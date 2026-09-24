@@ -1,0 +1,1779 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WorkingNotes Hub</title>
+<meta name="description" content="Note taking BCA — browse Obsidian WorkingNotes tasks, capture notes, and generate detailed prompts for the local LLM (Mage / opencode / Qwen).">
+<style>
+:root{
+  --bg:#f4f6fa; --panel:#ffffff; --panel-2:#f8f9fc; --ink:#152033; --muted:#5c6a80; --line:#dde3ec;
+  --accent:#0a5cad; --accent-2:#e7f0fb; --accent-ink:#ffffff;
+  --ok:#1f8a4c; --ok-bg:#e5f5ec; --warn:#a86400; --warn-bg:#fff3dc; --danger:#c0362c; --danger-bg:#fdeceb;
+  --doing:#6a4bc4; --doing-bg:#efeafd; --chip:#eef1f6; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 16px rgba(16,24,40,.06);
+  --mono:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f141c; --panel:#171d27; --panel-2:#1c2430; --ink:#e6ebf2; --muted:#9aa7ba; --line:#2a3342;
+    --accent:#5aa2ef; --accent-2:#1b2d44; --accent-ink:#0b1320;
+    --ok:#56c98a; --ok-bg:#15301f; --warn:#f0b35a; --warn-bg:#35280f; --danger:#f07b72; --danger-bg:#3a1a18;
+    --doing:#b3a0f5; --doing-bg:#2a2340; --chip:#232c3a; --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f141c; --panel:#171d27; --panel-2:#1c2430; --ink:#e6ebf2; --muted:#9aa7ba; --line:#2a3342;
+  --accent:#5aa2ef; --accent-2:#1b2d44; --accent-ink:#0b1320;
+  --ok:#56c98a; --ok-bg:#15301f; --warn:#f0b35a; --warn-bg:#35280f; --danger:#f07b72; --danger-bg:#3a1a18;
+  --doing:#b3a0f5; --doing-bg:#2a2340; --chip:#232c3a; --shadow:0 1px 2px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans)}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+header.top{position:sticky;top:0;z-index:20;background:var(--panel);border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;gap:12px;padding:10px 16px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;margin-right:auto}
+.logo{width:28px;height:28px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:14px}
+.brand small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);padding:6px 12px;border-radius:8px;cursor:pointer;text-decoration:none;color:var(--ink);white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.small{padding:3px 8px;font-size:12px}
+.btn.danger{color:var(--danger)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.paths{display:flex;gap:8px;flex-wrap:wrap;padding:0 16px 10px;font-size:12px}
+.path{display:flex;gap:6px;align-items:center;background:var(--chip);border-radius:6px;padding:3px 8px;max-width:100%;cursor:pointer;border:1px solid transparent}
+.path b{color:var(--muted);font-weight:600}
+.path code{font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:360px}
+.path.missing{background:var(--danger-bg);border-color:var(--danger)}
+.path.missing code{color:var(--danger)}
+nav.tabs{display:flex;gap:4px;padding:0 16px;overflow-x:auto}
+nav.tabs button{border:0;background:none;padding:10px 14px;border-bottom:2px solid transparent;cursor:pointer;color:var(--muted);font-weight:600;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+nav.tabs .count{background:var(--chip);border-radius:10px;padding:0 7px;font-size:11px;margin-left:4px}
+main{padding:16px;max-width:1500px;margin:0 auto}
+.tab{display:none}.tab.active{display:block}
+.grid-2{display:grid;grid-template-columns:minmax(320px,420px) 1fr;gap:16px;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+.card-h{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.card-h h2{font-size:15px;margin:0;margin-right:auto}
+.card-b{padding:14px}
+.filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.filters .full{grid-column:1/-1}
+input[type=text],input[type=search],input[type=datetime-local],input[type=url],input[type=password],select,textarea{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+textarea{resize:vertical;min-height:80px;font-family:var(--sans)}
+textarea.mono{font-family:var(--mono);font-size:12.5px;line-height:1.45}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+label.f{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:10px 0 4px}
+label.f:first-child{margin-top:0}
+.hint{font-size:12px;color:var(--muted)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row>*{flex:1 1 140px}
+.row>.btn{flex:0 0 auto}
+.row>div>label.f:first-child{margin-top:10px}
+.task-list{max-height:calc(100vh - 330px);min-height:240px;overflow:auto}
+.group-h{position:sticky;top:0;background:var(--panel-2);border-bottom:1px solid var(--line);padding:6px 14px;font-size:12px;font-weight:700;display:flex;gap:6px;align-items:center;z-index:1}
+.group-h .n{margin-left:auto;color:var(--muted);font-weight:500}
+.task{display:flex;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line);cursor:pointer;align-items:flex-start}
+.task:hover{background:var(--panel-2)}
+.task.sel{background:var(--accent-2);box-shadow:inset 3px 0 0 var(--accent)}
+.task input{margin-top:3px;flex:0 0 auto}
+.task .t{flex:1;min-width:0}
+.task .t .txt{overflow-wrap:anywhere}
+.task.done .txt{text-decoration:line-through;color:var(--muted)}
+.meta-line{display:flex;gap:6px;flex-wrap:wrap;margin-top:3px}
+.chip{display:inline-flex;align-items:center;gap:4px;background:var(--chip);border-radius:6px;padding:0 7px;font-size:11.5px;line-height:20px;color:var(--muted);white-space:nowrap}
+.chip.st-Ongoing,.chip.s-open{background:var(--accent-2);color:var(--accent)}
+.chip.st-Explore,.chip.s-doing{background:var(--doing-bg);color:var(--doing)}
+.chip.st-Done,.chip.s-done{background:var(--ok-bg);color:var(--ok)}
+.chip.s-cancelled{text-decoration:line-through}
+.chip.s-blocked,.chip.overdue{background:var(--danger-bg);color:var(--danger)}
+.chip.soon{background:var(--warn-bg);color:var(--warn)}
+.chip.tag{background:transparent;border:1px solid var(--line)}
+.selbar{display:flex;gap:8px;align-items:center;padding:10px 14px;border-top:1px solid var(--line);flex-wrap:wrap}
+.selbar span{margin-right:auto;color:var(--muted);font-size:12px}
+.empty{padding:40px 20px;text-align:center;color:var(--muted)}
+.empty h3{color:var(--ink);margin:0 0 6px}
+.detail{min-height:300px}
+.detail-head{padding:16px 18px;border-bottom:1px solid var(--line)}
+.detail-head h2{margin:6px 0 10px;font-size:19px;line-height:1.3;overflow-wrap:anywhere}
+.detail-body{padding:6px 18px 18px}
+dl.meta{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;margin:14px 0 0;font-size:13px}
+dl.meta dt{color:var(--muted)}
+dl.meta dd{margin:0;overflow-wrap:anywhere}
+.sec{margin-top:18px}
+.sec>h3{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 8px;display:flex;align-items:center;gap:8px}
+details.note{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--panel)}
+details.note>summary{cursor:pointer;padding:9px 12px;list-style:none;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+details.note>summary::-webkit-details-marker{display:none}
+details.note>summary::before{content:"▸";color:var(--muted);transition:transform .15s}
+details.note[open]>summary::before{transform:rotate(90deg)}
+details.note>summary .ttl{font-weight:600}
+details.note>summary .sub{color:var(--muted);font-size:12px;flex-basis:100%;padding-left:16px}
+details.note .inner{padding:0 14px 12px;border-top:1px dashed var(--line)}
+.md{overflow-wrap:anywhere}
+.md h1,.md h2,.md h3,.md h4,.md h5,.md h6{margin:14px 0 6px;line-height:1.3}
+.md h3{font-size:17px}.md h4{font-size:15px}.md h5,.md h6{font-size:14px}
+.md p{margin:6px 0}
+.md ul{margin:6px 0;padding-left:20px}
+.md li.task-li{list-style:none;margin-left:-18px}
+.md pre{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px;overflow:auto;font-size:12.5px}
+.md code{font-family:var(--mono);background:var(--chip);border-radius:4px;padding:0 4px;font-size:12.5px}
+.md pre code{background:none;padding:0}
+.md table{border-collapse:collapse;width:100%;margin:8px 0;font-size:13px;display:block;overflow-x:auto}
+.md th,.md td{border:1px solid var(--line);padding:4px 8px;text-align:left}
+.md th{background:var(--panel-2)}
+.md blockquote{margin:6px 0;padding:2px 12px;border-left:3px solid var(--line);color:var(--muted)}
+.callout{border-left:3px solid var(--accent);background:var(--accent-2);border-radius:6px;padding:6px 12px;margin:8px 0}
+.callout-title{font-weight:700;color:var(--accent)}
+.embed{display:inline-block;background:var(--chip);border-radius:6px;padding:0 6px;font-size:12px;color:var(--muted)}
+.cb{display:inline-block;width:14px;height:14px;border:1.5px solid var(--muted);border-radius:4px;margin-right:6px;vertical-align:-2px;position:relative}
+.cb-done{background:var(--ok);border-color:var(--ok)}
+.cb-done::after{content:"";position:absolute;left:3.5px;top:0.5px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.cb-doing{background:linear-gradient(135deg,var(--doing) 50%,transparent 50%);border-color:var(--doing)}
+.cb-cancelled{border-color:var(--line);background:var(--chip)}
+.hl-line{background:var(--warn-bg);border-radius:4px;outline:1px solid var(--warn)}
+.fm{font-family:var(--mono);font-size:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;white-space:pre-wrap;margin:8px 0}
+.proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+.proj{padding:14px;cursor:pointer;display:flex;flex-direction:column;gap:8px}
+.proj:hover{border-color:var(--accent)}
+.proj h3{margin:0;font-size:15px}
+.proj .stats{display:flex;gap:14px;font-size:12px;color:var(--muted)}
+.proj .stats b{display:block;font-size:18px;color:var(--ink)}
+.status-h{font-size:13px;font-weight:700;margin:18px 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.status-h:first-child{margin-top:0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px}
+.kpi{padding:12px 14px}
+.kpi .v{font-size:24px;font-weight:700}
+.kpi .l{font-size:12px;color:var(--muted)}
+.detect{background:var(--panel-2);border:1px dashed var(--line);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:13px}
+.detect dl{display:grid;grid-template-columns:max-content 1fr;gap:3px 12px;margin:0}
+.detect dt{color:var(--muted)}.detect dd{margin:0;overflow-wrap:anywhere}
+.inbox-item{display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);align-items:flex-start}
+.inbox-item .t{flex:1;min-width:0}
+.inbox-item .prev{color:var(--muted);font-size:12.5px;white-space:pre-wrap;max-height:3.9em;overflow:hidden;overflow-wrap:anywhere}
+.inbox-item .acts{display:flex;gap:4px;flex-wrap:wrap}
+.pill{font-size:11px;font-weight:700;border-radius:10px;padding:1px 8px}
+.pill.draft{background:var(--chip);color:var(--muted)}
+.pill.prompted{background:var(--warn-bg);color:var(--warn)}
+.pill.sent{background:var(--doing-bg);color:var(--doing)}
+.pill.filed{background:var(--ok-bg);color:var(--ok)}
+dialog{border:1px solid var(--line);border-radius:14px;padding:0;background:var(--panel);color:var(--ink);width:min(1100px,calc(100vw - 24px));max-height:calc(100vh - 24px);box-shadow:0 20px 60px rgba(0,0,0,.3)}
+dialog::backdrop{background:rgba(10,15,25,.55)}
+.dlg{display:flex;flex-direction:column;max-height:calc(100vh - 26px)}
+.dlg-h{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.dlg-h h2{margin:0;font-size:16px;margin-right:auto}
+.dlg-b{padding:14px 16px;overflow:auto}
+.dlg-f{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line);flex-wrap:wrap;align-items:center}
+.dlg-f .grow{margin-right:auto;color:var(--muted);font-size:12px}
+#prompt-text{min-height:46vh}
+.cmd{display:flex;gap:8px;align-items:center;margin-top:10px}
+.cmd code{flex:1;font-family:var(--mono);font-size:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 10px;overflow-x:auto;white-space:nowrap}
+.warnbox{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:10px}
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px}
+.settings-grid .full{grid-column:1/-1}
+fieldset{border:1px solid var(--line);border-radius:10px;padding:10px 14px 14px;margin:0 0 12px}
+legend{font-weight:700;padding:0 6px}
+.check{display:flex;gap:8px;align-items:flex-start;margin:6px 0;font-size:13px}
+.check input{margin-top:3px}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:100;max-width:calc(100vw - 32px)}
+#toast.show{opacity:1}
+.mode-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.mode-row label{display:flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px}
+.mode-row label:has(input:checked){border-color:var(--accent);background:var(--accent-2);color:var(--accent);font-weight:600}
+#llm-response{white-space:pre-wrap;font-family:var(--mono);font-size:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px;max-height:40vh;overflow:auto;margin-top:10px}
+.hidden{display:none!important}
+@media (max-width: 900px){
+  .grid-2{grid-template-columns:1fr}
+  .task-list{max-height:none}
+  .settings-grid{grid-template-columns:1fr}
+  .path code{max-width:200px}
+}
+@media (max-width: 520px){
+  main{padding:12px}
+  .filters{grid-template-columns:1fr}
+  .bar{padding:10px 12px}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="bar">
+    <div class="brand"><div class="logo" aria-hidden="true">WN</div><div>WorkingNotes Hub<small id="vault-status">No vault loaded</small></div></div>
+    <button class="btn primary" id="btn-open">📂 Open vault folder</button>
+    <button class="btn" id="btn-reload" title="Re-read the vault from disk" disabled>↻ Reload</button>
+    <button class="btn" id="btn-demo" title="Load a small sample vault to try the app">Demo vault</button>
+    <button class="btn" id="btn-settings">⚙ Settings</button>
+    <button class="btn ghost" id="btn-theme" title="Toggle light/dark">◐</button>
+  </div>
+  <div class="paths" id="paths"></div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="tasks" aria-selected="true">Tasks <span class="count" id="c-tasks">0</span></button>
+    <button role="tab" data-tab="projects" aria-selected="false">Projects <span class="count" id="c-projects">0</span></button>
+    <button role="tab" data-tab="notes" aria-selected="false">Capture notes <span class="count" id="c-inbox">0</span></button>
+    <button role="tab" data-tab="help" aria-selected="false">How it works</button>
+  </nav>
+</header>
+
+<main>
+  <!-- TASKS -->
+  <section class="tab active" id="tab-tasks">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-h"><h2>Task list</h2><button class="btn small" id="btn-new-task" title="Capture a brand-new task">＋ New task</button></div>
+        <div class="filters">
+          <input type="search" id="f-q" class="full" placeholder="Search task, project, file…">
+          <select id="f-state" aria-label="Task state">
+            <option value="open">Open (todo + in progress)</option>
+            <option value="done">Done</option>
+            <option value="all">All states</option>
+          </select>
+          <select id="f-pstatus" aria-label="Project status">
+            <option value="active">Active projects (Ongoing/Explore)</option>
+            <option value="all">All projects</option>
+            <option value="Ongoing">Ongoing only</option>
+            <option value="Explore">Explore only</option>
+            <option value="Done">Done only</option>
+          </select>
+          <select id="f-project" aria-label="Project"><option value="">All projects</option></select>
+          <select id="f-kind" aria-label="Source">
+            <option value="">All sources</option>
+            <option value="project">Project TODO</option>
+            <option value="tasknote">Task List notes</option>
+            <option value="activity">Activity action items</option>
+            <option value="daily">Daily (Tomorrow)</option>
+            <option value="other">Other notes</option>
+          </select>
+          <select id="f-tag" aria-label="Tag" class="full">
+            <option value="">All tags</option>
+            <option value="track9">track9</option>
+            <option value="sidejob">sidejob</option>
+          </select>
+        </div>
+        <div class="task-list" id="task-list"></div>
+        <div class="selbar">
+          <span id="sel-info">0 selected</span>
+          <button class="btn small" id="btn-sel-clear">Clear</button>
+          <button class="btn small primary" id="btn-sel-prompt" disabled>Prompt for selected</button>
+        </div>
+      </div>
+      <div class="card detail" id="detail"></div>
+    </div>
+  </section>
+
+  <!-- PROJECTS -->
+  <section class="tab" id="tab-projects">
+    <div class="kpis" id="kpis"></div>
+    <div class="row" style="margin-bottom:12px">
+      <input type="search" id="p-q" placeholder="Filter projects…">
+      <button class="btn" id="btn-review-all">🧭 Review prompt: all Ongoing projects</button>
+    </div>
+    <div id="proj-wrap"></div>
+  </section>
+
+  <!-- NOTES -->
+  <section class="tab" id="tab-notes">
+    <div class="grid-2" style="grid-template-columns:minmax(320px,1fr) minmax(320px,1fr)">
+      <div class="card">
+        <div class="card-h"><h2 id="note-form-title">New note</h2><span class="hint">Ctrl/⌘ + Enter to save</span></div>
+        <div class="card-b">
+          <input type="hidden" id="n-id">
+          <label class="f" for="n-title">Title (optional)</label>
+          <input type="text" id="n-title" placeholder="e.g. Rapat kurs valas SBN">
+          <div class="row">
+            <div><label class="f" for="n-at">Captured at</label><input type="datetime-local" id="n-at"></div>
+            <div><label class="f" for="n-type">Type hint</label>
+              <select id="n-type"><option>Auto</option><option>Activity</option><option>Project</option><option>Knowledge</option><option>Daily</option><option>Task</option></select></div>
+            <div><label class="f" for="n-cat">Category hint</label>
+              <select id="n-cat"><option>Auto</option><option>Meeting</option><option>Kickoff</option><option>Implementation</option><option>Deployment</option><option>Discussion</option><option>Documentation</option></select></div>
+          </div>
+          <div class="row">
+            <div><label class="f" for="n-project">Project hint</label><input type="text" id="n-project" list="project-options" placeholder="Auto-detect"></div>
+            <div><label class="f" for="n-tags">Extra tags</label><input type="text" id="n-tags" placeholder="comma separated"></div>
+          </div>
+          <label class="f" for="n-source">Source / reference (ZTK-009, optional)</label>
+          <input type="text" id="n-source" placeholder="e.g. Angular blog, 12:30, accessed 2026-09-24">
+          <label class="f" for="n-text">Note</label>
+          <textarea id="n-text" rows="12" placeholder="Write freely. Meeting notes, decisions, action items, deadlines, ideas… The local LLM will categorize it into Activity / Project / Knowledge / Daily / Task List."></textarea>
+          <div class="detect" id="n-detect"></div>
+          <div class="row" style="margin-top:12px">
+            <button class="btn" id="btn-note-clear">Clear</button>
+            <button class="btn" id="btn-note-save">Save to inbox</button>
+            <button class="btn primary" id="btn-note-save-prompt">Save &amp; create prompt</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h2>Inbox</h2>
+          <select id="inbox-filter" style="width:auto">
+            <option value="pending">Pending (not filed)</option><option value="all">All</option><option value="filed">Filed</option>
+          </select>
+        </div>
+        <div id="inbox-list" class="task-list"></div>
+        <div class="selbar">
+          <span id="inbox-sel-info">0 selected</span>
+          <button class="btn small" id="btn-inbox-all">Select pending</button>
+          <button class="btn small" id="btn-inbox-filed" disabled>Mark filed</button>
+          <button class="btn small" id="btn-inbox-export">Export</button>
+          <label class="btn small" style="cursor:pointer">Import<input type="file" id="inbox-import" accept=".json,application/json" hidden></label>
+          <button class="btn small primary" id="btn-inbox-prompt" disabled>Categorize prompt</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HELP -->
+  <section class="tab" id="tab-help">
+    <div class="card"><div class="card-b md" id="help"></div></div>
+  </section>
+</main>
+
+<datalist id="project-options"></datalist>
+<input type="file" id="dir-input" webkitdirectory directory multiple hidden>
+
+<!-- PROMPT DIALOG -->
+<dialog id="dlg-prompt">
+  <div class="dlg">
+    <div class="dlg-h"><h2 id="prompt-title">Prompt</h2><button class="btn ghost" data-close>✕</button></div>
+    <div class="dlg-b">
+      <div id="prompt-warn"></div>
+      <div id="prompt-options"></div>
+      <label class="f" for="prompt-extra">Extra instructions for the LLM (optional — regenerates the prompt)</label>
+      <textarea id="prompt-extra" rows="2" placeholder="e.g. Also create a Knowledge note about the OAuth decision. / Work in branch feature/sbn-valas."></textarea>
+      <label class="f" for="prompt-text">Generated prompt (you can edit before copying)</label>
+      <textarea id="prompt-text" class="mono" spellcheck="false"></textarea>
+      <div class="cmd"><code id="prompt-cmd"></code><button class="btn small" id="btn-copy-cmd">Copy command</button></div>
+      <div class="hint" style="margin-top:4px">Command = your <b>Mage command template</b> (Settings) with <code>{{file}}</code> replaced by the downloaded prompt file path.</div>
+      <div id="llm-response" class="hidden"></div>
+    </div>
+    <div class="dlg-f">
+      <span class="grow" id="prompt-stats"></span>
+      <button class="btn" id="btn-send-llm" title="POST to your OpenAI-compatible endpoint (Settings)">Send to local LLM</button>
+      <button class="btn" id="btn-dl-prompt">Download .md</button>
+      <button class="btn primary" id="btn-copy-prompt">Copy prompt</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- NOTE VIEWER -->
+<dialog id="dlg-note">
+  <div class="dlg">
+    <div class="dlg-h"><h2 id="note-title">Note</h2><a class="btn small" id="note-obsidian" href="#">Open in Obsidian</a><button class="btn ghost" data-close>✕</button></div>
+    <div class="dlg-b"><div class="hint" id="note-path"></div><div class="fm" id="note-fm"></div><div class="md" id="note-body"></div></div>
+  </div>
+</dialog>
+
+<!-- SETTINGS -->
+<dialog id="dlg-settings">
+  <div class="dlg">
+    <div class="dlg-h"><h2>Settings</h2><button class="btn ghost" data-close>✕</button></div>
+    <div class="dlg-b">
+      <fieldset><legend>Repositories &amp; paths (written at the top of every prompt)</legend>
+        <div class="settings-grid">
+          <div><label class="f" for="s-skillRepo">1. Skill repository (absolute path)</label><input type="text" id="s-skillRepo" placeholder="D:\repo\opencode-skills"></div>
+          <div><label class="f" for="s-skillFile">Skill file (relative to skill repository)</label><input type="text" id="s-skillFile" placeholder="obsidian-zettelkasten/SKILL.md"></div>
+          <div><label class="f" for="s-vaultPath">2. Obsidian vault position (absolute path)</label><input type="text" id="s-vaultPath" placeholder="D:\Obsidian\WorkingNotes"></div>
+          <div><label class="f" for="s-vaultName">Obsidian vault name (for obsidian:// links)</label><input type="text" id="s-vaultName" placeholder="WorkingNotes"></div>
+          <div><label class="f" for="s-workRepo">Default work / code repository (optional, for tasks)</label><input type="text" id="s-workRepo" placeholder="D:\repo\wealth-frontend"></div>
+          <div><label class="f" for="s-timezone">Timezone label</label><input type="text" id="s-timezone"></div>
+        </div>
+      </fieldset>
+      <fieldset><legend>How the LLM runs</legend>
+        <div class="settings-grid">
+          <div><label class="f" for="s-execMode">Execution mode</label>
+            <select id="s-execMode">
+              <option value="agent">Agent — Mage/opencode has file tools and edits the vault itself</option>
+              <option value="chat">Chat — LLM prints full files, I paste them myself</option>
+            </select></div>
+          <div><label class="f" for="s-modelName">Model name (shown in prompt)</label><input type="text" id="s-modelName" placeholder="Qwen 3.6"></div>
+          <div><label class="f" for="s-mageCommand">Mage command template</label><input type="text" id="s-mageCommand" placeholder='mage "{{file}}"'></div>
+          <div><label class="f" for="s-promptFolder">Folder where you save downloaded prompts</label><input type="text" id="s-promptFolder" placeholder="C:\Users\me\Downloads"></div>
+          <div class="full"><label class="f" for="s-language">Output language rule</label><input type="text" id="s-language"></div>
+        </div>
+        <label class="check"><input type="checkbox" id="s-embedSkill"> Embed full skill text in prompts (recommended for Qwen — it will not need to open the skill file)</label>
+        <label class="check"><input type="checkbox" id="s-includeVaultIndex"> Include vault snapshot (project list, related file contents) in prompts</label>
+        <label class="check"><input type="checkbox" id="s-updateDaily"> When filing notes, also update the Daily note (<code>Daily/YYYY-MM-DD Kerjaan.md</code>)</label>
+        <label class="check"><input type="checkbox" id="s-allowNewProject"> Allow the LLM to create a new Project note when nothing matches</label>
+      </fieldset>
+      <fieldset><legend>Optional: send directly to an OpenAI-compatible endpoint</legend>
+        <div class="settings-grid">
+          <div><label class="f" for="s-llmBaseUrl">Base URL (…/v1)</label><input type="url" id="s-llmBaseUrl" placeholder="http://localhost:8000/v1"></div>
+          <div><label class="f" for="s-llmModel">Model id</label><input type="text" id="s-llmModel" placeholder="qwen3.6"></div>
+          <div class="full"><label class="f" for="s-llmApiKey">API key (stored only in this browser)</label><input type="password" id="s-llmApiKey" autocomplete="off"></div>
+        </div>
+        <div class="hint">The server must allow CORS from <code>null</code>/file origin. If it doesn’t, use Copy / Download instead.</div>
+      </fieldset>
+      <fieldset><legend>Project keyword mapping</legend>
+        <div class="hint">One line per project: <code>keyword1, keyword2 =&gt; Project Name | tag</code> (tag optional: track9 / sidejob). Lines starting with # are ignored.</div>
+        <textarea id="s-projectMap" class="mono" rows="10"></textarea>
+      </fieldset>
+      <fieldset><legend>Skill text (embedded copy)</legend>
+        <div class="hint">Leave empty to use the built-in copy of the Obsidian Zettelkasten skill. Paste your latest SKILL.md here if you change it.</div>
+        <textarea id="s-skillText" class="mono" rows="6" placeholder="(built-in skill is used)"></textarea>
+      </fieldset>
+    </div>
+    <div class="dlg-f">
+      <span class="grow">Saved in this browser (localStorage).</span>
+      <button class="btn danger" id="btn-settings-reset">Reset defaults</button>
+      <button class="btn" id="btn-settings-export">Export</button>
+      <label class="btn" style="cursor:pointer">Import<input type="file" id="settings-import" accept=".json" hidden></label>
+      <button class="btn primary" id="btn-settings-save">Save</button>
+    </div>
+  </div>
+</dialog>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<!-- Filled by tools/build.mjs -->
+<script id="skill-text" type="application/json">"# Obsidian Zettelkasten\n\nTrigger when creating, organizing, or linking notes in the Obsidian vault (`WorkingNotes`).\n\n## Vault Structure\n\n```\nRoot-Notes.md\n├── Dashboard.md\n├── Activity/\n│   └── YYYY-MM-DD \u003cDescription>.md (meeting, implementation, discussion notes)\n├── Project/\n│   └── \u003cProject Name>.md (project tracker: Status, TODO, Summary Activity)\n├── Knowledge/\n│   └── \u003cTopic>.md (conceptual/knowledge notes)\n├── Daily/\n│   └── YYYY-MM-DD Kerjaan.md\n├── Template/\n│   ├── Activity Template.md\n│   ├── Project Template.md\n│   └── Daily Template.md\n├── Base/\n│   ├── Activity Base.base\n│   ├── Project Base.base\n│   └── Daily Base.base\n├── Task List/\n│   └── \u003cTask>.md\n├── Attachment/\n│   └── images, files\n└── Archive/\n    ├── Track 9/ (legacy)\n    └── Sidejob/ (legacy)\n```\n\n## Core Concepts\n\n### Activity\nCatatan aktivitas (meeting, kickoff, implementation, deployment, discussion). Setiap activity dikaitkan dengan Project via `Project` field di frontmatter.\n\n### Project\nTracker project/task. Memiliki Status (Explore, Ongoing, Done), TODO list, dan Summary Activity yang otomatis mengambil semua Activity terkait.\n\n### Dashboard\nMenampilkan overview:\n- Ongoing Project (Track 9) — filter `tag: track9`\n- Ongoing Sidejob — filter `tag: sidejob`\n- Daily Activity\n\n## Rules\n\n### 1. Always Check Project First\n\nBefore creating any new note:\n- Check if an **Project** already exists in `Project/` for the related project.\n- If not, create an Project note using `Template/Project Template.md`.\n- Activity notes link to Project via `Project: - \"[[Project Name]]\"` in frontmatter.\n\n### 2. Map Context Automatically\n\nWhen creating a new note from user input:\n- **Identify the type:**\n  - Meeting, kickoff, implementation, deployment, discussion → `Activity/`\n  - Project tracker with TODO → `Project/`\n  - Conceptual/knowledge → `Knowledge/`\n  - Daily summary → `Daily/`\n- **Identify the Project (project):**\n  - \"IPO SBN\", \"SBN Valas\" → Project: `IPO SBN Valas`\n  - \"Avantrade\" → Project: `Avantrade`\n  - \"Tiket\" → Project: `Tiket`\n  - \"Portfolio FI\" → Project: `Informasi Portfolio FI`\n  - \"Autodebet\" → Project: `Autodebet Proteksi`\n  - \"Proteksi Leave Contact\" → Project: `Proteksi Leave Contact`\n  - \"Loket\" → Project: `Loket`\n  - \"ADHOC Reward\" → Project: `Project ADHOC Reward`\n  - \"Pemisahan biaya admin\" → Project: `Project pemisahan biaya admin`\n  - \"Pembiayaan emas Bsya\" → Project: `Pembiayaan emas Bsya`\n  - \"Automation\", \"SAQ\", \"Webhook\" → Project: `Automation Context Window SAQ Webhook`\n  - \"Obsidian\", \"Zettelkasten\", \"Skill\" → Project: `Obsidian Zettelkasten Skill`\n  - \"Angular 20\" → Project: `Angular 20`\n  - \"Prettier\" → Project: `Prettier HTML Whitespace Ignore`\n- Create the note with proper frontmatter (see below).\n\n### 3. Activity Note Structure\n\n```yaml\n---\nid: \"\u003cYYYYMMDDHHmm>\"\nCategory:\n  - Meeting | Kickoff | Implementation | Deployment | Discussion | Documentation\nProject:\n  - \"[[\u003cProject Name>]]\"\nDate: YYYY-MM-DD\nSummary: |\n  - 1-2 line summary of the activity\n---\n\n\u003cBody content preserved>\n```\n\n- Naming: `YYYY-MM-DD \u003cDescription>.md`\n- `Category` determines the type of activity.\n- `Project` links to the Project note (wiki-link format).\n- `Summary` is used by Project's \"Summary Activity\" view.\n- `Date` enables daily filtering in Dashboard.\n\n### 4. Project Note Structure\n\n```yaml\n---\nid: \"\u003cYYYYMMDDHHmm>\"\nStatus: Explore | Ongoing | Done\nFollowup Date: YYYY-MM-DD\ntodo:\ntags:\n  - track9 | sidejob\n---\n\n### TODO\n\n> [!TODO] TODO\n> - [ ] task 1\n> - [ ] task 2\n\n### Summary Activity\n![[Activity Base.base#Specific Activity]]\n```\n\n- `Status` controls visibility in Dashboard (Ongoing shown, Done archived).\n- `tags` determines Dashboard section (`track9` → Project, `sidejob` → Sidejob).\n- `Summary Activity` embeds all Activity notes linked to this Project.\n- One Project per project. Do NOT duplicate.\n\n### 5. Daily Notes\n\n- Daily files live in `Daily/` with format `YYYY-MM-DD Kerjaan.md`.\n- **Daily notes contain summaries, not links.** Write a brief conclusion/summary of the work done under each topic.\n- Tag daily notes with `daily` + relevant project tags.\n- Every daily note MUST include `[[Daily-Notes]]` right after the frontmatter.\n- Use `Template/Daily Template.md` as reference.\n\n### 6. Linking\n\n- Activity → Project via `Project` field in frontmatter.\n- Project → Activity via `![[Activity Base.base#Specific Activity]]` embed.\n- Dashboard → Project via `![[Project Base.base#Ongoing Project]]` and `![[Project Base.base#Ongoing Sidejob]]`.\n- Images use `![[Pasted image YYYYMMDDHHmmss.png]]` format, stored in `Attachment/`.\n\n### 7. Knowledge Notes\n\n- For conceptual/knowledge notes that don't tie to a specific project.\n- Use ZTK rules (atomic, unique ID, linking).\n- Frontmatter:\n```yaml\n---\nid: \"\u003cYYYYMMDDHHmm>\"\ntitle: \"\u003cTitle>\"\ntype: PERMANENT\ncreated: YYYY-MM-DD\nupdated: YYYY-MM-DD\ntags: [knowledge, \u003ctopic>]\nlinks: [related_ids]\n---\n```\n\n### 8. Archive\n\n- Old folder structures (`Track 9/`, `Sidejob/`) are archived in `Archive/`.\n- Do NOT create new notes in `Archive/`.\n- Reference archived notes if needed, but prefer creating new Activity/Project notes.\n\n### 9. Naming Convention\n\n- Activity: `YYYY-MM-DD \u003cDescription>.md`\n- Project: `\u003cProject Name>.md`\n- Daily: `YYYY-MM-DD Kerjaan.md`\n- Knowledge: `\u003cTopic>.md`\n- Use ISO date format (`YYYY-MM-DD`) so files sort chronologically.\n- Keep description concise (max ~60 chars).\n\n### 10. Base Files\n\n- `Base/Activity Base.base` — defines table views for Activity notes.\n- `Base/Project Base.base` — defines table views for Project notes (All, Ongoing Project, Ongoing Sidejob, Explore).\n- `Base/Daily Base.base` — defines table views for Daily Activity.\n- Do NOT modify base files unless explicitly requested.\n\n## Zettelkasten Core Rules (ZTK-001 to ZTK-010)\n\n### ZTK-001: Atomic Notes (Satu Ide, Satu Catatan)\nSetiap catatan HANYA BOLEH berisi SATU ide utama atau konsep tunggal. Pecah catatan yang mencakup banyak ide menjadi beberapa catatan terpisah.\n\n### ZTK-002: Unique Identifier (ID Unik)\nSetiap catatan WAJIB memiliki ID unik. Format: `YYYYMMDDHHmm` pada frontmatter. ID tidak boleh berubah meskipun judul catatan berubah.\n\n### ZTK-003: Judul Catatan\nSetiap catatan WAJIB memiliki judul yang singkat, jelas, dan representatif. Berbentuk pernyataan bermakna atau frasa konsep.\n\n### ZTK-004: Isi Catatan (Body)\nIsi catatan WAJIB ditulis dengan bahasa sendiri dan cukup untuk dipahami tanpa membaca sumber aslinya. Singkat, padat, dan kontekstual.\n\n### ZTK-005: Linking (Tautan Antar Catatan)\nSetiap catatan HARUS memiliki minimal SATU tautan ke catatan lain yang relevan. Activity link ke Project via `Project` field.\n\n### ZTK-006: Tipe Catatan\nKategorikan setiap catatan:\n- `[FLEETING]` → Catatan cepat/kasar, perlu diproses (max 2 hari)\n- `[LITERATURE]` → Catatan dari sumber eksternal\n- `[PERMANENT]` → Catatan final dalam bahasa sendiri\n- `[INDEX]` → Catatan peta/daftar topik besar\n- `[HUB]` → Catatan penghubung cluster topik\n\n### ZTK-007: Metadata Catatan\nSetiap catatan WAJIB menyertakan metadata frontmatter sesuai tipe:\n- **Activity:** `id`, `Category`, `Project`, `Date`, `Summary`\n- **Project:** `id`, `Status`, `Followup Date`, `todo`, `tags`\n- **Knowledge/Daily:** `id`, `title`, `type`, `created`, `updated`, `tags`, `links`\n\n### ZTK-008: Tagging\nMinimal 1, maksimal 5 tags. Gunakan kata benda/frasa konsep, lowercase, tanda hubung untuk multi-word. Primary tags: `track9`, `sidejob`, `daily`, `knowledge`.\n\n### ZTK-009: Sumber Referensi\nJika catatan berasal dari sumber eksternal, WAJIB cantumkan nama sumber, halaman/timestamp, dan tanggal akses.\n\n### ZTK-010: Review dan Pemeliharaan\n- FLEETING → Review max 2 hari\n- LITERATURE → Review max 1 minggu\n- PERMANENT → Review min 1 bulan atau saat ada catatan baru relevan\n- DILARANG menghapus PERMANENT yang sudah ada. Buat catatan baru yang merevisi/perluas ide.\n\n## Templates\n\n### Activity Template (`Template/Activity Template.md`)\n```yaml\n---\nCategory:\n  - Meeting\nProject:\n  - \"[[Replace With Project Name]]\"\nDate: {{date}}\nSummary: |\n  -\n---\n```\n\n### Project Template (`Template/Project Template.md`)\n```yaml\n---\nStatus: Ongoing\nFollowup Date:\ntodo:\ntags:\n  -\n---\n\n### TODO\n\n> [!TODO] TODO\n> - [ ]\n\n### Summary Activity\n![[Activity Base.base#Specific Activity]]\n```\n\n### Daily Template (`Template/Daily Template.md`)\n```yaml\n---\nDate: {{date}}\ntags:\n  - daily\n---\n\n## Activity\n\n| Time | Project | Category | Summary |\n| --- | --- | --- | --- |\n| | | | |\n\n## Notes\n\n-\n\n## Tomorrow\n\n- [ ]\n```\n\n## Zettelkasten Note Template (Knowledge)\n\n```markdown\n---\nid: YYYYMMDDHHmm\ntitle: \"Judul Catatan\"\ntype: PERMANENT\ncreated: YYYY-MM-DD\nupdated: YYYY-MM-DD\ntags: [knowledge, tag1, tag2]\nlinks: [ID-001, ID-002]\n---\n\n# Judul Catatan\n\n[Inti ide dalam bahasa sendiri]\n\n## Mengapa Penting\n[Konteks dan alasan]\n\n## Tautan\n- Berkaitan dengan [[ID|Judul]] karena [alasan]\n```\n"</script>
+<script id="demo-vault" type="application/json">[{"path":"Activity/2026-09-22 Kickoff IPO SBN Valas.md","content":"---\nid: \"202609221000\"\nCategory:\n  - Kickoff\nProject:\n  - \"[[IPO SBN Valas]]\"\nDate: 2026-09-22\nSummary: |\n  - Kickoff IPO SBN Valas: scope form pemesanan, integrasi kurs, target UAT akhir Oktober.\n---\n\n## Peserta\n- Tim bisnis Wealth, tim IT FE/BE, QA\n\n## Poin Diskusi\n- Produk SBN Valas dijual dalam USD, minimal pemesanan USD 1.000.\n- Form pemesanan harus menampilkan kurs terkini dan estimasi nominal IDR.\n- Target UAT: minggu terakhir Oktober 2026.\n\n## Action Item\n- FE: buat form pemesanan (Angular 20).\n- BE: sediakan endpoint kurs valas.\n"},{"path":"Activity/2026-09-23 Discussion Avantrade API.md","content":"---\nid: \"202609231030\"\nCategory:\n  - Discussion\nProject:\n  - \"[[Avantrade]]\"\nDate: 2026-09-23\nSummary: |\n  - Diskusi awal API Avantrade; vendor menyarankan OAuth2 client credentials.\n---\n\n- Vendor mengirim sandbox URL minggu depan.\n- Perlu konfirmasi ke security apakah OAuth2 cukup atau butuh mTLS.\n"},{"path":"Activity/2026-09-23 Implementation SBN Valas order form.md","content":"---\nid: \"202609231400\"\nCategory:\n  - Implementation\nProject:\n  - \"[[IPO SBN Valas]]\"\nDate: 2026-09-23\nSummary: |\n  - Mulai implementasi form pemesanan SBN Valas dengan reactive form + signal; validasi minimal USD 1.000 selesai.\n---\n\n- Membuat komponen `sbn-valas-order-form` (standalone).\n- Validasi nominal minimal USD 1.000 dan kelipatan USD 1.000.\n- Belum: tampilan kurs realtime (menunggu endpoint BE).\n"},{"path":"Archive/Track 9/Legacy note.md","content":"# Legacy note\n- [ ] this old task must NOT show in the app (archived)\n"},{"path":"Daily/2026-09-23 Kerjaan.md","content":"---\nid: \"202609230000\"\ntitle: \"2026-09-23 Kerjaan\"\ntype: PERMANENT\nDate: 2026-09-23\ncreated: 2026-09-23\nupdated: 2026-09-23\ntags:\n  - daily\n  - track9\nlinks: []\n---\n[[Daily-Notes]]\n\n## Activity\n\n| Time | Project | Category | Summary |\n| --- | --- | --- | --- |\n| 10:30 | Avantrade | Discussion | Vendor menyarankan OAuth2, sandbox menyusul. |\n| 14:00 | IPO SBN Valas | Implementation | Form pemesanan dibuat, validasi minimal USD 1.000 selesai. |\n\n## Notes\n\n- Endpoint kurs valas masih ditunggu dari BE.\n\n## Tomorrow\n\n- [ ] Follow up endpoint kurs valas ke tim BE\n- [ ] Konfirmasi kebutuhan mTLS Avantrade ke tim security\n"},{"path":"Dashboard.md","content":"# Dashboard\n\n## Ongoing Project (Track 9)\n![[Project Base.base#Ongoing Project]]\n\n## Ongoing Sidejob\n![[Project Base.base#Ongoing Sidejob]]\n\n## Daily Activity\n![[Daily Base.base#Daily Activity]]\n"},{"path":"Knowledge/Angular Signals.md","content":"---\nid: \"202608251500\"\ntitle: \"Angular Signals menggantikan banyak kebutuhan RxJS untuk state lokal\"\ntype: PERMANENT\ncreated: 2026-08-25\nupdated: 2026-08-25\ntags: [knowledge, angular, signals]\nlinks: []\n---\n\n# Angular Signals menggantikan banyak kebutuhan RxJS untuk state lokal\n\nSignal adalah nilai reaktif sinkron; `computed()` menurunkan nilai, `effect()` untuk side effect.\n\n## Mengapa Penting\nState komponen jadi lebih sederhana dan change detection lebih efisien (zoneless-ready).\n\n## Tautan\n- Berkaitan dengan [[Angular 20]] karena Angular 20 menstabilkan API signal.\n"},{"path":"Project/Angular 20.md","content":"---\nid: \"202608200900\"\nStatus: Done\nFollowup Date:\ntodo:\ntags:\n  - track9\n---\n\n### TODO\n\n> [!TODO] TODO\n> - [x] Upgrade workspace ke Angular 20\n> - [x] Migrasi ke control flow @if/@for\n\n### Summary Activity\n![[Activity Base.base#Specific Activity]]\n"},{"path":"Project/Avantrade.md","content":"---\nid: \"202609100830\"\nStatus: Explore\nFollowup Date: 2026-10-02\ntodo:\ntags:\n  - track9\n---\n\n### TODO\n\n> [!TODO] TODO\n> - [ ] Pelajari dokumentasi API Avantrade\n> - [ ] Tentukan kebutuhan autentikasi (OAuth / mTLS)\n\n### Summary Activity\n![[Activity Base.base#Specific Activity]]\n"},{"path":"Project/IPO SBN Valas.md","content":"---\nid: \"202609150900\"\nStatus: Ongoing\nFollowup Date: 2026-09-26\ntodo:\ntags:\n  - track9\n---\n\n### TODO\n\n> [!TODO] TODO\n> - [x] Kickoff dengan tim bisnis SBN Valas\n> - [ ] Buat form pemesanan SBN Valas (Angular 20) 📅 2026-09-30\n> - [ ] Integrasi API kurs valas dengan backend\n> - [ ] Siapkan skenario UAT bersama QA\n\n### Summary Activity\n![[Activity Base.base#Specific Activity]]\n"},{"path":"Project/Pembiayaan emas Bsya.md","content":"---\nid: \"202609011000\"\nStatus: Ongoing\nFollowup Date: 2026-09-25\ntodo:\ntags:\n  - sidejob\n---\n\n### TODO\n\n> [!TODO] TODO\n> - [ ] Review flow simulasi cicilan emas\n> - [/] Revisi desain halaman ringkasan pembiayaan\n\n### Summary Activity\n![[Activity Base.base#Specific Activity]]\n"},{"path":"Root-Notes.md","content":"# Root Notes\n\n- [[Dashboard]]\n- [[Daily-Notes]]\n"},{"path":"Task List/Integrasi kurs valas SBN.md","content":"---\nid: \"202609231600\"\nStatus: Todo\nPriority: High\nProject:\n  - \"[[IPO SBN Valas]]\"\nDue: 2026-09-30\nCreated: 2026-09-23\ntags:\n  - task\n  - track9\n---\n\n# Integrasi kurs valas SBN\n\n## Description\nTampilkan kurs USD/IDR terkini di form pemesanan SBN Valas dan hitung estimasi nominal IDR.\n\n## Acceptance Criteria\n- [ ] Kurs diambil dari endpoint BE `/api/fx/usd-idr`\n- [ ] Estimasi IDR ter-update saat nominal berubah\n- [ ] Error state jika endpoint gagal\n\n## Log\n- 2026-09-23: Task dibuat dari kickoff.\n"},{"path":"Template/Activity Template.md","content":"---\nCategory:\n  - Meeting\nProject:\n  - \"[[Replace With Project Name]]\"\nDate: {{date}}\nSummary: |\n  -\n---\n"},{"path":"Template/Daily Template.md","content":"---\nDate: {{date}}\ntags:\n  - daily\n---\n\n## Activity\n\n| Time | Project | Category | Summary |\n| --- | --- | --- | --- |\n| | | | |\n\n## Notes\n\n-\n\n## Tomorrow\n\n- [ ]\n"},{"path":"Template/Project Template.md","content":"---\nStatus: Ongoing\nFollowup Date:\ntodo:\ntags:\n  -\n---\n\n### TODO\n\n> [!TODO] TODO\n> - [ ]\n\n### Summary Activity\n![[Activity Base.base#Specific Activity]]\n"}]</script>
+
+<script>
+"use strict";
+/* =========================================================================
+   Utilities
+   ========================================================================= */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const escRe = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const pad = n => String(n).padStart(2, "0");
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch { return false; } }
+};
+const readJsonScript = id => { try { return JSON.parse($("#" + id).textContent); } catch { return null; } };
+const BUILTIN_SKILL = readJsonScript("skill-text") || "";
+const DEMO_VAULT = readJsonScript("demo-vault") || [];
+
+function toast(msg) {
+  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 2200);
+}
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; }
+  catch {
+    const ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select(); let ok = false;
+    try { ok = document.execCommand("copy"); } catch {}
+    ta.remove(); return ok;
+  }
+}
+function download(name, text, type = "text/markdown") {
+  const blob = new Blob([text], { type: type + ";charset=utf-8" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+const now = () => new Date();
+const localISO = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const ymd = d => localISO(d).slice(0, 10);
+const idOf = iso => iso.replace(/[-T:]/g, "").slice(0, 12);
+const parseLocal = iso => { const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/); return m ? new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0)) : null; };
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+function daysUntil(dateStr) { const d = parseLocal(dateStr); if (!d) return null; const t = new Date(); t.setHours(0, 0, 0, 0); return Math.round((d - t) / 864e5); }
+function fence(text, ch = "~") { const runs = String(text).match(new RegExp(escRe(ch) + "+", "g")) || []; const n = Math.max(3, ...runs.map(r => r.length + 1)); return ch.repeat(n); }
+function fenced(text, lang = "") { const f = fence(text); return `${f}${lang}\n${String(text).replace(/\s+$/, "")}\n${f}`; }
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+/* =========================================================================
+   Settings
+   ========================================================================= */
+const DEFAULT_PROJECT_MAP = `# keyword(s) => Project Name | tag(optional)
+IPO SBN, SBN Valas => IPO SBN Valas
+Avantrade => Avantrade
+Tiket => Tiket
+Portfolio FI => Informasi Portfolio FI
+Autodebet => Autodebet Proteksi
+Proteksi Leave Contact => Proteksi Leave Contact
+Loket => Loket
+ADHOC Reward => Project ADHOC Reward
+Pemisahan biaya admin => Project pemisahan biaya admin
+Pembiayaan emas Bsya => Pembiayaan emas Bsya
+Automation, SAQ, Webhook => Automation Context Window SAQ Webhook
+Obsidian, Zettelkasten, Skill => Obsidian Zettelkasten Skill
+Angular 20 => Angular 20
+Prettier => Prettier HTML Whitespace Ignore`;
+const DEFAULTS = {
+  skillRepo: "", skillFile: "obsidian-zettelkasten/SKILL.md",
+  vaultPath: "", vaultName: "WorkingNotes", workRepo: "",
+  timezone: "Asia/Jakarta (WIB, UTC+7)",
+  language: "Keep the language of the original note (Bahasa Indonesia / English mix is fine). Headings from the templates stay as in the templates.",
+  execMode: "agent", modelName: "Qwen 3.6",
+  mageCommand: 'mage "{{file}}"', promptFolder: "",
+  embedSkill: true, includeVaultIndex: true, updateDaily: true, allowNewProject: true,
+  llmBaseUrl: "", llmModel: "qwen3.6", llmApiKey: "",
+  projectMap: DEFAULT_PROJECT_MAP, skillText: ""
+};
+let S = Object.assign({}, DEFAULTS, store.get("wnh.settings", {}));
+const skillText = () => (S.skillText && S.skillText.trim()) || BUILTIN_SKILL || "(Skill text not embedded — read SKILL_FILE.)";
+function parseMap(txt) {
+  return String(txt || "").split("\n").map(l => l.trim()).filter(l => l && !l.startsWith("#")).map(l => {
+    const [lhs, rhs = ""] = l.split("=>");
+    const [project, tag = ""] = rhs.split("|").map(s => s.trim());
+    return { keywords: lhs.split(",").map(s => s.trim()).filter(Boolean), project, tag };
+  }).filter(m => m.project && m.keywords.length);
+}
+let MAP = parseMap(S.projectMap);
+const sepOf = p => (String(p).includes("\\") ? "\\" : "/");
+function joinPath(base, ...parts) {
+  if (!base) return "";
+  const sep = sepOf(base);
+  return [base.replace(/[\\/]+$/, ""), ...parts.map(p => String(p).replace(/[\\/]+/g, sep))].join(sep);
+}
+const vaultRootLabel = () => S.vaultPath || "<<FILL: absolute path of the Obsidian vault>>";
+const vaultFile = rel => (S.vaultPath ? joinPath(S.vaultPath, rel) : `<VAULT_ROOT>/${rel}`);
+const skillFileLabel = () => (S.skillRepo ? joinPath(S.skillRepo, S.skillFile || "SKILL.md") : "<<FILL: absolute path of the skill repository>>/" + (S.skillFile || "SKILL.md"));
+
+/* =========================================================================
+   Frontmatter + Markdown parsing
+   ========================================================================= */
+const unq = s => { s = String(s).trim(); if ((s.startsWith('"') && s.endsWith('"') && s.length > 1) || (s.startsWith("'") && s.endsWith("'") && s.length > 1)) return s.slice(1, -1); return s; };
+function parseYaml(raw) {
+  const fm = {}; const lines = raw.split("\n"); let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    const m = line.match(/^([^\s#:][^:]*):(?:\s+(.*))?$/);
+    if (!m) { i++; continue; }
+    const key = m[1].trim(); const val = (m[2] || "").trim();
+    if (/^[|>][-+]?$/.test(val)) {
+      const buf = []; i++;
+      while (i < lines.length && (/^\s+/.test(lines[i]) || lines[i] === "")) { buf.push(lines[i].replace(/^ {2}/, "")); i++; }
+      fm[key] = buf.join("\n").trim(); continue;
+    }
+    if (val === "") {
+      const arr = []; i++;
+      while (i < lines.length && /^\s*-(\s|$)/.test(lines[i])) { arr.push(unq(lines[i].replace(/^\s*-\s*/, ""))); i++; }
+      fm[key] = arr.filter(x => x !== ""); if (!fm[key].length) fm[key] = ""; continue;
+    }
+    if (val.startsWith("[") && val.endsWith("]") && !val.startsWith("[[")) fm[key] = val.slice(1, -1).split(",").map(s => unq(s)).filter(Boolean);
+    else fm[key] = unq(val);
+    i++;
+  }
+  return fm;
+}
+function parseNote(text) {
+  text = String(text).replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
+  if (!text.startsWith("---\n")) return { fm: {}, fmRaw: "", body: text, bodyLineOffset: 0 };
+  const end = text.indexOf("\n---", 3);
+  if (end < 0) return { fm: {}, fmRaw: "", body: text, bodyLineOffset: 0 };
+  const fmRaw = text.slice(4, end);
+  let after = end + 4; while (text[after] && text[after] !== "\n") after++; after++;
+  return { fm: parseYaml(fmRaw), fmRaw, body: text.slice(after), bodyLineOffset: text.slice(0, after).split("\n").length - 1 };
+}
+const asArr = v => (v == null || v === "" ? [] : Array.isArray(v) ? v : [v]);
+const linkName = s => String(s).replace(/^!?\[\[/, "").replace(/\]\]$/, "").split("|")[0].split("#")[0].trim();
+const CB_RE = /^((?:\s*>)*\s*)[-*+]\s+\[([^\]])\]\s+(\S.*)$/;
+const stateOf = c => ({ " ": "open", x: "done", X: "done", "/": "doing", "-": "cancelled", "!": "blocked" }[c] || "open");
+const STATE_LABEL = { open: "To do", doing: "In progress", done: "Done", cancelled: "Cancelled", blocked: "Blocked" };
+const dueOf = t => (t.match(/(?:📅|due::?|⏳)\s*(\d{4}-\d{2}-\d{2})/i) || [])[1] || "";
+const cleanTask = t => t.replace(/\s*(?:📅|⏳|🛫|✅|➕)\s*\d{4}-\d{2}-\d{2}/g, "").replace(/\s*\[?due::\s*\d{4}-\d{2}-\d{2}\]?/gi, "").trim();
+
+function inlineMd(s) {
+  let t = esc(s); const codes = [];
+  t = t.replace(/`([^`]+)`/g, (_, c) => { codes.push(c); return `\u0000${codes.length - 1}\u0000`; });
+  t = t.replace(/!\[\[([^\]]+)\]\]/g, (_, x) => `<span class="embed">⧉ ${x}</span>`);
+  t = t.replace(/\[\[([^\]]+)\]\]/g, (_, x) => { const [target, alias] = x.split("|"); return `<a href="#" class="wl" data-note="${target.split("#")[0].trim()}">${alias || target}</a>`; });
+  t = t.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/(^|[^*\w])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>");
+  t = t.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  t = t.replace(/==([^=]+)==/g, "<mark>$1</mark>");
+  return t.replace(/\u0000(\d+)\u0000/g, (_, n) => `<code>${codes[n]}</code>`);
+}
+function md(src, hlLine = -1) {
+  const lines = String(src || "").replace(/\r/g, "").split("\n"); const out = []; let i = 0;
+  const hl = idx => (idx === hlLine ? ' class="hl-line"' : "");
+  while (i < lines.length) {
+    const ln = lines[i];
+    if (/^\s*(```|~~~)/.test(ln)) {
+      const f = ln.trim().match(/^(`{3,}|~{3,})/)[1]; const buf = []; i++;
+      while (i < lines.length && !lines[i].trim().startsWith(f)) buf.push(lines[i++]);
+      i++; out.push(`<pre><code>${esc(buf.join("\n"))}</code></pre>`); continue;
+    }
+    if (/^\s*>/.test(ln)) {
+      const start = i; const buf = [];
+      while (i < lines.length && /^\s*>/.test(lines[i])) buf.push(lines[i++].replace(/^\s*>\s?/, ""));
+      const c = buf[0].match(/^\[!(\w+)\][+-]?\s*(.*)$/);
+      const innerHl = hlLine >= start && hlLine < i ? hlLine - start - (c ? 1 : 0) : -1;
+      out.push(c ? `<div class="callout callout-${esc(c[1].toLowerCase())}"><div class="callout-title">${inlineMd(c[2] || c[1])}</div>${md(buf.slice(1).join("\n"), innerHl)}</div>`
+                 : `<blockquote>${md(buf.join("\n"), innerHl)}</blockquote>`);
+      continue;
+    }
+    if (/^\s*\|/.test(ln) && i + 1 < lines.length && /^\s*\|?\s*:?-{3,}/.test(lines[i + 1])) {
+      const cells = r => r.trim().replace(/^\||\|$/g, "").split("|").map(c => c.trim());
+      const head = cells(ln); i += 2; const rows = [];
+      while (i < lines.length && /^\s*\|/.test(lines[i])) rows.push(cells(lines[i++]));
+      out.push(`<table><thead><tr>${head.map(h => `<th>${inlineMd(h)}</th>`).join("")}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${inlineMd(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`);
+      continue;
+    }
+    const h = ln.match(/^(#{1,6})\s+(.*)$/);
+    if (h) { const lv = Math.min(6, h[1].length + 2); out.push(`<h${lv}${hl(i)}>${inlineMd(h[2])}</h${lv}>`); i++; continue; }
+    if (/^\s*([-*+]|\d+\.)\s+/.test(ln)) {
+      const items = [];
+      while (i < lines.length && /^\s*([-*+]|\d+\.)\s+/.test(lines[i])) {
+        const l = lines[i]; const indent = l.match(/^\s*/)[0].length;
+        const t = l.replace(/^\s*([-*+]|\d+\.)\s+/, ""); const cb = t.match(/^\[(.)\]\s*(.*)$/);
+        const cls = [cb ? "task-li" : "", i === hlLine ? "hl-line" : ""].filter(Boolean).join(" ");
+        items.push(`<li style="margin-left:${indent * 8}px"${cls ? ` class="${cls}"` : ""}>${cb ? `<span class="cb cb-${stateOf(cb[1])}"></span>${inlineMd(cb[2])}` : inlineMd(t)}</li>`);
+        i++;
+      }
+      out.push(`<ul>${items.join("")}</ul>`); continue;
+    }
+    if (/^\s*(---|\*\*\*|___)\s*$/.test(ln)) { out.push("<hr>"); i++; continue; }
+    if (!ln.trim()) { i++; continue; }
+    const buf = [];
+    do { buf.push(lines[i++]); } while (i < lines.length && lines[i].trim() && !/^(#{1,6}\s|```|~~~|\s*>|\s*[-*+]\s|\s*\d+\.\s|\s*\|)/.test(lines[i]));
+    out.push(`<p>${buf.map(inlineMd).join("<br>")}</p>`);
+  }
+  return out.join("\n");
+}
+
+/* =========================================================================
+   Vault model
+   ========================================================================= */
+const V = { loaded: false, label: "", files: [], byName: new Map(), projects: new Map(), activities: [], tasks: [], ids: new Set(), dirHandle: null, loadedAt: null };
+const KIND = { "Activity": "activity", "Project": "project", "Knowledge": "knowledge", "Daily": "daily", "Task List": "tasknote", "Template": "template", "Archive": "archive", "Base": "base", "Attachment": "attachment" };
+const SKIP_TASKS = new Set(["template", "archive", "base", "attachment"]);
+const TASKNOTE_STATE = s => { s = String(s || "").toLowerCase(); return /done|selesai|complete/.test(s) ? "done" : /progress|doing|ongoing/.test(s) ? "doing" : /block/.test(s) ? "blocked" : /cancel|batal/.test(s) ? "cancelled" : "open"; };
+
+function detectProjects(text) {
+  const res = []; const seen = new Set(); if (!text) return res;
+  const test = k => new RegExp("(^|[^\\p{L}\\p{N}])" + escRe(k) + "(?=$|[^\\p{L}\\p{N}])", "iu").test(text);
+  for (const m of MAP) for (const k of m.keywords) if (test(k)) { if (!seen.has(m.project)) { res.push({ project: m.project, keyword: k, tag: m.tag }); seen.add(m.project); } break; }
+  for (const name of V.projects.keys()) if (!seen.has(name) && name.length > 2 && test(name)) { res.push({ project: name, keyword: name, tag: "" }); seen.add(name); }
+  return res;
+}
+function projectOfFile(f) {
+  if (f.kind === "project") return f.name;
+  const p = asArr(f.fm.Project).map(linkName).filter(Boolean);
+  return p[0] || "";
+}
+
+function indexVault(entries, label) {
+  V.files = []; V.byName = new Map(); V.projects = new Map(); V.activities = []; V.tasks = []; V.ids = new Set();
+  for (const e of entries) {
+    const path = e.path.replace(/\\/g, "/").replace(/^\/+/, "");
+    if (!/\.md$/i.test(path)) continue;
+    const parts = path.split("/"); const folder = parts.length > 1 ? parts[0] : "";
+    const name = parts[parts.length - 1].replace(/\.md$/i, "");
+    const n = parseNote(e.content);
+    const f = { path, folder, name, content: e.content, ...n, kind: KIND[folder] || (folder ? "other" : "root") };
+    V.files.push(f);
+    if (!V.byName.has(name) || f.kind !== "archive") V.byName.set(name, f);
+    if (f.fm.id) V.ids.add(String(f.fm.id));
+  }
+  for (const f of V.files) if (f.kind === "project") {
+    V.projects.set(f.name, { name: f.name, file: f, status: f.fm.Status || "", followup: f.fm["Followup Date"] || "", tags: asArr(f.fm.tags).map(String), id: f.fm.id || "", missing: false });
+  }
+  for (const f of V.files) if (f.kind === "activity") {
+    const a = { file: f, date: String(f.fm.Date || f.name.slice(0, 10)), category: asArr(f.fm.Category).join(", "), projects: asArr(f.fm.Project).map(linkName).filter(Boolean), summary: String(f.fm.Summary || "").trim() };
+    V.activities.push(a);
+    for (const p of a.projects) if (!V.projects.has(p)) V.projects.set(p, { name: p, file: null, status: "", followup: "", tags: [], id: "", missing: true });
+  }
+  V.activities.sort((a, b) => b.date.localeCompare(a.date) || b.file.name.localeCompare(a.file.name));
+  for (const f of V.files) {
+    if (SKIP_TASKS.has(f.kind)) continue;
+    const lines = f.body.split("\n"); let heading = ""; const subs = [];
+    lines.forEach((ln, idx) => {
+      const h = ln.match(/^\s*(?:>\s*)*#{1,6}\s+(.*)/); if (h) heading = h[1].trim();
+      const m = ln.match(CB_RE); if (!m) return;
+      const item = { raw: m[3].trim(), text: cleanTask(m[3].trim()), state: stateOf(m[2]), due: dueOf(m[3]), bodyIdx: idx, line: idx + f.bodyLineOffset + 1, heading };
+      if (f.kind === "tasknote") { subs.push(item); return; }
+      const project = projectOfFile(f) || (detectProjects(item.text)[0] || {}).project || "";
+      V.tasks.push({ ...item, id: f.path + "#" + idx, file: f, kind: KIND[f.folder] ? f.kind : "other", project });
+    });
+    if (f.kind === "tasknote") {
+      const h1 = (f.body.match(/^#\s+(.+)$/m) || [])[1];
+      V.tasks.push({ id: f.path, text: f.fm.title || h1 || f.name, raw: f.name, state: TASKNOTE_STATE(f.fm.Status), due: String(f.fm.Due || f.fm.due || ""), priority: f.fm.Priority || "", bodyIdx: -1, line: 1, heading: "", file: f, kind: "tasknote", project: projectOfFile(f) || (detectProjects(f.name)[0] || {}).project || "", subtasks: subs });
+    }
+  }
+  V.loaded = true; V.label = label; V.loadedAt = new Date();
+  afterLoad();
+}
+const activitiesFor = p => V.activities.filter(a => a.projects.includes(p));
+const tasksFor = p => V.tasks.filter(t => t.project === p);
+const projOf = t => V.projects.get(t.project);
+const obsidianUrl = f => `obsidian://open?vault=${encodeURIComponent(S.vaultName || "WorkingNotes")}&file=${encodeURIComponent(f.path.replace(/\.md$/i, ""))}`;
+
+/* ---------- loading from disk ---------- */
+const idb = {
+  open() { return new Promise((res, rej) => { const r = indexedDB.open("wnh", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  async get(k) { try { const db = await this.open(); return await new Promise(res => { const q = db.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => res(q.result); q.onerror = () => res(undefined); }); } catch { return undefined; } },
+  async set(k, v) { try { const db = await this.open(); await new Promise(res => { const tx = db.transaction("kv", "readwrite"); tx.objectStore("kv").put(v, k); tx.oncomplete = res; tx.onerror = res; }); } catch {} }
+};
+async function walkDir(dir, prefix, out) {
+  for await (const [name, h] of dir.entries()) {
+    if (name.startsWith(".")) continue;
+    const p = prefix ? prefix + "/" + name : name;
+    if (h.kind === "directory") { if (p !== "Attachment") await walkDir(h, p, out); }
+    else if (/\.md$/i.test(name)) { const file = await h.getFile(); out.push({ path: p, content: await file.text() }); }
+  }
+}
+async function loadFromHandle(h) {
+  const out = []; await walkDir(h, "", out);
+  V.dirHandle = h; indexVault(out, h.name);
+  if (!S.vaultName || S.vaultName === DEFAULTS.vaultName) { S.vaultName = h.name; saveSettings(false); }
+  toast(`Loaded ${out.length} notes from “${h.name}”`);
+}
+async function openVault() {
+  if (window.showDirectoryPicker) {
+    try { const h = await window.showDirectoryPicker({ id: "wnh-vault", mode: "read" }); await loadFromHandle(h); idb.set("vault", h); return; }
+    catch (e) { if (e && e.name === "AbortError") return; console.warn("Directory picker failed, falling back", e); }
+  }
+  $("#dir-input").click();
+}
+async function reloadVault() {
+  let h = V.dirHandle || await idb.get("vault");
+  if (!h) return openVault();
+  try {
+    if (h.queryPermission && (await h.queryPermission({ mode: "read" })) !== "granted") {
+      if ((await h.requestPermission({ mode: "read" })) !== "granted") return toast("Permission denied");
+    }
+    await loadFromHandle(h);
+  } catch (e) { console.warn(e); openVault(); }
+}
+$("#dir-input").addEventListener("change", async e => {
+  const files = [...e.target.files].filter(f => /\.md$/i.test(f.name));
+  if (!files.length) return toast("No .md files found in that folder");
+  const root = (files[0].webkitRelativePath || "").split("/")[0];
+  const out = [];
+  for (const f of files) {
+    const rel = (f.webkitRelativePath || f.name).split("/").slice(1).join("/") || f.name;
+    if (rel.split("/").some(s => s.startsWith("."))) continue;
+    out.push({ path: rel, content: await f.text() });
+  }
+  V.dirHandle = null; indexVault(out, root || "vault");
+  if (root && (!S.vaultName || S.vaultName === DEFAULTS.vaultName)) { S.vaultName = root; saveSettings(false); }
+  toast(`Loaded ${out.length} notes from “${root}” (use “Open vault folder” again to refresh)`);
+  e.target.value = "";
+});
+
+/* =========================================================================
+   UI state
+   ========================================================================= */
+const UI = { tab: store.get("wnh.tab", "tasks"), selTask: null, selProject: null, checked: new Set(), inboxChecked: new Set() };
+const F = Object.assign({ q: "", state: "open", pstatus: "active", project: "", kind: "", tag: "" }, store.get("wnh.filters", {}));
+
+function setTab(name) {
+  UI.tab = name; store.set("wnh.tab", name);
+  $$("nav.tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
+  $$(".tab").forEach(s => s.classList.toggle("active", s.id === "tab-" + name));
+}
+$$("nav.tabs button").forEach(b => b.addEventListener("click", () => setTab(b.dataset.tab)));
+
+function renderPaths() {
+  const items = [
+    ["SKILL_REPO", S.skillRepo, "s-skillRepo"],
+    ["SKILL_FILE", S.skillFile, "s-skillFile"],
+    ["VAULT_ROOT", S.vaultPath, "s-vaultPath"],
+    ["WORK_REPO", S.workRepo || "(optional)", "s-workRepo", true],
+    ["MODE", S.execMode === "agent" ? "Agent (edits files)" : "Chat (prints files)", "s-execMode", true],
+    ["MODEL", S.modelName, "s-modelName", true]
+  ];
+  $("#paths").innerHTML = items.map(([k, v, id, opt]) => `<span class="path ${!v && !opt ? "missing" : ""}" data-focus="${id}" title="Click to edit"><b>${k}</b><code>${esc(v || "not set — click to fill")}</code></span>`).join("");
+  $$("#paths .path").forEach(p => p.addEventListener("click", () => openSettings(p.dataset.focus)));
+}
+
+function afterLoad() {
+  $("#vault-status").textContent = `${V.label} · ${V.files.length} notes · ${V.projects.size} projects · loaded ${V.loadedAt.toLocaleTimeString()}`;
+  $("#btn-reload").disabled = false;
+  const names = [...new Set([...V.projects.keys(), ...MAP.map(m => m.project)])].sort((a, b) => a.localeCompare(b));
+  $("#f-project").innerHTML = `<option value="">All projects</option><option value="__none">(no project)</option>` + names.filter(n => V.projects.has(n)).map(n => `<option>${esc(n)}</option>`).join("");
+  $("#f-project").value = V.projects.has(F.project) || F.project === "__none" ? F.project : "";
+  $("#project-options").innerHTML = names.map(n => `<option value="${esc(n)}">`).join("");
+  if (UI.selTask && !V.tasks.some(t => t.id === UI.selTask)) UI.selTask = null;
+  UI.checked = new Set([...UI.checked].filter(id => V.tasks.some(t => t.id === id)));
+  renderTasks(); renderDetail(); renderProjects(); renderDetect();
+}
+
+/* ---------- Tasks tab ---------- */
+function filteredTasks() {
+  const q = F.q.trim().toLowerCase();
+  return V.tasks.filter(t => {
+    const p = projOf(t);
+    if (F.state === "open" && !["open", "doing", "blocked"].includes(t.state)) return false;
+    if (F.state === "done" && t.state !== "done") return false;
+    if (F.project === "__none" ? t.project : F.project && t.project !== F.project) return false;
+    if (F.kind && t.kind !== F.kind) return false;
+    const ps = p ? p.status : "";
+    if (F.pstatus === "active" && ps === "Done") return false;
+    if (!["all", "active"].includes(F.pstatus) && ps !== F.pstatus) return false;
+    if (F.tag) { const tags = [...(p ? p.tags : []), ...asArr(t.file.fm.tags).map(String)]; if (!tags.includes(F.tag)) return false; }
+    if (q && !`${t.text} ${t.project} ${t.file.path} ${t.heading}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+function dueChip(due) {
+  if (!due) return "";
+  const d = daysUntil(due); const cls = d == null ? "" : d < 0 ? "overdue" : d <= 2 ? "soon" : "";
+  const lbl = d == null ? due : d < 0 ? `${due} · ${-d}d late` : d === 0 ? `${due} · today` : `${due} · in ${d}d`;
+  return `<span class="chip ${cls}">📅 ${esc(lbl)}</span>`;
+}
+const KIND_LABEL = { project: "Project TODO", tasknote: "Task note", activity: "Activity", daily: "Daily", knowledge: "Knowledge", other: "Note", root: "Note" };
+function renderTasks() {
+  const el = $("#task-list"); $("#c-tasks").textContent = V.tasks.filter(t => ["open", "doing", "blocked"].includes(t.state)).length;
+  if (!V.loaded) { el.innerHTML = `<div class="empty"><h3>No vault loaded</h3>Click <b>Open vault folder</b> and choose your <code>WorkingNotes</code> folder, or try the <b>Demo vault</b>.<br><br><span class="hint">Nothing is uploaded — files are read only inside this browser tab.</span></div>`; updateSelBar(); return; }
+  const list = filteredTasks();
+  if (!list.length) { el.innerHTML = `<div class="empty"><h3>No tasks match</h3>Try “All states” or clear the filters.</div>`; updateSelBar(); return; }
+  const groups = new Map();
+  for (const t of list) { const k = t.project || ""; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(t); }
+  const order = [...groups.keys()].sort((a, b) => (!a) - (!b) || statusRank(a) - statusRank(b) || a.localeCompare(b));
+  el.innerHTML = order.map(k => {
+    const p = V.projects.get(k); const ts = groups.get(k);
+    ts.sort((a, b) => (a.state === "done") - (b.state === "done") || (a.due || "9999").localeCompare(b.due || "9999") || a.file.path.localeCompare(b.file.path) || a.line - b.line);
+    return `<div class="group-h"><span>${esc(k || "No project")}</span>${p && p.status ? `<span class="chip st-${esc(p.status)}">${esc(p.status)}</span>` : ""}${p && p.missing ? `<span class="chip overdue">no Project note</span>` : ""}<span class="n">${ts.length}</span></div>` +
+      ts.map(t => `<div class="task ${t.state === "done" ? "done" : ""} ${UI.selTask === t.id ? "sel" : ""}" data-id="${esc(t.id)}">
+        <input type="checkbox" aria-label="Select task" ${UI.checked.has(t.id) ? "checked" : ""}>
+        <div class="t"><div class="txt">${t.kind === "tasknote" ? "📄 " : ""}${inlineMd(t.text)}</div>
+        <div class="meta-line"><span class="chip s-${t.state}">${STATE_LABEL[t.state]}</span><span class="chip">${KIND_LABEL[t.kind] || t.kind}</span>${t.priority ? `<span class="chip">⚑ ${esc(t.priority)}</span>` : ""}${dueChip(t.due)}${t.kind !== "project" && t.kind !== "tasknote" ? `<span class="chip" title="${esc(t.file.path)}">${esc(t.file.name.slice(0, 32))}</span>` : ""}</div></div></div>`).join("");
+  }).join("");
+  $$(".task", el).forEach(row => {
+    row.addEventListener("click", e => {
+      if (e.target.matches("input,a")) return;
+      UI.selTask = row.dataset.id; UI.selProject = null;
+      $$(".task.sel", el).forEach(r => r.classList.remove("sel")); row.classList.add("sel");
+      renderDetail(); if (innerWidth < 900) $("#detail").scrollIntoView({ behavior: "smooth" });
+    });
+    row.querySelector("input").addEventListener("change", e => { e.target.checked ? UI.checked.add(row.dataset.id) : UI.checked.delete(row.dataset.id); updateSelBar(); });
+  });
+  bindWikiLinks(el); updateSelBar();
+}
+const statusRank = name => { const s = (V.projects.get(name) || {}).status; return { Ongoing: 0, Explore: 1, "": 2, Done: 3 }[s] ?? 2; };
+function updateSelBar() { $("#sel-info").textContent = `${UI.checked.size} selected`; $("#btn-sel-prompt").disabled = !UI.checked.size; }
+for (const [id, key] of [["f-q", "q"], ["f-state", "state"], ["f-pstatus", "pstatus"], ["f-project", "project"], ["f-kind", "kind"], ["f-tag", "tag"]]) {
+  const el = $("#" + id); el.value = F[key];
+  el.addEventListener(id === "f-q" ? "input" : "change", () => { F[key] = el.value; store.set("wnh.filters", F); renderTasks(); });
+}
+$("#btn-sel-clear").addEventListener("click", () => { UI.checked.clear(); renderTasks(); });
+$("#btn-sel-prompt").addEventListener("click", () => openTaskPrompt(V.tasks.filter(t => UI.checked.has(t.id)), "execute"));
+$("#btn-new-task").addEventListener("click", () => { setTab("notes"); resetNoteForm(); $("#n-type").value = "Task"; if (F.project && F.project !== "__none") $("#n-project").value = F.project; $("#n-text").focus(); renderDetect(); });
+
+/* ---------- Detail pane ---------- */
+function contextBlock(t) {
+  if (t.kind === "tasknote" || t.bodyIdx < 0) return { text: t.file.body, hl: -1 };
+  const lines = t.file.body.split("\n"); let s = t.bodyIdx, e = t.bodyIdx;
+  while (s > 0 && !/^\s*(?:>\s*)*#{1,6}\s/.test(lines[s]) && t.bodyIdx - s < 25) s--;
+  while (e < lines.length - 1 && !/^\s*(?:>\s*)*#{1,6}\s/.test(lines[e + 1]) && e - t.bodyIdx < 25) e++;
+  return { text: lines.slice(s, e + 1).join("\n"), hl: t.bodyIdx - s };
+}
+function activityHtml(acts, openFirst = 0) {
+  if (!acts.length) return `<div class="hint">No Activity notes link to this project yet.</div>`;
+  return acts.map((a, i) => `<details class="note" ${i < openFirst ? "open" : ""}><summary><span class="chip">${esc(a.date)}</span><span class="chip">${esc(a.category || "—")}</span><span class="ttl">${esc(a.file.name.replace(/^\d{4}-\d{2}-\d{2}\s*/, ""))}</span><span class="sub">${esc(a.summary.replace(/^-\s*/gm, "").replace(/\n/g, " · ") || "(no Summary)")}</span></summary>
+    <div class="inner"><div class="row" style="margin:8px 0"><span class="hint">${esc(a.file.path)}</span><a class="btn small" href="${obsidianUrl(a.file)}" style="flex:0 0 auto">Open in Obsidian</a></div><div class="md">${md(a.file.body)}</div></div></details>`).join("");
+}
+function projectMeta(p) {
+  if (!p) return "";
+  return `<dt>Project status</dt><dd>${p.status ? `<span class="chip st-${esc(p.status)}">${esc(p.status)}</span>` : p.missing ? `<span class="chip overdue">Project note missing</span>` : "—"}</dd>
+    <dt>Follow-up</dt><dd>${p.followup ? dueChip(p.followup) : "—"}</dd>
+    <dt>Tags</dt><dd>${p.tags.length ? p.tags.map(t => `<span class="chip tag">#${esc(t)}</span>`).join(" ") : "—"}</dd>`;
+}
+function renderDetail() {
+  const el = $("#detail");
+  if (UI.selProject) return renderProjectDetail(UI.selProject);
+  const t = V.tasks.find(x => x.id === UI.selTask);
+  if (!t) {
+    el.innerHTML = `<div class="empty"><h3>Select a task</h3>The detail view shows the task, its source note, the Project note and every related Activity note — so you can review it before asking Mage to work on it.</div>`;
+    return;
+  }
+  const p = projOf(t); const acts = t.project ? activitiesFor(t.project) : [];
+  const ctx = contextBlock(t);
+  const others = t.project ? tasksFor(t.project).filter(x => x.id !== t.id && x.state !== "done" && x.state !== "cancelled") : [];
+  const backlinks = t.project ? V.files.filter(f => f.kind !== "activity" && f.kind !== "archive" && f !== t.file && f.name !== t.project && f.content.includes("[[" + t.project)) : [];
+  el.innerHTML = `
+  <div class="detail-head">
+    <div class="meta-line"><span class="chip s-${t.state}">${STATE_LABEL[t.state]}</span><span class="chip">${KIND_LABEL[t.kind] || t.kind}</span>${t.priority ? `<span class="chip">⚑ ${esc(t.priority)}</span>` : ""}${dueChip(t.due)}</div>
+    <h2>${inlineMd(t.text)}</h2>
+    <div class="row">
+      <button class="btn primary" data-mode="execute">🤖 Ask Mage to work on it</button>
+      <button class="btn" data-mode="breakdown">Break down</button>
+      <button class="btn" data-mode="tasknote">Create task note</button>
+      <button class="btn" data-mode="review">Review status</button>
+      <button class="btn" data-mode="derive">New task from this</button>
+    </div>
+    <dl class="meta">
+      <dt>Project</dt><dd>${t.project ? `<a href="#" data-proj="${esc(t.project)}">${esc(t.project)}</a>` : "<span class='hint'>none detected</span>"}</dd>
+      ${projectMeta(p)}
+      <dt>Source</dt><dd><a href="#" class="wl" data-note="${esc(t.file.name)}">${esc(t.file.path)}</a> · line ${t.line} · <a href="${obsidianUrl(t.file)}">Obsidian ↗</a></dd>
+      ${t.heading ? `<dt>Section</dt><dd>${esc(t.heading)}</dd>` : ""}
+    </dl>
+  </div>
+  <div class="detail-body">
+    <div class="sec"><h3>${t.kind === "tasknote" ? "Task note" : "Source context"}</h3>${t.kind === "tasknote" && t.file.fmRaw ? `<div class="fm">${esc(t.file.fmRaw)}</div>` : ""}<div class="md">${md(ctx.text, ctx.hl)}</div></div>
+    ${p && p.file ? `<div class="sec"><h3>Project note</h3><details class="note"><summary><span class="ttl">${esc(p.name)}</span><span class="sub">${esc(p.file.path)}</span></summary><div class="inner"><div class="fm">${esc(p.file.fmRaw)}</div><div class="md">${md(p.file.body)}</div></div></details></div>` : ""}
+    ${t.project ? `<div class="sec"><h3>Related activity (${acts.length})</h3>${activityHtml(acts, 1)}</div>` : ""}
+    ${others.length ? `<div class="sec"><h3>Other open tasks in ${esc(t.project)} (${others.length})</h3><ul class="md">${others.map(o => `<li><a href="#" data-task="${esc(o.id)}">${inlineMd(o.text)}</a> <span class="hint">· ${esc(KIND_LABEL[o.kind] || o.kind)}</span></li>`).join("")}</ul></div>` : ""}
+    ${backlinks.length ? `<div class="sec"><h3>Also mentioned in</h3>${backlinks.map(f => `<a href="#" class="wl chip" data-note="${esc(f.name)}">${esc(f.path)}</a>`).join(" ")}</div>` : ""}
+  </div>`;
+  $$("[data-mode]", el).forEach(b => b.addEventListener("click", () => openTaskPrompt([t], b.dataset.mode)));
+  bindDetailLinks(el);
+}
+function renderProjectDetail(name) {
+  const el = $("#detail"); const p = V.projects.get(name);
+  if (!p) { UI.selProject = null; return renderDetail(); }
+  const ts = tasksFor(name); const open = ts.filter(t => !["done", "cancelled"].includes(t.state)); const acts = activitiesFor(name);
+  el.innerHTML = `
+  <div class="detail-head">
+    <div class="meta-line"><span class="chip">Project</span>${p.status ? `<span class="chip st-${esc(p.status)}">${esc(p.status)}</span>` : ""}</div>
+    <h2>${esc(name)}</h2>
+    <div class="row">
+      <button class="btn primary" data-pmode="review">🧭 Review project prompt</button>
+      <button class="btn" data-pmode="execute" ${open.length ? "" : "disabled"}>🤖 Work on all open tasks</button>
+      <button class="btn" data-pmode="breakdown" ${open.length ? "" : "disabled"}>Break down open tasks</button>
+      ${p.file ? `<a class="btn" href="${obsidianUrl(p.file)}">Open in Obsidian</a>` : ""}
+    </div>
+    <dl class="meta">${projectMeta(p)}<dt>File</dt><dd>${p.file ? esc(p.file.path) : "<span class='hint'>No file in Project/ — referenced by Activity notes only</span>"}</dd>
+    <dt>Tasks</dt><dd>${open.length} open · ${ts.length - open.length} done/cancelled</dd><dt>Activities</dt><dd>${acts.length}${acts[0] ? ` · last ${esc(acts[0].date)}` : ""}</dd></dl>
+  </div>
+  <div class="detail-body">
+    <div class="sec"><h3>Tasks</h3>${ts.length ? `<ul class="md">${ts.map(o => `<li class="task-li"><span class="cb cb-${o.state}"></span><a href="#" data-task="${esc(o.id)}">${inlineMd(o.text)}</a> <span class="hint">· ${esc(KIND_LABEL[o.kind] || o.kind)}</span> ${dueChip(o.due)}</li>`).join("")}</ul>` : `<div class="hint">No checkbox tasks found.</div>`}</div>
+    ${p.file ? `<div class="sec"><h3>Project note</h3><div class="fm">${esc(p.file.fmRaw)}</div><div class="md">${md(p.file.body)}</div></div>` : ""}
+    <div class="sec"><h3>Activity timeline (${acts.length})</h3>${activityHtml(acts, 2)}</div>
+  </div>`;
+  $$("[data-pmode]", el).forEach(b => b.addEventListener("click", () => {
+    const mode = b.dataset.pmode;
+    openTaskPrompt(mode === "review" ? (open.length ? open : ts) : open, mode, { project: name });
+  }));
+  bindDetailLinks(el);
+}
+function bindDetailLinks(el) {
+  $$("[data-proj]", el).forEach(a => a.addEventListener("click", e => { e.preventDefault(); showProject(a.dataset.proj); }));
+  $$("[data-task]", el).forEach(a => a.addEventListener("click", e => { e.preventDefault(); UI.selTask = a.dataset.task; UI.selProject = null; setTab("tasks"); renderTasks(); renderDetail(); }));
+  bindWikiLinks(el);
+}
+function bindWikiLinks(el) {
+  $$("a.wl", el).forEach(a => a.addEventListener("click", e => { e.preventDefault(); e.stopPropagation(); openNote(a.dataset.note); }));
+}
+function showProject(name) { UI.selProject = name; UI.selTask = null; setTab("tasks"); renderTasks(); renderDetail(); window.scrollTo({ top: 0 }); }
+function openNote(name) {
+  const f = V.byName.get(name);
+  if (!f) { if (V.projects.has(name)) return showProject(name); return toast(`“${name}” is not in the loaded vault`); }
+  $("#note-title").textContent = f.name; $("#note-path").textContent = f.path; $("#note-obsidian").href = obsidianUrl(f);
+  $("#note-fm").textContent = f.fmRaw; $("#note-fm").classList.toggle("hidden", !f.fmRaw);
+  $("#note-body").innerHTML = md(f.body); bindWikiLinks($("#note-body"));
+  const d = $("#dlg-note"); if (!d.open) d.showModal();
+}
+
+/* ---------- Projects tab ---------- */
+function renderProjects() {
+  $("#c-projects").textContent = V.projects.size;
+  const wrap = $("#proj-wrap");
+  if (!V.loaded) { $("#kpis").innerHTML = ""; wrap.innerHTML = `<div class="card empty"><h3>No vault loaded</h3>Open your vault to see Ongoing / Explore / Done projects.</div>`; return; }
+  const all = [...V.projects.values()];
+  const openTasks = V.tasks.filter(t => ["open", "doing", "blocked"].includes(t.state));
+  const overdue = openTasks.filter(t => t.due && daysUntil(t.due) < 0).length + all.filter(p => p.status !== "Done" && p.followup && daysUntil(p.followup) < 0).length;
+  const today = ymd(now()); const week = new Date(); week.setDate(week.getDate() - 7);
+  $("#kpis").innerHTML = [
+    [all.filter(p => p.status === "Ongoing").length, "Ongoing projects"], [all.filter(p => p.status === "Explore").length, "Exploring"],
+    [openTasks.length, "Open tasks"], [overdue, "Overdue tasks / follow-ups"],
+    [V.activities.filter(a => a.date >= ymd(week)).length, "Activities (last 7 days)"], [V.activities.filter(a => a.date === today).length, "Activities today"]
+  ].map(([v, l]) => `<div class="card kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
+  const q = $("#p-q").value.trim().toLowerCase();
+  const groups = [["Ongoing", "Ongoing"], ["Explore", "Explore"], ["", "No status / missing note"], ["Done", "Done"]];
+  wrap.innerHTML = groups.map(([st, label]) => {
+    const ps = all.filter(p => (p.status || "") === st || (st === "" && !["Ongoing", "Explore", "Done"].includes(p.status))).filter(p => !q || p.name.toLowerCase().includes(q)).sort((a, b) => a.name.localeCompare(b.name));
+    if (!ps.length) return "";
+    return `<div class="status-h">${label} · ${ps.length}</div><div class="proj-grid">${ps.map(p => {
+      const ts = tasksFor(p.name); const o = ts.filter(t => ["open", "doing", "blocked"].includes(t.state)).length; const acts = activitiesFor(p.name);
+      return `<div class="card proj" data-p="${esc(p.name)}" tabindex="0"><h3>${esc(p.name)}</h3>
+        <div class="meta-line">${p.status ? `<span class="chip st-${esc(p.status)}">${esc(p.status)}</span>` : ""}${p.missing ? `<span class="chip overdue">no Project note</span>` : ""}${p.tags.map(t => `<span class="chip tag">#${esc(t)}</span>`).join("")}${p.followup && p.status !== "Done" ? dueChip(p.followup) : ""}</div>
+        <div class="stats"><div><b>${o}</b>open</div><div><b>${ts.length - o}</b>closed</div><div><b>${acts.length}</b>activities</div><div><b>${acts[0] ? esc(acts[0].date.slice(5)) : "—"}</b>last</div></div></div>`;
+    }).join("")}</div>`;
+  }).join("") || `<div class="card empty">No projects match.</div>`;
+  $$(".proj", wrap).forEach(c => { const go = () => showProject(c.dataset.p); c.addEventListener("click", go); c.addEventListener("keydown", e => e.key === "Enter" && go()); });
+}
+$("#p-q").addEventListener("input", renderProjects);
+$("#btn-review-all").addEventListener("click", () => {
+  if (!V.loaded) return toast("Open the vault first");
+  const names = [...V.projects.values()].filter(p => p.status === "Ongoing").map(p => p.name);
+  openTaskPrompt(V.tasks.filter(t => names.includes(t.project) && ["open", "doing", "blocked"].includes(t.state)), "review", { projects: names });
+});
+
+/* =========================================================================
+   Capture notes + inbox
+   ========================================================================= */
+let INBOX = store.get("wnh.inbox", []);
+const saveInbox = () => { if (!store.set("wnh.inbox", INBOX)) toast("Could not save inbox (browser storage blocked) — export it!"); };
+const TYPE_RULES = [
+  ["Activity", /\b(meeting|rapat|kickoff|kick-off|diskusi|discussion|sync|call|standup|stand-up|implement\w*|coding|deploy\w*|release|rilis|dokumentasi|documentation|presentasi|demo|uat|sit)\b/i],
+  ["Task", /\b(task|tugas|todo|to-do|kerjakan|deadline|due|harus)\b/i],
+  ["Knowledge", /\b(konsep|concept|belajar|learn\w*|til|definisi|definition|how to|cara|tips|insight)\b/i],
+  ["Daily", /\b(hari ini|today|daily|kerjaan hari)\b/i],
+  ["Project", /\b(project baru|new project|inisiatif|initiative|status project)\b/i]
+];
+const CAT_RULES = [["Kickoff", /\bkick-?off\b/i], ["Deployment", /\b(deploy\w*|release|rilis|go-?live)\b/i], ["Documentation", /\b(dokumentasi|documentation|docs|spec|confluence)\b/i], ["Implementation", /\b(implement\w*|coding|develop\w*|fix|bugfix|refactor|migrasi|migration)\b/i], ["Meeting", /\b(meeting|rapat|presentasi|demo)\b/i], ["Discussion", /\b(diskusi|discussion|chat|sync|call|ngobrol)\b/i]];
+function analyzeNote(n) {
+  const text = `${n.title || ""}\n${n.text || ""}`;
+  const detected = n.project ? [{ project: n.project, keyword: "(your hint)", tag: (MAP.find(m => m.project === n.project) || {}).tag || "" }, ...detectProjects(text).filter(d => d.project !== n.project)] : detectProjects(text);
+  const types = TYPE_RULES.filter(([, re]) => re.test(text)).map(([t]) => t);
+  const type = n.type && n.type !== "Auto" ? n.type : types[0] || (detected.length ? "Activity" : "Knowledge");
+  const category = n.category && n.category !== "Auto" ? n.category : ((CAT_RULES.find(([, re]) => re.test(text)) || [])[0] || (type === "Activity" ? "Meeting" : ""));
+  const at = n.capturedAt || localISO(now());
+  const date = at.slice(0, 10);
+  let firstLine = (n.title || (n.text || "").split("\n").find(l => l.trim()) || "Note").split(/[.!?\n]/)[0].replace(/[\\/:*?"<>|#^[\]]/g, " ").replace(/\s+/g, " ").trim();
+  if (firstLine.length > 55) firstLine = firstLine.slice(0, 55).replace(/\s+\S*$/, "");
+  const proj = detected[0] ? detected[0].project : "";
+  const existsProject = proj ? V.projects.has(proj) && !V.projects.get(proj).missing : null;
+  const fname = type === "Activity" ? `Activity/${date} ${firstLine}.md` : type === "Knowledge" ? `Knowledge/${firstLine}.md` : type === "Daily" ? `Daily/${date} Kerjaan.md` : type === "Task" ? `Task List/${firstLine}.md` : `Project/${proj || firstLine}.md`;
+  return { detected, types, type, category, date, at, fname, proj, existsProject };
+}
+const ID_BLOCK = 5; // each raw note reserves 5 consecutive minute-IDs (one note may become several files)
+function assignIds(notes) {
+  const used = new Set(V.ids); const out = new Map();
+  const free = d => { for (let k = 0; k < ID_BLOCK; k++) { const x = new Date(d); x.setMinutes(x.getMinutes() + k); if (used.has(idOf(localISO(x)))) return false; } return true; };
+  for (const n of sortNotes(notes)) {
+    const d = parseLocal(n.capturedAt) || now();
+    while (!free(d)) d.setMinutes(d.getMinutes() + 1);
+    const block = [];
+    for (let k = 0; k < ID_BLOCK; k++) { const x = new Date(d); x.setMinutes(x.getMinutes() + k); const id = idOf(localISO(x)); used.add(id); block.push(id); }
+    out.set(n.id, block);
+  }
+  return out;
+}
+const sortNotes = notes => [...notes].sort((a, b) => (a.capturedAt || "").localeCompare(b.capturedAt || "") || (a.createdAt || "").localeCompare(b.createdAt || ""));
+function formNote() {
+  return { id: $("#n-id").value || uid(), title: $("#n-title").value.trim(), capturedAt: $("#n-at").value || localISO(now()), type: $("#n-type").value, category: $("#n-cat").value, project: $("#n-project").value.trim(), tags: $("#n-tags").value.trim(), source: $("#n-source").value.trim(), text: $("#n-text").value };
+}
+function renderDetect() {
+  const n = formNote(); const el = $("#n-detect");
+  if (!n.text.trim() && !n.title) { el.innerHTML = `<span class="hint">Live analysis appears here while you type (project keyword match, suggested type, file name, ID). The LLM makes the final decision.</span>`; return; }
+  const a = analyzeNote(n); const id = assignIds([n]).get(n.id)[0];
+  el.innerHTML = `<dl>
+    <dt>Project</dt><dd>${a.detected.length ? a.detected.map(d => `<span class="chip ${V.loaded && !V.projects.has(d.project) ? "soon" : "st-Ongoing"}" title="matched “${esc(d.keyword)}”">${esc(d.project)}</span>`).join(" ") + (V.loaded && a.proj && !a.existsProject ? ` <span class="hint">(new — no Project note yet)</span>` : "") : "<span class='hint'>none → Knowledge / Daily</span>"}</dd>
+    <dt>Type</dt><dd>${esc(a.type)}${a.category ? " · " + esc(a.category) : ""}${a.types.length > 1 ? ` <span class="hint">(also: ${esc(a.types.slice(1).join(", "))} → may be split)</span>` : ""}</dd>
+    <dt>File</dt><dd><code>${esc(a.fname)}</code></dd>
+    <dt>ID</dt><dd><code>${id}</code></dd></dl>`;
+}
+["n-title", "n-text", "n-project", "n-type", "n-cat", "n-at"].forEach(id => $("#" + id).addEventListener("input", renderDetect));
+function resetNoteForm() {
+  $("#n-id").value = ""; ["n-title", "n-project", "n-tags", "n-source", "n-text"].forEach(id => ($("#" + id).value = ""));
+  $("#n-type").value = "Auto"; $("#n-cat").value = "Auto"; $("#n-at").value = localISO(now());
+  $("#note-form-title").textContent = "New note"; store.set("wnh.draft", null); renderDetect();
+}
+function saveNote() {
+  const n = formNote();
+  if (!n.text.trim()) { toast("Write something first"); $("#n-text").focus(); return null; }
+  const i = INBOX.findIndex(x => x.id === n.id);
+  if (i >= 0) INBOX[i] = { ...INBOX[i], ...n, updatedAt: new Date().toISOString() };
+  else INBOX.unshift({ ...n, status: "draft", createdAt: new Date().toISOString() });
+  saveInbox(); resetNoteForm(); renderInbox(); toast(i >= 0 ? "Note updated" : "Saved to inbox");
+  return INBOX.find(x => x.id === n.id);
+}
+$("#btn-note-save").addEventListener("click", saveNote);
+$("#btn-note-save-prompt").addEventListener("click", () => { const n = saveNote(); if (n) openNotesPrompt([n]); });
+$("#btn-note-clear").addEventListener("click", resetNoteForm);
+$("#n-text").addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); saveNote(); } });
+$("#n-text").addEventListener("input", () => store.set("wnh.draft", { ...formNote(), id: $("#n-id").value }));
+function renderInbox() {
+  const filt = $("#inbox-filter").value; const el = $("#inbox-list");
+  $("#c-inbox").textContent = INBOX.filter(n => n.status !== "filed").length;
+  const list = INBOX.filter(n => filt === "all" || (filt === "filed" ? n.status === "filed" : n.status !== "filed"));
+  UI.inboxChecked = new Set([...UI.inboxChecked].filter(id => INBOX.some(n => n.id === id)));
+  if (!list.length) el.innerHTML = `<div class="empty"><h3>Inbox is empty</h3>Notes you save appear here. Select them and create one categorize prompt for Mage.</div>`;
+  else el.innerHTML = list.map(n => { const a = analyzeNote(n); return `<div class="inbox-item" data-id="${n.id}">
+    <input type="checkbox" ${UI.inboxChecked.has(n.id) ? "checked" : ""} aria-label="Select note">
+    <div class="t"><div class="row" style="gap:6px"><b style="flex:1 1 auto">${esc(n.title || (n.text.split("\n").find(l => l.trim()) || "").slice(0, 70))}</b><span class="pill ${n.status}" style="flex:0 0 auto">${n.status}</span></div>
+      <div class="meta-line"><span class="chip">${esc(n.capturedAt.replace("T", " "))}</span><span class="chip">${esc(a.type)}${a.category ? " · " + esc(a.category) : ""}</span>${a.proj ? `<span class="chip st-Ongoing">${esc(a.proj)}</span>` : ""}</div>
+      <div class="prev">${esc(n.text)}</div>
+      <div class="acts" style="margin-top:6px"><button class="btn small" data-a="edit">Edit</button><button class="btn small" data-a="prompt">Prompt</button><button class="btn small" data-a="filed">${n.status === "filed" ? "Unfile" : "Mark filed"}</button><button class="btn small danger" data-a="del">Delete</button></div></div></div>`; }).join("");
+  $$(".inbox-item", el).forEach(row => {
+    const n = INBOX.find(x => x.id === row.dataset.id);
+    row.querySelector("input").addEventListener("change", e => { e.target.checked ? UI.inboxChecked.add(n.id) : UI.inboxChecked.delete(n.id); updateInboxBar(); });
+    $$("[data-a]", row).forEach(b => b.addEventListener("click", () => {
+      const a = b.dataset.a;
+      if (a === "edit") { loadNoteToForm(n); }
+      if (a === "prompt") openNotesPrompt([n]);
+      if (a === "filed") { n.status = n.status === "filed" ? "draft" : "filed"; saveInbox(); renderInbox(); }
+      if (a === "del" && confirm("Delete this note from the inbox? (It is not in the vault yet unless you filed it.)")) { INBOX = INBOX.filter(x => x.id !== n.id); saveInbox(); renderInbox(); }
+    }));
+  });
+  updateInboxBar();
+}
+function loadNoteToForm(n) {
+  $("#n-id").value = n.id; $("#n-title").value = n.title || ""; $("#n-at").value = n.capturedAt; $("#n-type").value = n.type || "Auto"; $("#n-cat").value = n.category || "Auto";
+  $("#n-project").value = n.project || ""; $("#n-tags").value = n.tags || ""; $("#n-source").value = n.source || ""; $("#n-text").value = n.text;
+  $("#note-form-title").textContent = INBOX.some(x => x.id === n.id) ? "Edit note" : "New note"; renderDetect(); $("#n-text").focus();
+}
+function updateInboxBar() { $("#inbox-sel-info").textContent = `${UI.inboxChecked.size} selected`; $("#btn-inbox-prompt").disabled = $("#btn-inbox-filed").disabled = !UI.inboxChecked.size; }
+$("#inbox-filter").addEventListener("change", renderInbox);
+$("#btn-inbox-all").addEventListener("click", () => { INBOX.filter(n => n.status !== "filed").forEach(n => UI.inboxChecked.add(n.id)); renderInbox(); });
+$("#btn-inbox-filed").addEventListener("click", () => { INBOX.forEach(n => UI.inboxChecked.has(n.id) && (n.status = "filed")); UI.inboxChecked.clear(); saveInbox(); renderInbox(); });
+$("#btn-inbox-prompt").addEventListener("click", () => openNotesPrompt(INBOX.filter(n => UI.inboxChecked.has(n.id))));
+$("#btn-inbox-export").addEventListener("click", () => download(`workingnotes-inbox-${ymd(now())}.json`, JSON.stringify(INBOX, null, 2), "application/json"));
+$("#inbox-import").addEventListener("change", async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { const arr = JSON.parse(await f.text()); if (!Array.isArray(arr)) throw 0; let added = 0; for (const n of arr) if (n && n.id && n.text && !INBOX.some(x => x.id === n.id)) { INBOX.push(n); added++; } saveInbox(); renderInbox(); toast(`Imported ${added} notes`); }
+  catch { toast("Not a valid inbox export"); }
+  e.target.value = "";
+});
+
+/* =========================================================================
+   PROMPT BUILDERS
+   ========================================================================= */
+function headerBlock(extraRows = []) {
+  const d = now(); const missing = [];
+  if (!S.skillRepo) missing.push("SKILL_REPO"); if (!S.vaultPath) missing.push("VAULT_ROOT");
+  const rows = [
+    ["SKILL_REPO", S.skillRepo || "<<FILL: absolute path of the skill repository>>", "Repository that contains the Obsidian Zettelkasten skill"],
+    ["SKILL_FILE", skillFileLabel(), "The skill you MUST follow"],
+    ["VAULT_ROOT", vaultRootLabel(), `Obsidian vault “${S.vaultName || "WorkingNotes"}” — every note path below is relative to this folder`],
+    ...extraRows,
+    ["TODAY", `${ymd(d)} (${DAYS[d.getDay()]})`, "Use for relative dates like “besok”, “minggu depan”, “tomorrow”"],
+    ["NOW", localISO(d).replace("T", " "), S.timezone]
+  ];
+  return { missing, text:
+`## 0. REPOSITORIES & PATHS  ← read this first
+
+| Key | Value | Meaning |
+|---|---|---|
+${rows.map(r => `| ${r[0]} | \`${r[1]}\` | ${r[2]} |`).join("\n")}
+
+Path rules:
+- Every file you create or edit in the vault MUST be inside VAULT_ROOT. Full path = VAULT_ROOT + "${sepOf(S.vaultPath || "/")}" + relative path (e.g. \`${vaultFile("Activity/2026-01-31 Example.md")}\`).
+- Use the same path separator as VAULT_ROOT. Keep spaces in file names exactly (they are allowed; quote paths in shell commands).
+- Never write outside VAULT_ROOT${extraRows.some(r => r[0] === "WORK_REPO") ? " — except code changes inside WORK_REPO" : ""}.` };
+}
+function modeBlock() {
+  return S.execMode === "agent"
+? `## 1. EXECUTION MODE: AGENT (you have tools)
+You are running inside **Mage (opencode)** with file-system tools (read / list / glob / grep / write / edit${""}).
+- USE the tools. Read a file before you edit it. Create missing folders.
+- Edit existing files surgically (only the lines you must change). Create new files with their complete content.
+- Do not ask me for confirmation for anything this prompt already decides. Only stop and ask if a required path in section 0 still contains \`<<FILL\`.
+- When finished, print the report defined at the end of this prompt and nothing else.`
+: `## 1. EXECUTION MODE: CHAT (no file access)
+You CANNOT touch files. I will copy your output into the vault by hand.
+- Output every file you create or change as a FILE BLOCK (format defined in the Output section).
+- A FILE BLOCK always contains the COMPLETE final content of that file (never a diff, never "…rest unchanged").
+- For files that already exist, their current content is given to you in the Vault snapshot section — start from it and change only what is required.
+- If an existing file's current content is NOT given to you, do NOT output the full file; instead output an APPEND/PATCH BLOCK describing exactly which lines to add and where.`;
+}
+function skillBlock(n) {
+  return `## ${n}. LOAD THE SKILL (mandatory, before anything else)
+1. ${S.execMode === "agent" ? "Open and read SKILL_FILE completely." : "You cannot open SKILL_FILE; use Appendix A (it is the same text)."}
+2. ${S.embedSkill ? "Appendix A at the end of this prompt contains the same skill text. If SKILL_FILE cannot be read, Appendix A is authoritative." : "If SKILL_FILE cannot be read, STOP and tell me."}
+3. Also look at \`Template/Activity Template.md\`, \`Template/Project Template.md\`, \`Template/Daily Template.md\` in VAULT_ROOT${S.execMode === "agent" ? " (read them)" : " (their content is in the skill)"}.
+4. Priority when two rules conflict: (1) "Resolved decisions" in THIS prompt → (2) SKILL_FILE → (3) the files in \`Template/\`.`;
+}
+function projectTableText() {
+  if (!V.loaded) return null;
+  const ps = [...V.projects.values()].sort((a, b) => a.name.localeCompare(b.name));
+  return `| Project (exact file name) | Status | Tags | Followup Date | Open TODO | Note exists |
+|---|---|---|---|---|---|
+${ps.map(p => `| ${p.name} | ${p.status || "—"} | ${p.tags.join(", ") || "—"} | ${p.followup || "—"} | ${tasksFor(p.name).filter(t => ["open", "doing", "blocked"].includes(t.state)).length} | ${p.missing ? "NO (only referenced)" : "yes"} |`).join("\n")}`;
+}
+function mappingTableText() {
+  return `| Keyword(s) in note (case-insensitive) | Project | Dashboard tag |
+|---|---|---|
+${MAP.map(m => `| ${m.keywords.map(k => `"${k}"`).join(", ")} | ${m.project} | ${m.tag || (V.projects.get(m.project) || {}).tags?.join(", ") || "track9 (default)"} |`).join("\n")}`;
+}
+function fileDump(f, maxChars = 12000) {
+  const c = f.content.length > maxChars ? f.content.slice(0, maxChars) + "\n…(truncated by app)" : f.content;
+  return `#### \`${f.path}\`\n${fenced(c, "markdown")}`;
+}
+function appendixSkill() {
+  return S.embedSkill ? `\n\n---\n## APPENDIX A — Embedded copy of SKILL_FILE (Obsidian Zettelkasten)\n${fenced(skillText(), "markdown")}\n` : "";
+}
+
+/* ---------- 1) Categorize notes ---------- */
+function buildNotesPrompt(notes, extra) {
+  const H = headerBlock(); const ids = assignIds(notes);
+  notes = sortNotes(notes);
+  const analyses = notes.map(n => ({ n, a: analyzeNote(n), ids: ids.get(n.id) }));
+  const dates = [...new Set(analyses.map(x => x.a.date))].sort();
+  const projNames = [...new Set(analyses.flatMap(x => x.a.detected.map(d => d.project)))];
+  let snap;
+  if (S.includeVaultIndex && V.loaded) {
+    const relFiles = [];
+    for (const p of projNames) { const pr = V.projects.get(p); if (pr && pr.file) relFiles.push(pr.file); }
+    if (S.updateDaily) for (const d of dates) { const f = V.files.find(x => x.kind === "daily" && x.name === `${d} Kerjaan`); if (f) relFiles.push(f); }
+    const recent = V.activities.slice(0, 25);
+    const know = V.files.filter(f => f.kind === "knowledge");
+    const taskNotes = V.files.filter(f => f.kind === "tasknote");
+    snap = `## 3. VAULT SNAPSHOT (read by the app at ${V.loadedAt.toLocaleString()} — treat as current)
+
+### 3.1 Existing Project notes (\`Project/\`)
+${projectTableText()}
+
+### 3.2 Most recent Activity notes (newest first — avoid duplicates of the same event)
+${recent.length ? recent.map(a => `- \`Activity/${a.file.name}.md\` — ${a.category || "?"} — ${a.projects.join(", ") || "no project"} — id ${a.file.fm.id || "?"}`).join("\n") : "- (none)"}
+
+### 3.3 Knowledge notes (for ZTK-005 links)
+${know.length ? know.map(f => `- id \`${f.fm.id || "?"}\` — [[${f.name}]] — ${f.fm.title || ""}`).join("\n") : "- (none yet)"}
+
+### 3.4 Task List notes
+${taskNotes.length ? taskNotes.map(f => `- [[${f.name}]] — Status: ${f.fm.Status || "?"} — Project: ${asArr(f.fm.Project).map(linkName).join(", ") || "?"}`).join("\n") : "- (none yet)"}
+
+### 3.5 Current content of files you will probably UPDATE
+${relFiles.length ? relFiles.map(f => fileDump(f)).join("\n\n") : "_No existing Project/Daily file matched the notes. Double-check by listing `Project/` and `Daily/` yourself before creating new ones._"}
+
+### 3.6 IDs already used in the vault (never reuse)
+${[...V.ids].sort().slice(-60).join(", ") || "(none)"}${V.ids.size > 60 ? ` … (+${V.ids.size - 60} older)` : ""}`;
+  } else {
+    snap = `## 3. VAULT SNAPSHOT
+The app did not include a snapshot. ${S.execMode === "agent" ? "Before step 5.2 you MUST list `VAULT_ROOT/Project/`, `VAULT_ROOT/Daily/` and `VAULT_ROOT/Task List/` yourself and read every Project note you plan to update." : "Assume the Project names from the mapping table already exist; when you must update one, output an APPEND/PATCH BLOCK instead of a full file, and flag it in the report as “VERIFY”."}`;
+  }
+  const noteBlocks = analyses.map(({ n, a, ids }, i) => `### NOTE ${i + 1} of ${notes.length}
+| Field | Value |
+|---|---|
+| Captured at | ${n.capturedAt.replace("T", " ")} |
+| Reserved IDs for files created from this note | ${ids.map(x => `\`${x}\``).join(", ")} — use them in this order (1st file = 1st ID); if you need more, continue +1 minute and skip every ID in 3.6 and every ID reserved for other notes |
+| Title (from me) | ${n.title || "—"} |
+| Type hint (from me) | ${n.type || "Auto"} |
+| Category hint (from me) | ${n.category || "Auto"} |
+| Project hint (from me) | ${n.project || "Auto"} |
+| Extra tags (from me) | ${n.tags || "—"} |
+| Source / reference | ${n.source || "—"} |
+| App pre-analysis (hint only, verify!) | project: ${a.detected.map(d => `${d.project} (matched “${d.keyword}”)`).join("; ") || "none"} · type: ${a.type}${a.category ? " / " + a.category : ""} · file: \`${a.fname}\` |
+
+Raw text (verbatim, do not lose any fact from it):
+${fenced(n.text, "text")}`).join("\n\n");
+
+  const P = [];
+  P.push(`# PROMPT: File my raw notes into the Obsidian vault “${S.vaultName || "WorkingNotes"}”
+
+You are **${S.modelName || "the local LLM"}**, my careful personal knowledge-management agent. Your ONLY job in this run: take the RAW NOTES in section 4, categorize every piece of information exactly according to the **Obsidian Zettelkasten skill**, and create / update the correct Markdown files in the vault.
+
+How to work:
+- Precision beats speed. Follow the numbered steps in order. Do not skip a step. Do not invent facts.
+- Think through each decision (type, project, file name, ID, frontmatter) before writing. You may reason internally, but the final answer must follow the Output section exactly.
+- When something is truly unclear, choose the safest option described here AND list it under “Assumptions” in the report.`);
+  P.push(H.text);
+  P.push(modeBlock());
+  P.push(skillBlock(2));
+  P.push(snap);
+  P.push(`## 4. RAW NOTES TO PROCESS (${notes.length})\n\n${noteBlocks}`);
+  P.push(`## 5. PROCEDURE — do ALL steps for EVERY note, in this order
+
+**5.1 Understand.** Read the whole note. Make a private list of: every event (what happened, when, who), decisions, action items (who/what/deadline), deadlines/dates, reusable concepts/knowledge, external sources, images (\`![[Pasted image …]]\`).
+
+**5.2 Resolve the Project** (Skill rule 1 “Always Check Project First”).
+  a. If I gave a Project hint → use it.
+  b. Else match keywords with the mapping table in 6.2 (case-insensitive, whole words).
+  c. Else compare against the existing Project list (section 3.1${S.execMode === "agent" ? " or your own listing of `Project/`" : ""}). Treat names that differ only by case/spacing/typo as the SAME project. **Never create a duplicate Project note.**
+  d. No match but it is clearly work on a named initiative → ${S.allowNewProject ? "create a NEW Project note (6.8b)." : "do NOT create a project; file it as Activity with the closest project, or as Knowledge, and ask me in the report."}
+  e. Not tied to any project (a general concept) → Knowledge note only.
+  f. One note can touch several projects → one Activity per project (atomic, ZTK-001), unless it is one meeting about several projects: then one Activity whose \`Project\` list contains all of them.
+
+**5.3 Decide the note type(s)** with table 6.1. One raw note MAY produce several files (ZTK-001 atomic): e.g. meeting → 1 Activity; the reusable concept inside it → 1 Knowledge note; its action items → TODO lines in the Project note; the day → a row in the Daily note.
+
+**5.4 Build** for each new file: ID (6.4) → file name (6.5) → frontmatter (6.6) → body (6.7).
+
+**5.5 Update the Project note(s)** (6.8).
+
+**5.6 ${S.updateDaily ? "Update the Daily note(s)" : "Daily note: SKIP (disabled by me) unless the note itself is a daily summary"}** (6.9).
+
+**5.7 ${S.execMode === "agent" ? "Write the files with your tools." : "Print the FILE BLOCKS."}**
+
+**5.8 Self-check** with section 7. Fix every “no” before you finish.
+
+**5.9 Print the report** (section 9).`);
+  P.push(`## 6. RESOLVED DECISIONS (authoritative)
+
+### 6.1 Type decision table
+| Signal in the note | Type | Folder |
+|---|---|---|
+| Something that HAPPENED at a point in time: meeting, rapat, kickoff, diskusi/discussion, sync, call, implementation/coding, deployment/release, writing documentation | **Activity** | \`Activity/\` |
+| A new project/initiative, a project status change (Explore/Ongoing/Done), a list of TODOs for a project | **Project** (create or update) | \`Project/\` |
+| A concept, definition, how-to, lesson learned, reusable insight not tied to one event | **Knowledge** | \`Knowledge/\` |
+| A summary of the whole working day (“hari ini…”, “today I…”) | **Daily** | \`Daily/\` |
+| A concrete standalone task with details (acceptance criteria, due date, priority) or my type hint = Task | **Task note** + TODO line in the Project | \`Task List/\` |
+
+Activity \`Category\` — choose exactly ONE: \`Meeting\` (scheduled meeting with several people) · \`Kickoff\` (first meeting / start of a project or phase) · \`Implementation\` (coding, config, fixing, migrating) · \`Deployment\` (release to SIT/UAT/PROD, go-live) · \`Discussion\` (informal talk, chat, quick sync, async thread) · \`Documentation\` (writing specs/docs/Confluence). My category hint wins if given.
+
+### 6.2 Project mapping (Skill rule 2)
+${mappingTableText()}
+
+### 6.3 Tags (ZTK-008): 1–5 tags, lowercase, hyphen for multi-word.
+- Project note: \`track9\` (default, main office work) or \`sidejob\` (only if the mapping says so, the existing note says so, or the note says side job/sidejob/freelance).
+- Knowledge note: \`knowledge\` + 1–4 topic tags.
+- Daily note: \`daily\` + the tags of every project touched that day.
+- Activity note: no \`tags\` key (not in the skill's Activity structure). Task note: \`task\` + the project's tag.
+- Add my “extra tags” where they fit, still max 5.
+
+### 6.4 IDs (ZTK-002)
+- Format \`YYYYMMDDHHmm\`, ALWAYS written quoted: \`id: "202609241015"\`.
+- Use the reserved IDs from the note's table in order (first file = first ID). Never use an ID reserved for another note or already used (3.6). If the note text states a different date/time for the event, use that date for \`Date\` and file name, but keep the reserved ID.
+- Daily note ID: \`YYYYMMDD0000\` of that day. Never change the ID of an existing file.
+
+### 6.5 File names (Skill rule 9)
+- Activity: \`Activity/YYYY-MM-DD <Description>.md\` — Description ≤ 60 chars, meaningful (ZTK-003), include the project short name. Example: \`Activity/2026-09-24 Meeting kurs valas SBN.md\`.
+- Project: \`Project/<Exact Project Name>.md\` (name from mapping / existing list).
+- Knowledge: \`Knowledge/<Topic as a short meaningful phrase>.md\`.
+- Daily: \`Daily/YYYY-MM-DD Kerjaan.md\`.
+- Task: \`Task List/<Short task title>.md\`.
+- Forbidden characters in names: \`\\ / : * ? " < > | # ^ [ ]\` → replace with a space or “-”.
+- Same name already exists: if it is the SAME event/topic → UPDATE that file instead; otherwise add \` 2\` to the new name.
+
+### 6.6 Frontmatter — exact keys, exact order, exact spelling (case-sensitive)
+
+Activity:
+${fenced(`---
+id: "YYYYMMDDHHmm"
+Category:
+  - Meeting
+Project:
+  - "[[Exact Project Name]]"
+Date: YYYY-MM-DD
+Summary: |
+  - one or two lines: what happened + the key outcome
+---`, "yaml")}
+
+Project (new):
+${fenced(`---
+id: "YYYYMMDDHHmm"
+Status: Ongoing
+Followup Date: YYYY-MM-DD
+todo:
+tags:
+  - track9
+---
+
+### TODO
+
+> [!TODO] TODO
+> - [ ] first concrete task
+
+### Summary Activity
+![[Activity Base.base#Specific Activity]]`, "markdown")}
+
+Knowledge:
+${fenced(`---
+id: "YYYYMMDDHHmm"
+title: "Meaningful statement of the idea"
+type: PERMANENT
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+tags: [knowledge, topic-one]
+links: []
+---`, "yaml")}
+(\`type\`: PERMANENT if written in my own words and complete; FLEETING if it is a rough idea that needs processing; LITERATURE if it summarizes an external source. \`links\`: IDs of related Knowledge notes from 3.3, or \`[]\`.)
+
+Daily (new file):
+${fenced(`---
+id: "YYYYMMDD0000"
+title: "YYYY-MM-DD Kerjaan"
+type: PERMANENT
+Date: YYYY-MM-DD
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+tags:
+  - daily
+  - track9
+links: []
+---
+[[Daily-Notes]]
+
+## Activity
+
+| Time | Project | Category | Summary |
+| --- | --- | --- | --- |
+
+## Notes
+
+-
+
+## Tomorrow
+
+- [ ]`, "markdown")}
+
+Task note:
+${fenced(`---
+id: "YYYYMMDDHHmm"
+Status: Todo
+Priority: Medium
+Project:
+  - "[[Exact Project Name]]"
+Due: YYYY-MM-DD
+Created: YYYY-MM-DD
+tags:
+  - task
+  - track9
+---
+
+# Task title
+
+## Description
+What must be done and why (from the note).
+
+## Acceptance Criteria
+- [ ] measurable result 1
+
+## Log
+- YYYY-MM-DD: Task created from note.`, "markdown")}
+(\`Status\`: Todo | In Progress | Blocked | Done. \`Priority\`: High | Medium | Low — High only if the note says urgent/penting/ASAP or the due date is ≤ 3 days away. Leave \`Due\` empty if no date is known.)
+
+YAML rules: \`---\` on the first line; two-space indentation for lists; wiki-links inside YAML are ALWAYS quoted (\`- "[[Name]]"\`); empty values stay empty (\`Followup Date:\`), never \`null\` or \`""\`; no keys other than those shown.
+
+### 6.7 Body rules
+- **No information loss.** Every name, number, amount, date, decision and action item in the raw note must appear in some created/updated file. Rewrite into clean structure in my language (ZTK-004), but do not summarize facts away.
+- Activity body sections (omit empty ones, keep this order): \`## Konteks\` (who/why) · \`## Poin Penting\` · \`## Keputusan\` · \`## Action Item\` (checkbox list: \`- [ ] <what> — <who> — 📅 YYYY-MM-DD\`) · \`## Sumber\` (if a source was given, ZTK-009: name, page/timestamp, access date).
+- Knowledge body: \`# <title>\`, core idea in my own words, \`## Mengapa Penting\`, \`## Tautan\` with ≥ 1 link \`- Berkaitan dengan [[Note]] karena <reason>\` (ZTK-005), and \`## Sumber\` if external (ZTK-009).
+- Keep image embeds exactly as written (\`![[Pasted image YYYYMMDDHHmmss.png]]\`).
+- Convert relative dates (“besok”, “Jumat depan”, “next week”) to absolute \`YYYY-MM-DD\` using TODAY.
+- Language: ${S.language}
+- Unknown information → leave empty or write \`TBD\` and ask in the report. Never guess names, numbers or dates.
+
+### 6.8 Project note updates
+a. **Existing Project** — edit only what is needed:
+   - Add every NEW action item that belongs to the project as a checkbox INSIDE the TODO callout: \`> - [ ] <task>\` (add \` 📅 YYYY-MM-DD\` when a due date is known). Keep the \`> \` prefix on every callout line.
+   - Do not add a TODO that already exists with the same meaning. If the note says an existing TODO is finished → change \`[ ]\` to \`[x]\`; never delete TODO lines.
+   - \`Followup Date\`: set to the nearest upcoming date mentioned for the next follow-up/deadline (only if it is sooner than the current value or the current value is empty/past).
+   - \`Status\`: change ONLY if the note explicitly says so: started/berjalan → \`Ongoing\`; selesai/done/go-live finished → \`Done\`; riset/explore/ide → \`Explore\`.
+   - Never touch \`### Summary Activity\` and its embed line. Never change \`id\` or \`tags\` (you may ADD a missing \`track9\`/\`sidejob\` tag).
+b. **New Project** (${S.allowNewProject ? "allowed" : "NOT allowed — ask me instead"}): use the Project template in 6.6; \`Status: Ongoing\` (or \`Explore\` if the note is exploratory); \`tags\` from 6.3; TODO = the action items; \`Followup Date\` = nearest date or empty.
+
+### 6.9 Daily note${S.updateDaily ? "" : " (DISABLED — only if the note itself is a daily summary)"}
+- One file per date that received an Activity in this run: \`Daily/YYYY-MM-DD Kerjaan.md\`. Create it (6.6) if missing.
+- \`[[Daily-Notes]]\` must be the first line right after the frontmatter.
+- Add one row per Activity to the \`## Activity\` table: \`| HH:mm | <Project name, plain text> | <Category> | <one-line summary> |\`. **No wiki-links in the Daily body** except \`[[Daily-Notes]]\` (skill rule 5: summaries, not links). Delete an empty placeholder row \`| | | | |\` if present. Keep rows sorted by time.
+- Things planned for tomorrow/besok → \`## Tomorrow\` as \`- [ ] …\`.
+- Update \`updated:\` to TODAY and merge project tags into \`tags\` (max 5).
+
+### 6.10 Forbidden
+- Creating files in \`Archive/\`; editing \`Base/*.base\` or \`Template/*\`; deleting or renaming any file; deleting a PERMANENT note (ZTK-010); changing an existing \`id\`; reformatting parts of a file you did not need to change; creating a second Project note for the same project; putting \`\`\` fences inside frontmatter; adding keys not listed in 6.6.`);
+  P.push(`## 7. SELF-CHECK — answer each silently; fix every “no” before finishing
+1. Did I read the skill (SKILL_FILE or Appendix A)?
+2. Does every new file have frontmatter with EXACTLY the keys/order of 6.6 and a quoted unique \`id\`?
+3. Does every Activity have exactly one \`Category\` and a \`Project\` list with quoted wiki-links whose names exactly match a Project file?
+4. Does every Project I linked exist (existing or created in this run)? No duplicate Project notes?
+5. Is every file name valid (6.5) and in the right folder? Nothing in \`Archive/\`, \`Base/\`, \`Template/\`?
+6. Is every fact / number / date / name from each raw note present somewhere? (Re-read each raw note line by line.)
+7. Are all action items in the Project TODO callout (with \`> \` prefix) and not duplicated?
+8. Are relative dates converted to YYYY-MM-DD?
+9. Is every Knowledge note atomic (one idea) with ≥ 1 link in \`## Tautan\`?
+10. ${S.updateDaily ? "Daily note: `[[Daily-Notes]]` right after frontmatter, one table row per Activity, no other wiki-links?" : "Daily note skipped as instructed (unless the note was a daily summary)?"}
+11. Tags: 1–5, lowercase, hyphenated?
+12. Only files mentioned in the report were touched?`);
+  P.push(S.execMode === "agent"
+? `## 8. OUTPUT
+Write the files with your tools. Do NOT paste full file contents into the chat. Then print ONLY the report of section 9.`
+: `## 8. OUTPUT — exact format, nothing before the plan
+
+First a plan table (one row per file), then one block per file:
+
+${fenced(`=== FILE: <full path starting with VAULT_ROOT> ===
+ACTION: CREATE | UPDATE
+~~~~markdown
+<complete final file content>
+~~~~
+=== END FILE ===`, "text")}
+
+For an existing file whose content was NOT given in section 3, use instead:
+
+${fenced(`=== PATCH: <full path> ===
+WHERE: <exact line after which to insert / exact line to replace>
+~~~~markdown
+<lines to insert or the replacement line>
+~~~~
+=== END PATCH ===`, "text")}`);
+  P.push(`## 9. REPORT — print exactly this structure at the end
+
+${fenced(`### Filing report
+| # | From note | Action | Type | Path (relative to VAULT_ROOT) | Project | id |
+|---|---|---|---|---|---|---|
+| 1 | NOTE 1 | CREATE | Activity/Meeting | Activity/2026-09-24 Meeting kurs valas SBN.md | IPO SBN Valas | 202609241015 |
+
+### Project updates
+- IPO SBN Valas: +2 TODO, Followup Date 2026-09-26 → 2026-09-25, Status unchanged
+
+### Assumptions
+- …
+
+### Questions for me
+- … (write "none" if nothing is unclear)`, "markdown")}`);
+  P.push(`## 10. WORKED EXAMPLE (shows the expected quality — do NOT create these example files)
+
+Raw note (captured 2026-09-24 10:15): “Rapat dgn tim bisnis SBN Valas. Min order USD 1000 kelipatan 1000. Form harus jadi Jumat depan. Budi (BE) siapin endpoint kurs. Btw signal lebih simpel dr BehaviorSubject buat state form.”
+
+Correct result:
+1. \`Activity/2026-09-24 Meeting requirement form SBN Valas.md\` — id "202609241015", Category Meeting, Project "[[IPO SBN Valas]]", Date 2026-09-24, Summary “Rapat requirement form SBN Valas: min order USD 1.000 kelipatan 1.000; form target 2026-10-02.”; body with Konteks / Poin Penting / Keputusan / Action Item (“- [ ] Endpoint kurs valas — Budi (BE)”, “- [ ] Form pemesanan SBN Valas — 📅 2026-10-02”).
+2. \`Knowledge/Signal lebih sederhana dari BehaviorSubject untuk state form.md\` — id "202609241016", type FLEETING (rough idea), tags [knowledge, angular, signals], \`## Tautan\` → \`[[IPO SBN Valas]]\`.
+3. \`Project/IPO SBN Valas.md\` UPDATE — two new \`> - [ ]\` lines in the TODO callout (skip if identical TODO exists), Followup Date → 2026-10-02 only if sooner than the current one.
+4. \`Daily/2026-09-24 Kerjaan.md\` — row \`| 10:15 | IPO SBN Valas | Meeting | Requirement form SBN Valas: min USD 1.000, target 2 Okt. |\`.`);
+  if (extra && extra.trim()) P.push(`## 11. EXTRA INSTRUCTIONS FROM ME (higher priority than section 6 when they conflict)\n${extra.trim()}`);
+  return { text: P.join("\n\n") + appendixSkill(), missing: H.missing };
+}
+
+/* ---------- 2) Task prompts for Mage ---------- */
+const MODES = {
+  execute: { label: "Work on it", title: "Work on the task(s)", desc: "Mage plans and does the work (code in WORK_REPO if relevant), then logs the result back to the vault." },
+  breakdown: { label: "Break down", title: "Break the task(s) into subtasks", desc: "Split into small concrete subtasks and write them into the Project TODO / Task note. No implementation." },
+  tasknote: { label: "Create task note", title: "Create detailed Task List note(s)", desc: "Write a full Task List note (description, acceptance criteria, subtasks, risks) linked to the project." },
+  review: { label: "Review status", title: "Review task / project status", desc: "Assess progress from Activity notes, find blockers, propose next actions and follow-up date; apply safe updates." },
+  derive: { label: "New task from this", title: "Create new task(s) derived from the listed one(s)", desc: "Describe the new task in “Extra instructions”; Mage creates it in the right Project TODO (+ Task note if detailed)." }
+};
+function taskBlock(t, i, total, detailLevel) {
+  const p = projOf(t); const ctx = contextBlock(t);
+  const acts = t.project ? activitiesFor(t.project) : [];
+  const lines = [`### TASK ${i + 1} of ${total}: ${t.text}
+| Field | Value |
+|---|---|
+| Task text (exact) | ${t.raw.replace(/\|/g, "\\|")} |
+| State | ${STATE_LABEL[t.state]} |
+| Due | ${t.due || "—"} |
+| Priority | ${t.priority || "—"} |
+| Project | ${t.project || "— (none detected)"} |
+| Project status / follow-up / tags | ${p ? `${p.status || "—"} / ${p.followup || "—"} / ${p.tags.join(", ") || "—"}` : "—"} |
+| Source file | \`${vaultFile(t.file.path)}\` (line ${t.line}${t.heading ? `, section “${t.heading}”` : ""}) |`];
+  if (t.kind === "tasknote") lines.push(`\nFull Task note:\n${fenced(t.file.content, "markdown")}`);
+  else lines.push(`\nSource context (the task line is inside this block):\n${fenced(ctx.text, "markdown")}`);
+  if (detailLevel >= 1 && p && p.file && t.kind !== "project") lines.push(`\nProject note \`Project/${p.name}.md\`:\n${fenced(p.file.content, "markdown")}`);
+  const sib = t.project ? tasksFor(t.project).filter(x => x.id !== t.id && !["done", "cancelled"].includes(x.state)) : [];
+  if (detailLevel >= 1 && sib.length) lines.push(`\nOther open tasks in ${t.project} (for context / dependencies — do NOT work on them unless listed in section 4):\n${sib.map(x => `- [${x.state === "doing" ? "/" : " "}] ${x.text}${x.due ? " 📅 " + x.due : ""} — \`${x.file.path}\``).join("\n")}`);
+  if (detailLevel >= 1 && acts.length) {
+    lines.push(`\nActivity history for ${t.project} (${acts.length}, newest first):\n${acts.map(a => `- ${a.date} · ${a.category || "?"} · \`${a.file.name}\` — ${a.summary.replace(/^-\s*/gm, "").replace(/\n/g, " ") || "(no summary)"}`).join("\n")}`);
+    const full = acts.slice(0, detailLevel >= 2 ? 3 : 1);
+    lines.push(`\nFull text of the ${full.length} most recent Activity note(s):\n${full.map(a => fileDump(a.file, 6000)).join("\n\n")}`);
+  }
+  return lines.join("\n");
+}
+function buildTaskPrompt(tasks, mode, extra, opts = {}) {
+  const work = (opts.workRepo ?? S.workRepo) || "";
+  const H = headerBlock([["WORK_REPO", work || "(none — only if the task needs code; ask me if needed)", "Code / project repository where implementation happens"]]);
+  const M = MODES[mode];
+  const projects = [...new Set(tasks.map(t => t.project).filter(Boolean))];
+  const detail = tasks.length > 8 ? 0 : tasks.length > 3 ? 1 : 2;
+  const P = [];
+  const scope = opts.projects ? `the Ongoing projects (${opts.projects.join(", ")})` : opts.project ? `the project “${opts.project}”` : `${tasks.length} task(s) from my vault`;
+  P.push(`# PROMPT FOR MAGE: ${M.title}
+
+You are **${S.modelName || "the local LLM"}** running as **Mage (opencode)**, my engineering + project assistant. This prompt was generated by my WorkingNotes Hub from ${scope}. Everything you need is below: paths, the task(s), and their full context from my Obsidian vault.
+
+Goal of this run: **${M.desc}**
+
+Work carefully and completely. Follow the steps in order. Do not invent facts that are not in the context; ask instead.`);
+  P.push(H.text);
+  P.push(modeBlock());
+  P.push(skillBlock(2) + `\n5. Every note you create or edit in the vault must follow the skill exactly (frontmatter keys, file names, IDs \`YYYYMMDDHHmm\` quoted, wiki-links quoted in YAML).`);
+  if (S.includeVaultIndex && V.loaded) P.push(`## 3. PROJECT OVERVIEW (vault snapshot, ${V.loadedAt.toLocaleString()})\n${projectTableText()}`);
+  if (opts.projects) {
+    P.push(`## 3b. PROJECT NOTES UNDER REVIEW\n${opts.projects.map(n => { const p = V.projects.get(n); const acts = activitiesFor(n); return `### ${n}\n${p && p.file ? fenced(p.file.content, "markdown") : "_No Project note file._"}\nActivity history (${acts.length}):\n${acts.map(a => `- ${a.date} · ${a.category || "?"} · ${a.summary.replace(/^-\s*/gm, "").replace(/\n/g, " ") || a.file.name}`).join("\n") || "- none"}`; }).join("\n\n")}`);
+  } else if (opts.project) {
+    const p = V.projects.get(opts.project);
+    if (p && p.file) P.push(`## 3b. PROJECT NOTE \`Project/${p.name}.md\`\n${fenced(p.file.content, "markdown")}`);
+  }
+  P.push(`## 4. THE TASK(S) (${tasks.length})\n\n${tasks.length ? tasks.map((t, i) => taskBlock(t, i, tasks.length, opts.projects ? 0 : detail)).join("\n\n---\n\n") : "_No open tasks were found — review the project notes above instead._"}`);
+  const steps = {
+    execute: `1. Read section 4 fully. Restate each task in one sentence and list its acceptance criteria (derive them from the context if missing; mark derived ones “(assumed)”).
+2. If a task needs code: work in WORK_REPO. Inspect the relevant files first, make a short plan, implement in small steps, run the project's existing lint/tests/build, and fix failures. Never commit secrets; do not push unless I ask. ${work ? "" : "WORK_REPO is not set — if code is required, STOP after the plan and ask me for the repository path."}
+3. If a task is non-code (analysis, document, follow-up message, decision): produce the deliverable directly in your answer (or as a Knowledge/Activity note if it is worth keeping).
+4. Log the work in the vault (skill):
+   a. Create one Activity note per task worked on: \`Activity/${ymd(now())} <short description>.md\`, Category \`Implementation\` (or \`Documentation\`/\`Discussion\` if that fits better), Project link, Date ${ymd(now())}, Summary = what was done + result. Body: \`## Konteks\`, \`## Yang dikerjakan\`, \`## Hasil\`, \`## Next\`.
+   b. In the Project note TODO callout: mark the task \`[x]\` ONLY if all acceptance criteria are met; if partially done change it to \`[/]\` and add follow-up TODO lines (\`> - [ ] …\`) for what remains. For a Task note: update \`Status\` and append to \`## Log\`.
+   c. ${S.updateDaily ? `Add a row to \`Daily/${ymd(now())} Kerjaan.md\` (create from the Daily template if missing; \`[[Daily-Notes]]\` right after frontmatter; summaries, no links).` : "Daily note update is disabled."}
+5. Report (section 7).`,
+    breakdown: `1. For each task, identify the concrete deliverable and the definition of done.
+2. Split it into 3–10 subtasks. Each subtask: starts with a verb, is doable in ≤ 1 day, is testable, and names the owner if known from context (else no owner).
+3. Order them by dependency. Mark blockers/external dependencies with “(dependency: …)”.
+4. Write them into the vault:
+   - Task from a Project TODO → insert the subtasks as indented checkboxes directly under the parent line inside the callout: \`>   - [ ] subtask\`.
+   - Task note → add/replace the \`## Subtasks\` section with the checkboxes (keep existing ones, mark nothing as done).
+   - Add \` 📅 YYYY-MM-DD\` to a subtask only when a date follows from the context.
+5. Do not implement anything. Report (section 7), including an estimate per subtask (S ≤ 2h, M ≤ 1 day, L > 1 day).`,
+    tasknote: `1. For each task create \`Task List/<Short task title>.md\` with the Task note format below. If a Task note for it already exists, UPDATE that file instead of creating a duplicate.
+2. Fill it richly from the context: Description (what + why + for whom), Acceptance Criteria (measurable checkboxes), Subtasks, Dependencies, Risks & open questions, Links (\`[[Project]]\`, related Activity notes).
+3. Make sure the Project note TODO callout contains the task (add \`> - [ ] <task> — see [[<Task note name>]]\` if missing; do not duplicate).
+4. Task note format:
+${fenced(`---
+id: "YYYYMMDDHHmm"
+Status: Todo
+Priority: High | Medium | Low
+Project:
+  - "[[Exact Project Name]]"
+Due: YYYY-MM-DD
+Created: ${ymd(now())}
+tags:
+  - task
+  - track9
+---
+
+# <Task title>
+
+## Description
+## Acceptance Criteria
+- [ ] …
+## Subtasks
+- [ ] …
+## Dependencies
+## Risks & Open Questions
+## Links
+- [[Exact Project Name]]
+## Log
+- ${ymd(now())}: Task note created from WorkingNotes Hub.`, "markdown")}
+5. Report (section 7).`,
+    review: `1. For every project/task: compare the TODO list with the Activity history. Decide per task: Done (evidence?), In progress, Not started, Blocked (by what?), Stale (no activity > 14 days).
+2. Check dates: overdue due dates, \`Followup Date\` in the past or missing, Activity notes older than 14 days for an Ongoing project.
+3. Propose for each project: the next 1–3 concrete actions, a realistic next \`Followup Date\`, and whether \`Status\` should change (Explore → Ongoing → Done) — with the evidence.
+4. Apply ONLY these SAFE updates in the vault: set a missing/past \`Followup Date\` to your proposed date; add the proposed next actions as \`> - [ ]\` TODO lines (no duplicates); mark \`[x]\` only when an Activity note explicitly proves completion. Do NOT change \`Status\` — list it as a recommendation.
+5. Create one Activity note \`Activity/${ymd(now())} Review <project>.md\` (Category \`Discussion\`) per reviewed project with the findings in 1–3 lines Summary, ${S.updateDaily ? "and a row in today's Daily note." : "(Daily note disabled)."}
+6. Report (section 7) + a review table: | Project | Task | Verdict | Evidence | Next action | Due |.`,
+    derive: `1. Read the listed task(s) as the PARENT context. The new task(s) I want are described in “Extra instructions” (section 8). If section 8 is empty, propose 1–3 sensible follow-up tasks from the context and create them.
+2. For each new task: decide the Project (same as the parent unless I say otherwise), write a clear title (verb first), due date if known, priority.
+3. Add it to the Project note TODO callout (\`> - [ ] <title> 📅 YYYY-MM-DD\`), directly below the parent task if related. No duplicates.
+4. If the new task has details (acceptance criteria / multiple steps) also create a Task note in \`Task List/\` (format: Status, Priority, Project, Due, Created, tags + Description / Acceptance Criteria / Log).
+5. Report (section 7).`
+  }[mode];
+  P.push(`## 5. STEPS\n${steps}`);
+  P.push(`## 6. RULES
+- Follow the Obsidian Zettelkasten skill for EVERY vault change (Activity frontmatter: \`id\`, \`Category\`, \`Project\`, \`Date\`, \`Summary\`; Project TODO lives inside the \`> [!TODO] TODO\` callout; file names \`YYYY-MM-DD <Description>.md\`; IDs \`YYYYMMDDHHmm\` quoted; unique; ${V.loaded ? `already-used IDs include ${[...V.ids].sort().slice(-15).join(", ")}` : "check existing IDs"}).
+- Never delete lines or files, never rename files, never edit \`Archive/\`, \`Base/\`, \`Template/\`, never change an existing \`id\`.
+- Keep my language (Bahasa Indonesia / English as in the notes).
+- If information is missing, write the question in the report instead of guessing.${S.execMode === "chat" ? "\n- CHAT MODE: output every changed vault file as a FILE BLOCK (`=== FILE: <full path> ===` / `ACTION: CREATE|UPDATE` / fenced full content / `=== END FILE ===`). Use `=== PATCH: <path> ===` + `WHERE:` for files whose full content you do not have." : ""}`);
+  P.push(`## 7. REPORT — print at the end, exactly this structure
+${fenced(`### Result
+<2–5 lines: what was done / decided>
+
+### Vault changes
+| # | Action | Path (relative to VAULT_ROOT) | What changed |
+|---|---|---|---|
+
+### ${mode === "execute" ? "Code changes (WORK_REPO)\n| File | Change |\n|---|---|\n\n### Tests / checks run\n- …\n\n### " : ""}Next steps
+- [ ] …
+
+### Questions for me
+- … (or "none")`, "markdown")}`);
+  if (extra && extra.trim()) P.push(`## 8. EXTRA INSTRUCTIONS FROM ME (highest priority)\n${extra.trim()}`);
+  return { text: P.join("\n\n") + appendixSkill(), missing: H.missing };
+}
+
+/* =========================================================================
+   Prompt dialog
+   ========================================================================= */
+const PD = { kind: null, payload: null, mode: null, opts: {}, file: "" };
+function openNotesPrompt(notes) {
+  if (!notes.length) return toast("Select at least one note");
+  PD.kind = "notes"; PD.payload = notes; PD.opts = {}; PD.mode = null;
+  $("#prompt-title").textContent = `Categorize ${notes.length} note${notes.length > 1 ? "s" : ""} → Obsidian vault`;
+  $("#prompt-options").innerHTML = `<label class="check"><input type="checkbox" id="po-daily" ${S.updateDaily ? "checked" : ""}> Also update the Daily note</label><label class="check"><input type="checkbox" id="po-mark" checked> Mark these notes as “prompted” when I copy / download / send</label>`;
+  $("#po-daily").addEventListener("change", e => { S.updateDaily = e.target.checked; saveSettings(false); regenPrompt(); });
+  $("#prompt-extra").value = "";
+  regenPrompt(); $("#dlg-prompt").showModal();
+}
+function openTaskPrompt(tasks, mode, opts = {}) {
+  if (!V.loaded) return toast("Open the vault first");
+  if (!tasks.length && !opts.project && !opts.projects) return toast("No tasks selected");
+  PD.kind = "task"; PD.payload = tasks; PD.mode = mode; PD.opts = opts;
+  $("#prompt-options").innerHTML = `<div class="mode-row">${Object.entries(MODES).map(([k, m]) => `<label title="${esc(m.desc)}"><input type="radio" name="pmode" value="${k}" ${k === mode ? "checked" : ""}> ${esc(m.label)}</label>`).join("")}</div>
+    <div class="hint" id="po-mode-desc"></div>
+    <label class="f" for="po-work">WORK_REPO for this prompt</label><input type="text" id="po-work" value="${esc(opts.workRepo ?? S.workRepo)}" placeholder="(optional) path of the code repository">`;
+  $$("input[name=pmode]").forEach(r => r.addEventListener("change", () => { PD.mode = r.value; regenPrompt(); }));
+  $("#po-work").addEventListener("input", e => { PD.opts.workRepo = e.target.value; regenPrompt(); });
+  $("#prompt-extra").value = "";
+  regenPrompt(); $("#dlg-prompt").showModal();
+}
+function regenPrompt() {
+  const extra = $("#prompt-extra").value; let r;
+  if (PD.kind === "notes") r = buildNotesPrompt(PD.payload, extra);
+  else {
+    r = buildTaskPrompt(PD.payload, PD.mode, extra, PD.opts);
+    $("#prompt-title").textContent = `${MODES[PD.mode].title} — ${PD.payload.length} task${PD.payload.length === 1 ? "" : "s"}`;
+    $("#po-mode-desc").textContent = MODES[PD.mode].desc;
+  }
+  $("#prompt-text").value = r.text;
+  $("#prompt-warn").innerHTML = r.missing.length ? `<div class="warnbox">⚠ ${r.missing.join(" and ")} not set — the prompt contains <code>&lt;&lt;FILL…&gt;&gt;</code> placeholders. <a href="#" id="pw-fix">Set paths in Settings</a></div>` : "";
+  const fx = $("#pw-fix"); if (fx) fx.addEventListener("click", e => { e.preventDefault(); openSettings(S.skillRepo ? "s-vaultPath" : "s-skillRepo"); });
+  const stamp = localISO(now()).replace(/[-:]/g, "").replace("T", "-");
+  PD.file = `mage-prompt-${stamp}-${PD.kind === "notes" ? "categorize" : PD.mode}.md`;
+  updatePromptStats();
+}
+function updatePromptStats() {
+  const t = $("#prompt-text").value;
+  $("#prompt-stats").textContent = `${t.length.toLocaleString()} chars · ~${Math.round(t.length / 3.6).toLocaleString()} tokens · ${t.split("\n").length} lines`;
+  const path = S.promptFolder ? joinPath(S.promptFolder, PD.file) : PD.file;
+  $("#prompt-cmd").textContent = (S.mageCommand || 'mage "{{file}}"').replace(/\{\{file\}\}/g, path);
+}
+let extraTimer; $("#prompt-extra").addEventListener("input", () => { clearTimeout(extraTimer); extraTimer = setTimeout(regenPrompt, 300); });
+$("#prompt-text").addEventListener("input", updatePromptStats);
+function markPrompted(status = "prompted") {
+  if (PD.kind !== "notes" || !($("#po-mark") || {}).checked) return;
+  for (const n of PD.payload) { const x = INBOX.find(y => y.id === n.id); if (x && x.status !== "filed" && !(x.status === "sent" && status === "prompted")) x.status = status; }
+  saveInbox(); renderInbox();
+}
+$("#btn-copy-prompt").addEventListener("click", async () => { toast((await copyText($("#prompt-text").value)) ? "Prompt copied — paste it into Mage" : "Copy failed — select the text manually"); markPrompted(); });
+$("#btn-dl-prompt").addEventListener("click", () => { download(PD.file, $("#prompt-text").value); toast(`Downloaded ${PD.file}`); markPrompted(); });
+$("#btn-copy-cmd").addEventListener("click", async () => { toast((await copyText($("#prompt-cmd").textContent)) ? "Command copied" : "Copy failed"); });
+$("#btn-send-llm").addEventListener("click", async () => {
+  if (!S.llmBaseUrl) { toast("Set the endpoint Base URL in Settings first"); return openSettings("s-llmBaseUrl"); }
+  const out = $("#llm-response"); out.classList.remove("hidden"); out.textContent = "Sending to " + S.llmBaseUrl + " …";
+  const btn = $("#btn-send-llm"); btn.disabled = true;
+  try {
+    const res = await fetch(S.llmBaseUrl.replace(/\/+$/, "") + "/chat/completions", {
+      method: "POST", headers: { "Content-Type": "application/json", ...(S.llmApiKey ? { Authorization: "Bearer " + S.llmApiKey } : {}) },
+      body: JSON.stringify({ model: S.llmModel || "qwen3.6", temperature: 0.2, stream: false, messages: [{ role: "user", content: $("#prompt-text").value }] })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText} ${JSON.stringify(data).slice(0, 300)}`);
+    out.textContent = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || JSON.stringify(data, null, 2);
+    markPrompted("sent"); toast("Response received");
+  } catch (e) { out.textContent = "Request failed: " + e.message + "\n\nTip: the server must allow CORS for this page. Otherwise use Copy prompt / Download .md and run it in Mage."; }
+  finally { btn.disabled = false; }
+});
+
+/* =========================================================================
+   Settings dialog
+   ========================================================================= */
+const SETTING_KEYS = Object.keys(DEFAULTS);
+function openSettings(focusId) {
+  for (const k of SETTING_KEYS) { const el = $("#s-" + k); if (!el) continue; if (el.type === "checkbox") el.checked = !!S[k]; else el.value = S[k] ?? ""; }
+  $("#dlg-settings").showModal();
+  if (focusId) setTimeout(() => { const el = $("#" + focusId); if (el) { el.focus(); el.select && el.select(); } }, 50);
+}
+function saveSettings(fromForm = true) {
+  if (fromForm) for (const k of SETTING_KEYS) { const el = $("#s-" + k); if (!el) continue; S[k] = el.type === "checkbox" ? el.checked : el.value.trim(); }
+  if (!S.projectMap) S.projectMap = DEFAULT_PROJECT_MAP;
+  MAP = parseMap(S.projectMap); store.set("wnh.settings", S); renderPaths();
+}
+$("#btn-settings").addEventListener("click", () => openSettings());
+$("#btn-settings-save").addEventListener("click", () => { saveSettings(true); $("#dlg-settings").close(); toast("Settings saved"); if (V.loaded) afterLoad(); renderInbox(); renderDetect(); });
+$("#btn-settings-reset").addEventListener("click", () => { if (!confirm("Reset all settings to defaults?")) return; S = Object.assign({}, DEFAULTS); saveSettings(false); openSettings(); });
+$("#btn-settings-export").addEventListener("click", () => { const { llmApiKey, ...rest } = S; download("workingnotes-hub-settings.json", JSON.stringify(rest, null, 2), "application/json"); });
+$("#settings-import").addEventListener("change", async e => { const f = e.target.files[0]; if (!f) return; try { S = Object.assign({}, DEFAULTS, JSON.parse(await f.text())); saveSettings(false); openSettings(); toast("Settings imported"); } catch { toast("Invalid settings file"); } e.target.value = ""; });
+$$("dialog [data-close]").forEach(b => b.addEventListener("click", () => b.closest("dialog").close()));
+$$("dialog").forEach(d => d.addEventListener("click", e => { if (e.target === d) d.close(); }));
+
+/* =========================================================================
+   Header buttons, theme, help, boot
+   ========================================================================= */
+$("#btn-open").addEventListener("click", openVault);
+$("#btn-reload").addEventListener("click", reloadVault);
+$("#btn-demo").addEventListener("click", () => { if (!DEMO_VAULT.length) return toast("Demo vault not embedded"); V.dirHandle = null; indexVault(DEMO_VAULT, "Demo WorkingNotes"); toast("Demo vault loaded — nothing on disk is touched"); });
+function applyTheme(t) { if (t) document.documentElement.setAttribute("data-theme", t); else document.documentElement.removeAttribute("data-theme"); }
+applyTheme(store.get("wnh.theme", null));
+$("#btn-theme").addEventListener("click", () => {
+  const cur = document.documentElement.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  const next = cur === "dark" ? "light" : "dark"; applyTheme(next); store.set("wnh.theme", next);
+});
+$("#help").innerHTML = md(`# How it works
+
+**1. Fill the two repositories** (top bar → click a red chip, or ⚙ Settings):
+- **SKILL_REPO** — folder that contains the Obsidian Zettelkasten skill (\`${DEFAULTS.skillFile}\`).
+- **VAULT_ROOT** — absolute path of your Obsidian vault (\`WorkingNotes\`).
+Both are written at the very top of every generated prompt so Qwen / Mage knows exactly where to read and write.
+
+**2. Open the vault** — *Open vault folder* reads every \`.md\` file locally in the browser (nothing is uploaded). Chrome / Edge remember the folder so **Reload** re-reads it after Mage changed files.
+
+**3. Tasks tab** — every checkbox in Project TODO callouts, Activity action items, Daily “Tomorrow” lists, plus every note in \`Task List/\`. Filter by state, project status, project, source, tag. Click a task to review it with its source context, Project note and all related Activity notes.
+- **Ask Mage to work on it / Break down / Create task note / Review status / New task from this** → builds a very detailed prompt with all that context.
+- Tick several tasks → **Prompt for selected**.
+
+**4. Projects tab** — Ongoing / Explore / Done cards with open tasks, activity count and follow-up date. *Review prompt* creates a status review for one project or all Ongoing ones.
+
+**5. Capture notes** — write any raw note (meeting, idea, task…). The app pre-detects the project from the keyword mapping, suggests type, file name and ID. Save it to the inbox, select one or many and press **Categorize prompt**. Paste the prompt into Mage: it files the notes into Activity / Project / Knowledge / Daily / Task List exactly per the skill, then prints a report. Mark the notes as *filed* and press **Reload** to see them in the vault.
+
+**Sending to Mage** — *Copy prompt* (paste into Mage), *Download .md* (then run the command shown, e.g. \`mage "C:\\\\…\\\\mage-prompt-….md"\` — edit the template in Settings), or *Send to local LLM* if your server exposes an OpenAI-compatible \`/v1/chat/completions\` with CORS enabled.
+
+**Execution mode** — *Agent*: Mage edits the vault files itself (recommended). *Chat*: the LLM prints complete files which you paste yourself.
+
+Your inbox, settings and filters live in this browser's localStorage — use **Export** to back them up.`);
+
+(function boot() {
+  renderPaths(); renderTasks(); renderDetail(); renderProjects(); renderInbox();
+  const draft = store.get("wnh.draft", null);
+  if (draft && draft.text) loadNoteToForm(draft); else resetNoteForm();
+  setTab(UI.tab);
+  idb.get("vault").then(h => { if (h && !V.loaded) { $("#btn-reload").disabled = false; $("#btn-reload").textContent = `↻ Reconnect “${h.name}”`; } });
+})();
+</script>
+</body>
+</html>
