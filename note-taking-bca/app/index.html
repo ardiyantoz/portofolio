@@ -400,9 +400,9 @@ label.btn.disabled{opacity:.5;pointer-events:none}
       <fieldset><legend>Repositories &amp; paths (written at the top of every prompt)</legend>
         <div class="settings-grid">
           <div><label class="f" for="s-skillRepo">1. Skill repository (absolute path)</label><input type="text" id="s-skillRepo" placeholder="C:\Users\you\.mage\skills"></div>
-          <div><label class="f" for="s-skillFile">Skill file (relative to skill repository)</label><input type="text" id="s-skillFile" placeholder="obsidian-zettelkasten/SKILL.md"></div>
+          <div><label class="f" for="s-skillFile">Skill file (relative to skill repository; slashes are unified on Save)</label><input type="text" id="s-skillFile" placeholder="obsidian-zettelkasten/SKILL.md"></div>
           <div><label class="f" for="s-vaultPath">2. Obsidian vault position (absolute path)</label><input type="text" id="s-vaultPath" placeholder="D:\Obsidian\WorkingNotes"></div>
-          <div><label class="f" for="s-vaultName">Obsidian vault name (for obsidian:// links)</label><input type="text" id="s-vaultName" placeholder="WorkingNotes"></div>
+          <div><label class="f" for="s-vaultName">Obsidian vault name (= folder name of the vault, for obsidian:// links)</label><input type="text" id="s-vaultName" placeholder="WorkingNotes"></div>
           <div><label class="f" for="s-workRepo">Default work / code repository (optional, for tasks)</label><input type="text" id="s-workRepo" placeholder="D:\repo\wealth-frontend"></div>
           <div><label class="f" for="s-timezone">Timezone label</label><input type="text" id="s-timezone"></div>
         </div>
@@ -534,6 +534,7 @@ const DEFAULTS = {
   projectMap: DEFAULT_PROJECT_MAP, skillText: ""
 };
 let S = Object.assign({}, DEFAULTS, store.get("wnh.settings", {}));
+setTimeout(() => { normalizePaths(); store.set("wnh.settings", S); renderPaths(); });
 const skillText = () => (S.skillText && S.skillText.trim()) || BUILTIN_SKILL || "(Skill text not embedded — read SKILL_FILE.)";
 function parseMap(txt) {
   return String(txt || "").split("\n").map(l => l.trim()).filter(l => l && !l.startsWith("#")).map(l => {
@@ -1298,7 +1299,7 @@ ${rows.map(r => `| ${r[0]} | \`${r[1]}\` | ${r[2]} |`).join("\n")}
 
 Path rules:
 - Every file you create or edit in the vault MUST be inside VAULT_ROOT. Full path = VAULT_ROOT + "${sepOf(S.vaultPath || "/")}" + relative path (e.g. \`${vaultFile("Activity/2026-01-31 Example.md")}\`).
-- Use the same path separator as VAULT_ROOT. Keep spaces in file names exactly (they are allowed; quote paths in shell commands).
+- Relative paths in this prompt are written Obsidian-style with "/" (e.g. \`Activity/x.md\`). When you build a full path, use the separator of VAULT_ROOT${sepOf(S.vaultPath || "/") === "\\" ? " — i.e. replace every \"/\" with \"\\\"" : ""}. Keep spaces in file names exactly (they are allowed; quote paths in shell commands).
 - Never write outside VAULT_ROOT${extraRows.some(r => r[0] === "WORK_REPO") ? " — except code changes inside WORK_REPO" : ""}.` };
 }
 function modeBlock() {
@@ -1887,8 +1888,26 @@ function openSettings(focusId) {
   $("#dlg-settings").showModal();
   if (focusId) setTimeout(() => { const el = $("#" + focusId); if (el) { el.focus(); el.select && el.select(); } }, 50);
 }
+/* One separator style everywhere: Windows paths (with a drive letter or any "\") use "\",
+   everything else uses "/". The skill file follows the style of the skill repository. */
+const PATH_KEYS = ["skillRepo", "vaultPath", "workRepo", "promptFolder"];
+const winStyle = p => /^[A-Za-z]:|\\/.test(p);
+function normPath(p, win = winStyle(p)) {
+  p = String(p || "").trim().replace(/^"(.*)"$/, "$1");
+  if (!p) return "";
+  p = win ? p.replace(/\//g, "\\").replace(/(?!^)\\{2,}/g, "\\") : p.replace(/\\/g, "/").replace(/\/{2,}/g, "/");
+  return /^[A-Za-z]:\\$|^\/$/.test(p) ? p : p.replace(/[\\/]+$/, "");
+}
+function normalizePaths() {
+  for (const k of PATH_KEYS) S[k] = normPath(S[k]);
+  const win = S.skillRepo ? winStyle(S.skillRepo) : winStyle(S.vaultPath);
+  S.skillFile = normPath(S.skillFile || DEFAULTS.skillFile, win).replace(/^[\\/]+/, "");
+  // Obsidian names a vault after its folder, so obsidian:// links need the folder name of VAULT_ROOT.
+  if (S.vaultPath && (!S.vaultName || S.vaultName === DEFAULTS.vaultName)) S.vaultName = S.vaultPath.split(/[\\/]/).pop() || S.vaultName;
+}
 function saveSettings(fromForm = true) {
   if (fromForm) for (const k of SETTING_KEYS) { const el = $("#s-" + k); if (!el) continue; S[k] = el.type === "checkbox" ? el.checked : el.value.trim(); }
+  normalizePaths();
   if (!S.projectMap) S.projectMap = DEFAULT_PROJECT_MAP;
   MAP = parseMap(S.projectMap); store.set("wnh.settings", S); renderPaths();
 }
