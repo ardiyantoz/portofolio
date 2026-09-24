@@ -208,6 +208,12 @@ label.btn.disabled{opacity:.5;pointer-events:none}
 ul.checklist{list-style:none;padding:0;margin:0}
 ul.checklist li{display:flex;gap:8px;align-items:flex-start;padding:4px 0}
 .strike{text-decoration:line-through;color:var(--muted)}
+.notes-box{margin-top:14px;border:1px solid var(--line);border-left:3px solid var(--ok);border-radius:10px;padding:10px 12px;background:var(--panel-2)}
+.notes-box h4{margin:0 0 6px;font-size:13px;display:flex;gap:8px;align-items:center}
+.notes-box .md{font-size:13px}
+.notes-box textarea{margin-top:8px;min-height:70px;background:var(--panel)}
+.notes-box .row{margin-top:8px}
+.pending-note{font-size:13px;margin:4px 0;padding:4px 8px;border:1px dashed var(--warn);border-radius:6px}
 #pending-bar .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
 #toast .btn{margin-left:10px;color:var(--ink)}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:100;max-width:calc(100vw - 32px)}
@@ -410,6 +416,25 @@ ul.checklist li{display:flex;gap:8px;align-items:flex-start;padding:4px 0}
   </div>
 </dialog>
 
+<!-- COMPLETION NOTE -->
+<dialog id="dlg-done" style="width:min(560px,calc(100vw - 24px))">
+  <div class="dlg">
+    <div class="dlg-h"><h2>Why is this task done?</h2><button class="btn ghost" data-close>✕</button></div>
+    <div class="dlg-b">
+      <div class="hint">Task</div>
+      <div id="dd-task" style="font-weight:600;margin-bottom:8px;overflow-wrap:anywhere"></div>
+      <label class="f" for="dd-text">Completion note: what was done, the result, and why it can be checked off</label>
+      <textarea id="dd-text" rows="5" placeholder="e.g. Form deployed to SIT, QA tested min USD 1.000 validation OK. Confirmed by Budi in standup."></textarea>
+      <div class="hint" id="dd-where" style="margin-top:6px"></div>
+    </div>
+    <div class="dlg-f"><span class="grow">Ctrl/⌘ + Enter to confirm</span>
+      <button class="btn" data-close>Cancel</button>
+      <button class="btn" id="dd-skip">Done without note</button>
+      <button class="btn primary" id="dd-ok">☑ Mark done</button>
+    </div>
+  </div>
+</dialog>
+
 <!-- SNAPSHOT -->
 <dialog id="dlg-snapshot">
   <div class="dlg">
@@ -458,6 +483,7 @@ ul.checklist li{display:flex;gap:8px;align-items:flex-start;padding:4px 0}
         <label class="check"><input type="checkbox" id="s-includeVaultIndex"> Include vault snapshot (project list, related file contents) in prompts</label>
         <label class="check"><input type="checkbox" id="s-updateDaily"> When filing notes, also update the Daily note (<code>Daily/YYYY-MM-DD Kerjaan.md</code>)</label>
         <label class="check"><input type="checkbox" id="s-allowNewProject"> Allow the LLM to create a new Project note when nothing matches</label>
+        <label class="check"><input type="checkbox" id="s-requireDoneNote"> Require a completion note (why it is done) before a task can be marked done</label>
         <label class="check"><input type="checkbox" id="s-doneDate"> When I tick a task done in this app, add <code>✅ YYYY-MM-DD</code> to the line (Obsidian Tasks style)</label>
       </fieldset>
       <fieldset><legend>Optional: send directly to an OpenAI-compatible endpoint</legend>
@@ -569,7 +595,7 @@ const DEFAULTS = {
   mageCommand: 'mage "{{file}}"', promptFolder: "",
   embedSkill: true, includeVaultIndex: true, updateDaily: true, allowNewProject: true,
   llmBaseUrl: "", llmModel: "qwen3.6", llmApiKey: "",
-  projectMap: DEFAULT_PROJECT_MAP, skillText: "", skipFolders: "Archive, Attachment, node_modules", doneDate: false
+  projectMap: DEFAULT_PROJECT_MAP, skillText: "", skipFolders: "Archive, Attachment, node_modules", doneDate: false, requireDoneNote: true
 };
 let S = Object.assign({}, DEFAULTS, store.get("wnh.settings", {}));
 setTimeout(() => { normalizePaths(); store.set("wnh.settings", S); renderPaths(); });
@@ -692,10 +718,10 @@ function md(src, hlLine = -1) {
     if (/^\s*([-*+]|\d+\.)\s+/.test(ln)) {
       const items = [];
       while (i < lines.length && /^\s*([-*+]|\d+\.)\s+/.test(lines[i])) {
-        const l = lines[i]; const indent = l.match(/^\s*/)[0].length;
+        const l = lines[i]; const indent = l.match(/^\s*/)[0].replace(/\t/g, "    ").length;
         const t = l.replace(/^\s*([-*+]|\d+\.)\s+/, ""); const cb = t.match(/^\[(.)\]\s*(.*)$/);
         const cls = [cb ? "task-li" : "", i === hlLine ? "hl-line" : ""].filter(Boolean).join(" ");
-        items.push(`<li style="margin-left:${indent * 8}px"${cls ? ` class="${cls}"` : ""}>${cb ? `<span class="cb cb-${stateOf(cb[1])}"></span>${inlineMd(cb[2])}` : inlineMd(t)}</li>`);
+        items.push(`<li style="margin-left:${indent * 5}px"${cls ? ` class="${cls}"` : ""}>${cb ? `<span class="cb cb-${stateOf(cb[1])}"></span>${inlineMd(cb[2])}` : inlineMd(t)}</li>`);
         i++;
       }
       out.push(`<ul>${items.join("")}</ul>`); continue;
@@ -1223,14 +1249,24 @@ function renderDetail() {
   </div>
   <div class="detail-body">
     ${t.kind === "tasknote" && t.subtasks && t.subtasks.length ? `<div class="sec"><h3>Checklist (${t.subtasks.filter(x => x.state === "done").length}/${t.subtasks.length})</h3><ul class="checklist">${t.subtasks.map((x, i) => `<li>${tickHtml(x, `data-sub="${i}"`)}<span class="${x.state === "done" ? "strike" : ""}">${inlineMd(x.text)}</span>${x.pending ? ` <span class="chip soon">✎ unsaved</span>` : ""}</li>`).join("")}</ul></div>` : ""}
-    <div class="sec"><h3>${t.kind === "tasknote" ? "Task note" : "Source context"}</h3>${t.kind === "tasknote" && t.file.fmRaw ? `<div class="fm">${esc(t.file.fmRaw)}</div>` : ""}<div class="md">${md(ctx.text, ctx.hl)}</div></div>
+    <div class="sec"><h3>${t.kind === "tasknote" ? "Task note" : "Source context"}</h3>${t.kind === "tasknote" && t.file.fmRaw ? `<div class="fm">${esc(t.file.fmRaw)}</div>` : ""}<div class="md">${md(ctx.text, ctx.hl)}</div>${notesBoxHtml(t)}</div>
     ${p && p.file ? `<div class="sec"><h3>Project note</h3><details class="note"><summary><span class="ttl">${esc(p.name)}</span><span class="sub">${esc(p.file.path)}</span></summary><div class="inner"><div class="fm">${esc(p.file.fmRaw)}</div><div class="md">${md(p.file.body)}</div></div></details></div>` : ""}
     ${t.project ? `<div class="sec"><h3>Related activity (${acts.length})</h3>${activityHtml(acts, 1)}</div>` : ""}
     ${others.length ? `<div class="sec"><h3>Other open tasks in ${esc(t.project)} (${others.length})</h3><ul class="checklist">${others.map(o => `<li>${tickHtml(o)}<span><a href="#" data-task="${esc(o.id)}">${inlineMd(o.text)}</a> <span class="hint">· ${esc(KIND_LABEL[o.kind] || o.kind)}</span></span></li>`).join("")}</ul></div>` : ""}
     ${backlinks.length ? `<div class="sec"><h3>Also mentioned in</h3>${backlinks.map(f => `<a href="#" class="wl chip" data-note="${esc(f.name)}">${esc(f.path)}</a>`).join(" ")}</div>` : ""}
   </div>`;
   $$("[data-mode]", el).forEach(b => b.addEventListener("click", () => openTaskPrompt([t], b.dataset.mode)));
-  $$("[data-set-state]", el).forEach(b => b.addEventListener("click", () => changeState(t, b.dataset.setState)));
+  $$("[data-set-state]", el).forEach(b => b.addEventListener("click", () => {
+    const st = b.dataset.setState, txt = ($("#task-note", el) || {}).value?.trim();
+    changeState(t, st, undefined, st === "done" && txt ? { note: txt } : {});
+  }));
+  const tn = $("#task-note", el);
+  if (tn) {
+    tn.addEventListener("input", () => saveDraft(t.id, tn.value));
+    const need = () => { if (tn.value.trim()) return tn.value.trim(); toast("Write the note first"); tn.focus(); return null; };
+    const bd = $("#tn-done", el); if (bd) bd.addEventListener("click", () => { const v = need(); if (v) changeState(t, "done", undefined, { note: v }); });
+    $("#tn-add", el).addEventListener("click", () => { const v = need(); if (v) addNote(t, v); });
+  }
   $$("[data-sub]", el).forEach(b => b.addEventListener("click", () => { const x = t.subtasks[+b.dataset.sub]; changeState(t, x.state === "done" ? "open" : "done", x); }));
   bindTicks(el); bindDetailLinks(el);
 }
@@ -1325,8 +1361,23 @@ const STATE_CHAR = { open: " ", doing: "/", done: "x", cancelled: "-", blocked: 
 const STATUS_WORD = { open: "Todo", doing: "In Progress", done: "Done", cancelled: "Cancelled", blocked: "Blocked" };
 let PENDING = store.get("wnh.pending", []);
 const savePending = () => store.set("wnh.pending", PENDING);
-const pendingKey = e => `${e.vault}|${e.type}|${e.path}|${e.type === "checkbox" ? e.raw : ""}`;
+const pendingKey = e => `${e.vault}|${e.type}|${e.path}|${e.type === "checkbox" ? e.raw : ""}|${e.type === "note" ? e.at : ""}`;
 const myPending = () => PENDING.filter(p => p.vault === V.label);
+function notesBoxHtml(t) {
+  const have = existingNotes(t), pend = t.pendingNotes || [];
+  const where = t.kind === "tasknote" ? `the “## Log” of <code>${esc(t.file.path)}</code>` : `an indented 📝 line under the task in <code>${esc(t.file.path)}</code>`;
+  return `<div class="notes-box">
+    <h4>📝 Notes &amp; completion ${t.state === "done" ? `<span class="chip s-done">Done</span>` : ""}</h4>
+    ${have ? `<div class="md">${md(have)}</div>` : `<div class="hint">No notes yet. Write what was done and why it can be checked off.</div>`}
+    ${pend.map(n => `<div class="pending-note"><span class="chip soon">✎ unsaved</span> 📝 ${esc(n.stamp)}: ${esc(n.text)}</div>`).join("")}
+    <textarea id="task-note" placeholder="What was done? Result, evidence (link / PR / screenshot name), who confirmed, and why it is complete…">${esc(loadDraft(t.id))}</textarea>
+    <div class="row">
+      ${t.state !== "done" ? `<button class="btn primary" id="tn-done">☑ Mark done with this note</button>` : ""}
+      <button class="btn" id="tn-add">＋ Add note</button>
+    </div>
+    <div class="hint" style="margin-top:6px">Saved as ${where}, with date and time.</div>
+  </div>`;
+}
 function tickHtml(t, attr) {
   const done = t.state === "done";
   return `<button class="tick tick-${t.state}" role="checkbox" aria-checked="${done}" title="${done ? "Mark as not done" : "Mark as done"}" ${attr || `data-tick-id="${esc(t.id)}"`}></button>`;
@@ -1349,8 +1400,56 @@ function findTaskLine(lines, e) {
   if (all.length === 1) return all[0];
   throw new Error(all.length ? "the same task text appears several times in the file" : "the task line was changed or removed since the vault was loaded (press Reload)");
 }
+/* ---------- Completion notes: written as indented lines directly under the task ---------- */
+const wsWidth = x => x.replace(/\t/g, "    ").length;
+const noteParts = e => String(e.text).split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+function noteBlock(taskLine, e) {
+  const m = taskLine.match(/^((?:\s*>)*)(\s*)[-*+]\s/) || ["", "", ""];
+  const base = m[1] + (m[2] || (m[1] ? " " : ""));
+  const [first, ...rest] = noteParts(e);
+  return [`${base}\t- 📝 ${e.stamp}: ${first}`, ...rest.map(r => `${base}\t\t- ${r.replace(/^[-*+]\s+/, "")}`)];
+}
+function logEntry(e) { const [first, ...rest] = noteParts(e); return [`- ${e.stamp}: 📝 ${first}`, ...rest.map(r => `\t- ${r.replace(/^[-*+]\s+/, "")}`)]; }
+/* index just after the task line and the lines already indented under it */
+function childEnd(lines, i) {
+  const m = lines[i].match(/^((?:\s*>)*)(\s*)[-*+]\s/) || ["", "", ""]; const quote = m[1], baseW = wsWidth(m[2]);
+  let j = i + 1;
+  while (j < lines.length) {
+    const l = lines[j]; if (!l.startsWith(quote)) break;
+    const rest = l.slice(quote.length); if (!rest.trim() || wsWidth(rest.match(/^\s*/)[0]) <= baseW) break;
+    j++;
+  }
+  return j;
+}
+function appendToLog(lines, entry) {
+  const li = lines.findIndex(l => /^##\s+Log\s*$/.test(l));
+  if (li < 0) { while (lines.length && !lines[lines.length - 1].trim()) lines.pop(); lines.push("", "## Log", ...entry, ""); return; }
+  let end = lines.length; for (let i = li + 1; i < lines.length; i++) if (/^#{1,6}\s/.test(lines[i])) { end = i; break; }
+  let at = end; while (at > li + 1 && !lines[at - 1].trim()) at--;
+  lines.splice(at, 0, ...entry);
+}
+/* existing notes of a task, as Markdown (children of the task line, or the Log of a Task note) */
+function existingNotes(t) {
+  const lines = t.file.content.split(/\r?\n/);
+  if (t.kind === "tasknote") {
+    const li = lines.findIndex(l => /^##\s+Log\s*$/.test(l)); if (li < 0) return "";
+    let end = lines.length; for (let i = li + 1; i < lines.length; i++) if (/^#{1,6}\s/.test(lines[i])) { end = i; break; }
+    return lines.slice(li + 1, end).join("\n").trim();
+  }
+  let i; try { i = findTaskLine(lines, { line: t.line, raw: t.raw }); } catch { return ""; }
+  const m = lines[i].match(/^((?:\s*>)*)(\s*)/); const quote = m[1];
+  const kids = lines.slice(i + 1, childEnd(lines, i)).map(l => l.slice(quote.length));
+  const cut = Math.min(...kids.map(k => (k.match(/^\s*/)[0]).length));
+  return kids.map(k => k.slice(cut)).join("\n");
+}
 function applyEdit(text, e) {
   const nl = text.includes("\r\n") ? "\r\n" : "\n";
+  if (e.type === "note") {
+    const lines = text.split(/\r?\n/);
+    if (e.log) appendToLog(lines, logEntry(e));
+    else { const i = findTaskLine(lines, e); lines.splice(childEnd(lines, i), 0, ...noteBlock(lines[i], e)); }
+    return lines.join(nl);
+  }
   if (e.type === "checkbox") {
     const lines = text.split(/\r?\n/); const i = findTaskLine(lines, e);
     lines[i] = setLineState(lines[i], e.to); return lines.join(nl);
@@ -1361,21 +1460,22 @@ function applyEdit(text, e) {
   let fm = m[2]; const word = STATUS_WORD[e.to];
   fm = /^Status:/m.test(fm) ? fm.replace(/^Status:[^\r\n]*((\r?\n)[ \t]+-[^\r\n]*)*/m, `Status: ${word}`) : `Status: ${word}${nl}${fm}`;
   const lines = (m[1] + fm + text.slice(m[1].length + m[2].length)).split(/\r?\n/);
-  const li = lines.findIndex(l => /^##\s+Log\s*$/.test(l));
-  if (li >= 0) {
-    let end = lines.length; for (let i = li + 1; i < lines.length; i++) if (/^#{1,6}\s/.test(lines[i])) { end = i; break; }
-    let at = end; while (at > li + 1 && !lines[at - 1].trim()) at--;
-    lines.splice(at, 0, `- ${ymd(now())}: Status → ${word} (WorkingNotes Hub)`);
-  }
+  if (lines.some(l => /^##\s+Log\s*$/.test(l))) appendToLog(lines, [`- ${ymd(now())}: Status → ${word} (WorkingNotes Hub)`]);
   return lines.join(nl);
 }
 /* Remember the state on disk, then show pending changes on top of it. */
 function applyPending() {
-  const all = V.tasks.flatMap(t => [t, ...(t.subtasks || []).map(x => Object.assign(x, { file: t.file }))]);
-  for (const t of all) { if (t.diskState === undefined) t.diskState = t.state; t.state = t.diskState; t.pending = false; }
+  const all = V.tasks.flatMap(t => [t, ...(t.subtasks || []).map(x => Object.assign(x, { file: t.file, parent: t }))]);
+  for (const t of all) { if (t.diskState === undefined) t.diskState = t.state; t.state = t.diskState; t.pending = false; t.pendingNotes = []; }
   let changed = false;
   PENDING = PENDING.filter(p => {
     if (p.vault !== V.label) return true;
+    if (p.type === "note") {
+      const t = p.log ? V.tasks.find(x => x.kind === "tasknote" && x.file.path === p.path) : all.find(x => x.file && x.file.path === p.path && x.raw === p.raw && x.kind !== "tasknote");
+      if (!t) return true;
+      if (t.file.content.includes(noteParts(p)[0])) { changed = true; return false; } // already written into the note
+      (t.parent || t).pendingNotes.push(p); return true;
+    }
     const t = p.type === "status" ? V.tasks.find(x => x.kind === "tasknote" && x.file.path === p.path) : all.find(x => x.file && x.file.path === p.path && x.raw === p.raw && x.kind !== "tasknote");
     if (!t) return true;                                  // keep: maybe the note was not loaded
     if (t.diskState === p.to) { changed = true; return false; } // already in the vault (e.g. Mage applied it)
@@ -1384,9 +1484,42 @@ function applyPending() {
   if (changed) savePending();
 }
 function refreshViews() { applyPending(); renderTasks(); renderDetail(); renderProjects(); renderPendingBar(); }
-async function changeState(t, to, sub) {
+function askDoneNote(t, sub) {
+  return new Promise(res => {
+    const d = $("#dlg-done"), ta = $("#dd-text"), req = !!S.requireDoneNote;
+    $("#dd-task").textContent = (sub || t).text; ta.value = loadDraft(t.id);
+    $("#dd-where").textContent = t.kind === "tasknote" && !sub ? `Saved in the “## Log” of ${t.file.path}` : `Saved as an indented 📝 line directly under the task in ${t.file.path}`;
+    $("#dd-skip").classList.toggle("hidden", req);
+    const upd = () => { $("#dd-ok").disabled = req && !ta.value.trim(); }; upd();
+    let settled = false; const finish = v => { if (settled) return; settled = true; d.close(); res(v); };
+    ta.oninput = upd; ta.onkeydown = ev => { if ((ev.ctrlKey || ev.metaKey) && ev.key === "Enter" && !$("#dd-ok").disabled) finish({ note: ta.value.trim() }); };
+    $("#dd-ok").onclick = () => finish({ note: ta.value.trim() });
+    $("#dd-skip").onclick = () => finish({ note: "" });
+    d.onclose = () => finish(null);
+    d.showModal(); ta.focus();
+  });
+}
+const DRAFTS_KEY = "wnh.notedrafts";
+const loadDraft = id => (store.get(DRAFTS_KEY, {})[id] || "");
+const saveDraft = (id, v) => { const d = store.get(DRAFTS_KEY, {}); if (v) d[id] = v; else delete d[id]; store.set(DRAFTS_KEY, d); };
+const stampNow = () => localISO(now()).replace("T", " ");
+function queueNote(t, sub, text) {
+  const target = sub || t;
+  const e = { type: "note", path: t.file.path, vault: V.label, label: target.text, text, stamp: stampNow(), at: new Date().toISOString() };
+  if (t.kind === "tasknote" && !sub) e.log = true; else Object.assign(e, { line: target.line, raw: target.raw });
+  PENDING.push(e); savePending();
+}
+async function addNote(t, text) {
+  queueNote(t, null, text); saveDraft(t.id, "");
+  if (V.dirHandle) return flushPending(`📝 Note saved to ${t.file.name}`);
+  refreshViews(); toast(V.isDemo ? "Demo vault: the note is only kept in this browser" : "Note kept in this browser. Use “Save to vault” in the yellow bar");
+}
+async function changeState(t, to, sub, opts = {}) {
   const target = sub || t;
   if (target.state === to) return;
+  let note = opts.note;
+  if (to === "done" && note === undefined) { const r = await askDoneNote(t, sub); if (!r) return; note = r.note; }
+  if (note) { queueNote(t, sub, note); saveDraft(t.id, ""); }
   const e = sub ? { type: "checkbox", path: t.file.path, line: sub.line, raw: sub.raw }
     : t.kind === "tasknote" ? { type: "status", path: t.file.path }
     : { type: "checkbox", path: t.file.path, line: t.line, raw: t.raw };
@@ -1422,6 +1555,7 @@ async function flushPending(okMsg, undo) {
     return;
   }
   const byPath = new Map(); for (const p of mine) { if (!byPath.has(p.path)) byPath.set(p.path, []); byPath.get(p.path).push(p); }
+  for (const list of byPath.values()) list.sort((a, b) => (a.type === "note" ? 0 : 1) - (b.type === "note" ? 0 : 1)); // notes find the task by its text before a ✅ date changes it
   const errors = []; let saved = 0;
   for (const [path, edits] of byPath) {
     try {
@@ -1458,7 +1592,7 @@ function renderPendingBar() {
   if (!mine.length) { bar.classList.add("hidden"); return; }
   bar.classList.remove("hidden");
   const canSave = !V.isDemo && !!window.showDirectoryPicker;
-  bar.innerHTML = `<span class="msg">✎ <b>${mine.length} task change${mine.length > 1 ? "s" : ""} not saved in the vault yet</b>: ${esc(mine.slice(0, 3).map(p => `${STATE_LABEL[p.to]}: ${p.label}`).join(" · "))}${mine.length > 3 ? " …" : ""}
+  bar.innerHTML = `<span class="msg">✎ <b>${mine.length} task change${mine.length > 1 ? "s" : ""} not saved in the vault yet</b>: ${esc(mine.slice(0, 3).map(p => p.type === "note" ? `📝 note on ${p.label}` : `${STATE_LABEL[p.to]}: ${p.label}`).join(" · "))}${mine.length > 3 ? " …" : ""}
     <span class="acts">${canSave ? `<button class="btn small" id="pb-save">💾 Save to vault</button>` : ""}<button class="btn small" id="pb-prompt">🤖 Prompt for Mage</button><button class="btn small" id="pb-discard">Discard</button></span></span>`;
   if (canSave) $("#pb-save").onclick = () => (V.dirHandle ? flushPending() : connectAndSave());
   $("#pb-prompt").onclick = openPendingPrompt;
@@ -1466,6 +1600,12 @@ function renderPendingBar() {
 }
 function describeEdit(e) {
   const f = V.files.find(x => x.path === e.path); if (!f) return null;
+  if (e.type === "note") {
+    if (e.log) return { log: true, add: logEntry(e) };
+    const lines = f.content.split(/\r?\n/);
+    try { const i = findTaskLine(lines, e); return { lineNo: i + 1, cur: lines[i], add: noteBlock(lines[i], e) }; }
+    catch { return { lineNo: e.line, cur: e.raw, add: noteBlock(`- [ ] ${e.raw}`, e), approx: true }; }
+  }
   if (e.type === "status") return { key: "Status", cur: scalar(f.fm.Status) || "(missing)", next: STATUS_WORD[e.to] };
   const lines = f.content.split(/\r?\n/); let i;
   try { i = findTaskLine(lines, e); } catch { return { lineNo: e.line, cur: `- [${STATE_CHAR[e.from] || " "}] ${e.raw}`, next: setLineState(`- [${STATE_CHAR[e.from] || " "}] ${e.raw}`, e.to), approx: true }; }
@@ -1475,6 +1615,25 @@ function buildPendingPrompt(extra) {
   const H = headerBlock(); const mine = myPending();
   const blocks = mine.map((e, i) => {
     const d = describeEdit(e) || {};
+    if (e.type === "note") return d.log
+? `### CHANGE ${i + 1}: Add a completion note to “${e.label}”
+| Field | Value |
+|---|---|
+| File | \`${vaultFile(e.path)}\` |
+| Where | At the end of the \`## Log\` section (create \`## Log\` at the end of the note if it is missing) |
+
+Append exactly:
+${fenced((d.add || []).join("\n"), "markdown")}`
+: `### CHANGE ${i + 1}: Add a completion note to “${e.label}”
+| Field | Value |
+|---|---|
+| File | \`${vaultFile(e.path)}\` |
+| Task line number (approximate) | ${d.lineNo || e.line} |
+
+Task line (exact):
+${fenced(d.cur || "", "markdown")}
+Insert these line(s) directly below the task line, after any lines that are already indented under it. Keep the leading \`>\` and tab characters exactly:
+${fenced((d.add || []).join("\n"), "markdown")}`;
     return e.type === "status"
 ? `### CHANGE ${i + 1}: ${e.label}
 | Field | Value |
@@ -1496,13 +1655,14 @@ ${fenced(d.cur || "", "markdown")}
 Replace it with exactly:
 ${fenced(d.next || "", "markdown")}`;
   }).join("\n\n");
-  const P = [`# PROMPT FOR MAGE: Update task checkboxes in my Obsidian vault
+  const P = [`# PROMPT FOR MAGE: Update task checkboxes and completion notes in my Obsidian vault
 
 You are **${S.modelName || "the local LLM"}** running as **Mage (opencode)**. I ticked tasks in my WorkingNotes Hub, but the app could not write to the vault. Your ONLY job: apply the ${mine.length} change(s) below **exactly**. Do nothing else.`, H.text, `## 1. CHANGES (${mine.length})\n\n${blocks}`,
 `## 2. PROCEDURE: for every change
 1. Open the file (full path above). Read it before editing.
 2. Find the line that is exactly "Current line". Look near the given line number first, then in the whole file. Ignore trailing spaces.
-3. Replace ONLY that line with "Replace it with". Only the checkbox character inside \`[ ]\` changes (and a \`✅ YYYY-MM-DD\` if shown). Do not touch any other line, do not reformat, keep the line endings.
+3. Replace ONLY that line with "Replace it with". Only the checkbox character inside \`[ ]\` changes (and a \`✅ YYYY-MM-DD\` if shown). For a note change, INSERT the given lines at the described place and change nothing else. Do not touch any other line, do not reformat, keep the line endings.
+   Apply the note changes of a file BEFORE its checkbox changes.
 4. For a Status change, edit only the \`Status:\` line of the frontmatter (and append the Log line if the note has \`## Log\`).
 5. The line is not found exactly? Find the task by its text. If it is already in the new state, report "already". If you are not sure which line is meant, do NOT edit and report "not found".
 6. Do not create, rename or delete files. No Activity/Daily notes for this job.`,
@@ -2311,6 +2471,7 @@ Both are written at the very top of every generated prompt so Qwen / Mage knows 
 **Ticking tasks**
 - Click the box in front of a task, or use ☐ To do / ◐ In progress / ☑ Done in the detail view. Task List notes also get a clickable checklist.
 - If you opened the vault with **📂 Open vault folder**, Chrome asks once to allow editing. After that, every tick is written straight into the note file: \`- [ ]\` becomes \`- [x]\`, and a Task List note gets \`Status: Done\` plus a Log line. Obsidian picks up the change immediately. **Undo** appears for a few seconds.
+- **Completion notes:** at the bottom of *Source context*, write what was done and why it can be checked off. Press **Mark done with this note** or **Add note**. Ticking a task done anywhere asks for this note first (required by default; change it in Settings). The note is saved directly under the task as \`📝 2026-09-24 14:05: …\` (in a Task List note: in \`## Log\`), so Obsidian and Mage's review prompts can see it.
 - Opened with a snapshot, the compatible selector, or the demo? Ticks are kept in this browser (✎ unsaved) and a yellow bar offers **Save to vault** (pick the folder once) or **Prompt for Mage** (Mage ticks them for you).
 
 **3. Tasks tab** — every checkbox in Project TODO callouts, Activity action items, Daily “Tomorrow” lists, plus every note in \`Task List/\`. Filter by state, project status, project, source, tag. Click a task to review it with its source context, Project note and all related Activity notes.
