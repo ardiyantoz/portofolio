@@ -194,6 +194,22 @@ legend{font-weight:700;padding:0 6px}
 label.btn.disabled{opacity:.5;pointer-events:none}
 .banner code{background:transparent;font-family:var(--mono);overflow-wrap:anywhere}
 .banner .btn{color:inherit;flex:0 0 auto}
+.tick{width:18px;height:18px;flex:0 0 auto;margin-top:2px;border:2px solid var(--muted);border-radius:5px;background:transparent;cursor:pointer;position:relative;padding:0}
+.tick:hover{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-2)}
+.tick-done{background:var(--ok);border-color:var(--ok)}
+.tick-done::after{content:"";position:absolute;left:4px;top:0;width:5px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.tick-doing{background:linear-gradient(135deg,var(--doing) 50%,transparent 50%);border-color:var(--doing)}
+.tick-cancelled{background:var(--chip);border-color:var(--line)}
+.tick-blocked{border-color:var(--danger)}
+.task .pick{margin-left:auto;opacity:.5}
+.task .pick:checked,.task:hover .pick{opacity:1}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px;align-items:center}
+.seg .on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+ul.checklist{list-style:none;padding:0;margin:0}
+ul.checklist li{display:flex;gap:8px;align-items:flex-start;padding:4px 0}
+.strike{text-decoration:line-through;color:var(--muted)}
+#pending-bar .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+#toast .btn{margin-left:10px;color:var(--ink)}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:100;max-width:calc(100vw - 32px)}
 #toast.show{opacity:1}
 .mode-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
@@ -228,6 +244,7 @@ label.btn.disabled{opacity:.5;pointer-events:none}
   </div>
   <div class="paths" id="paths"></div>
   <div id="load-banner" class="banner hidden" role="alert"></div>
+  <div id="pending-bar" class="banner warn hidden" role="status"></div>
   <div id="load-progress" class="banner info hidden" role="status" aria-live="polite">
     <span class="msg">
       <span class="lp-row"><span class="spinner" aria-hidden="true"></span><b id="lp-title">Loading</b> · <span id="lp-text"></span> · <span id="lp-time"></span></span>
@@ -441,6 +458,7 @@ label.btn.disabled{opacity:.5;pointer-events:none}
         <label class="check"><input type="checkbox" id="s-includeVaultIndex"> Include vault snapshot (project list, related file contents) in prompts</label>
         <label class="check"><input type="checkbox" id="s-updateDaily"> When filing notes, also update the Daily note (<code>Daily/YYYY-MM-DD Kerjaan.md</code>)</label>
         <label class="check"><input type="checkbox" id="s-allowNewProject"> Allow the LLM to create a new Project note when nothing matches</label>
+        <label class="check"><input type="checkbox" id="s-doneDate"> When I tick a task done in this app, add <code>✅ YYYY-MM-DD</code> to the line (Obsidian Tasks style)</label>
       </fieldset>
       <fieldset><legend>Optional: send directly to an OpenAI-compatible endpoint</legend>
         <div class="settings-grid">
@@ -493,9 +511,11 @@ const readJsonScript = id => { try { return JSON.parse($("#" + id).textContent);
 const BUILTIN_SKILL = readJsonScript("skill-text") || "";
 const DEMO_VAULT = readJsonScript("demo-vault") || [];
 
-function toast(msg) {
-  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
-  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 2200);
+function toast(msg, action) {
+  const t = $("#toast"); t.textContent = msg; t.style.pointerEvents = action ? "auto" : "none";
+  if (action) { const b = document.createElement("button"); b.className = "btn small"; b.textContent = action.label; b.onclick = () => { t.classList.remove("show"); action.run(); }; t.append(b); }
+  t.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), action ? 6000 : 2200);
 }
 async function copyText(text) {
   try { await navigator.clipboard.writeText(text); return true; }
@@ -549,7 +569,7 @@ const DEFAULTS = {
   mageCommand: 'mage "{{file}}"', promptFolder: "",
   embedSkill: true, includeVaultIndex: true, updateDaily: true, allowNewProject: true,
   llmBaseUrl: "", llmModel: "qwen3.6", llmApiKey: "",
-  projectMap: DEFAULT_PROJECT_MAP, skillText: "", skipFolders: "Archive, Attachment, node_modules"
+  projectMap: DEFAULT_PROJECT_MAP, skillText: "", skipFolders: "Archive, Attachment, node_modules", doneDate: false
 };
 let S = Object.assign({}, DEFAULTS, store.get("wnh.settings", {}));
 setTimeout(() => { normalizePaths(); store.set("wnh.settings", S); renderPaths(); });
@@ -692,7 +712,7 @@ function md(src, hlLine = -1) {
 /* =========================================================================
    Vault model
    ========================================================================= */
-const V = { loaded: false, label: "", files: [], byName: new Map(), projects: new Map(), activities: [], tasks: [], ids: new Set(), dirHandle: null, loadedAt: null };
+const V = { loaded: false, label: "", files: [], byName: new Map(), projects: new Map(), activities: [], tasks: [], ids: new Set(), dirHandle: null, loadedAt: null, rootPrefix: "", cacheLabel: "", isDemo: false };
 const KIND = { "Activity": "activity", "Project": "project", "Knowledge": "knowledge", "Daily": "daily", "Task List": "tasknote", "Template": "template", "Archive": "archive", "Base": "base", "Attachment": "attachment" };
 const SKIP_TASKS = new Set(["template", "archive", "base", "attachment"]);
 const TASKNOTE_STATE = s => { s = String(s || "").toLowerCase(); return /done|selesai|complete/.test(s) ? "done" : /progress|doing|ongoing/.test(s) ? "doing" : /block/.test(s) ? "blocked" : /cancel|batal/.test(s) ? "cancelled" : "open"; };
@@ -929,7 +949,7 @@ function finishLoad(entries, label, stats, how) {
     showBanner(`Read ${entries.length} notes but could not index them: <code>${esc(e.name + ": " + e.message)}</code>. Please send this message to whoever maintains the app.`, "error");
     return false;
   }
-  V.fromCache = false;
+  V.fromCache = false; V.rootPrefix = norm.prefix || ""; V.cacheLabel = label; V.isDemo = false;
   if (!S.vaultPath && (!S.vaultName || S.vaultName === DEFAULTS.vaultName)) { S.vaultName = vaultLabel; saveSettings(false); }
   const msgs = [];
   if (norm.prefix) msgs.push(`You picked the parent folder “${esc(label)}”; the vault is its subfolder <code>${esc(norm.prefix)}</code>. Next time pick <b>${esc(vaultLabel)}</b> directly: it is faster.`);
@@ -1073,6 +1093,7 @@ function renderPaths() {
 }
 
 function afterLoad() {
+  applyPending();
   $("#vault-status").textContent = `${V.label} · ${V.files.length} notes · ${V.projects.size} projects · loaded ${V.loadedAt.toLocaleTimeString()}`;
   $("#btn-reload").disabled = false;
   const names = [...new Set([...V.projects.keys(), ...MAP.map(m => m.project)])].sort((a, b) => a.localeCompare(b));
@@ -1081,7 +1102,7 @@ function afterLoad() {
   $("#project-options").innerHTML = names.map(n => `<option value="${esc(n)}">`).join("");
   if (UI.selTask && !V.tasks.some(t => t.id === UI.selTask)) UI.selTask = null;
   UI.checked = new Set([...UI.checked].filter(id => V.tasks.some(t => t.id === id)));
-  renderTasks(); renderDetail(); renderProjects(); renderDetect();
+  renderTasks(); renderDetail(); renderProjects(); renderDetect(); renderPendingBar();
 }
 
 /* ---------- Tasks tab ---------- */
@@ -1109,7 +1130,7 @@ function dueChip(due) {
 }
 const KIND_LABEL = { project: "Project TODO", tasknote: "Task note", activity: "Activity", daily: "Daily", knowledge: "Knowledge", other: "Note", root: "Note" };
 function renderTasks() {
-  const el = $("#task-list"); $("#c-tasks").textContent = V.tasks.filter(t => ["open", "doing", "blocked"].includes(t.state)).length;
+  const el = $("#task-list"); const keepScroll = el.scrollTop; requestAnimationFrame(() => { el.scrollTop = keepScroll; }); $("#c-tasks").textContent = V.tasks.filter(t => ["open", "doing", "blocked"].includes(t.state)).length;
   if (!V.loaded) { el.innerHTML = `<div class="empty"><h3>No vault loaded</h3>Click <b>📂 Open vault folder</b> and choose your <code>WorkingNotes</code> folder. If nothing happens, use <b>📁 Select folder (compatible)</b>. Or try the <b>Demo vault</b>.<br><br><span class="hint">The VAULT_ROOT path in Settings is only written into the prompts. A web page is not allowed to read a typed path, so you have to pick the folder once here.<br>Nothing is uploaded: the files are only read inside this browser tab.</span></div>`; updateSelBar(); return; }
   const list = filteredTasks();
   if (!list.length) { el.innerHTML = `<div class="empty"><h3>No tasks match</h3>Try “All states” or clear the filters.</div>`; updateSelBar(); return; }
@@ -1121,20 +1142,21 @@ function renderTasks() {
     ts.sort((a, b) => (a.state === "done") - (b.state === "done") || (a.due || "9999").localeCompare(b.due || "9999") || a.file.path.localeCompare(b.file.path) || a.line - b.line);
     return `<div class="group-h"><span>${esc(k || "No project")}</span>${p && p.status ? `<span class="chip st-${esc(p.status)}">${esc(p.status)}</span>` : ""}${p && p.missing ? `<span class="chip overdue">no Project note</span>` : ""}<span class="n">${ts.length}</span></div>` +
       ts.map(t => `<div class="task ${t.state === "done" ? "done" : ""} ${UI.selTask === t.id ? "sel" : ""}" data-id="${esc(t.id)}">
-        <input type="checkbox" aria-label="Select task" ${UI.checked.has(t.id) ? "checked" : ""}>
+        ${tickHtml(t)}
         <div class="t"><div class="txt">${t.kind === "tasknote" ? "📄 " : ""}${inlineMd(t.text)}</div>
-        <div class="meta-line"><span class="chip s-${t.state}">${STATE_LABEL[t.state]}</span><span class="chip">${KIND_LABEL[t.kind] || t.kind}</span>${t.priority ? `<span class="chip">⚑ ${esc(t.priority)}</span>` : ""}${dueChip(t.due)}${t.kind !== "project" && t.kind !== "tasknote" ? `<span class="chip" title="${esc(t.file.path)}">${esc(t.file.name.slice(0, 32))}</span>` : ""}</div></div></div>`).join("");
+        <div class="meta-line">${t.pending ? `<span class="chip soon" title="Changed here but not saved in the vault yet">✎ unsaved</span>` : ""}<span class="chip s-${t.state}">${STATE_LABEL[t.state]}</span><span class="chip">${KIND_LABEL[t.kind] || t.kind}</span>${t.priority ? `<span class="chip">⚑ ${esc(t.priority)}</span>` : ""}${dueChip(t.due)}${t.kind !== "project" && t.kind !== "tasknote" ? `<span class="chip" title="${esc(t.file.path)}">${esc(t.file.name.slice(0, 32))}</span>` : ""}</div></div>
+        <input type="checkbox" class="pick" aria-label="Select for a Mage prompt" title="Select for a Mage prompt" ${UI.checked.has(t.id) ? "checked" : ""}></div>`).join("");
   }).join("");
   $$(".task", el).forEach(row => {
     row.addEventListener("click", e => {
-      if (e.target.matches("input,a")) return;
+      if (e.target.closest("input,a,button")) return;
       UI.selTask = row.dataset.id; UI.selProject = null;
       $$(".task.sel", el).forEach(r => r.classList.remove("sel")); row.classList.add("sel");
       renderDetail(); if (innerWidth < 900) $("#detail").scrollIntoView({ behavior: "smooth" });
     });
-    row.querySelector("input").addEventListener("change", e => { e.target.checked ? UI.checked.add(row.dataset.id) : UI.checked.delete(row.dataset.id); updateSelBar(); });
+    row.querySelector("input.pick").addEventListener("change", e => { e.target.checked ? UI.checked.add(row.dataset.id) : UI.checked.delete(row.dataset.id); updateSelBar(); });
   });
-  bindWikiLinks(el); updateSelBar();
+  bindTicks(el); bindWikiLinks(el); updateSelBar();
 }
 const statusRank = name => { const s = (V.projects.get(name) || {}).status; return { Ongoing: 0, Explore: 1, "": 2, Done: 3 }[s] ?? 2; };
 function updateSelBar() { $("#sel-info").textContent = `${UI.checked.size} selected`; $("#btn-sel-prompt").disabled = !UI.checked.size; }
@@ -1181,6 +1203,10 @@ function renderDetail() {
   <div class="detail-head">
     <div class="meta-line"><span class="chip s-${t.state}">${STATE_LABEL[t.state]}</span><span class="chip">${KIND_LABEL[t.kind] || t.kind}</span>${t.priority ? `<span class="chip">⚑ ${esc(t.priority)}</span>` : ""}${dueChip(t.due)}</div>
     <h2>${inlineMd(t.text)}</h2>
+    <div class="seg" role="group" aria-label="Task state">
+      ${[["open", "☐ To do"], ["doing", "◐ In progress"], ["done", "☑ Done"]].map(([st, l]) => `<button class="btn small ${t.state === st ? "on" : ""}" data-set-state="${st}" aria-pressed="${t.state === st}">${l}</button>`).join("")}
+      ${t.pending ? `<span class="chip soon" title="Changed here but not saved in the vault yet">✎ unsaved</span>` : `<span class="hint">${V.dirHandle ? "Saved straight into the note file" : ""}</span>`}
+    </div>
     <div class="row">
       <button class="btn primary" data-mode="execute">🤖 Ask Mage to work on it</button>
       <button class="btn" data-mode="breakdown">Break down</button>
@@ -1196,14 +1222,17 @@ function renderDetail() {
     </dl>
   </div>
   <div class="detail-body">
+    ${t.kind === "tasknote" && t.subtasks && t.subtasks.length ? `<div class="sec"><h3>Checklist (${t.subtasks.filter(x => x.state === "done").length}/${t.subtasks.length})</h3><ul class="checklist">${t.subtasks.map((x, i) => `<li>${tickHtml(x, `data-sub="${i}"`)}<span class="${x.state === "done" ? "strike" : ""}">${inlineMd(x.text)}</span>${x.pending ? ` <span class="chip soon">✎ unsaved</span>` : ""}</li>`).join("")}</ul></div>` : ""}
     <div class="sec"><h3>${t.kind === "tasknote" ? "Task note" : "Source context"}</h3>${t.kind === "tasknote" && t.file.fmRaw ? `<div class="fm">${esc(t.file.fmRaw)}</div>` : ""}<div class="md">${md(ctx.text, ctx.hl)}</div></div>
     ${p && p.file ? `<div class="sec"><h3>Project note</h3><details class="note"><summary><span class="ttl">${esc(p.name)}</span><span class="sub">${esc(p.file.path)}</span></summary><div class="inner"><div class="fm">${esc(p.file.fmRaw)}</div><div class="md">${md(p.file.body)}</div></div></details></div>` : ""}
     ${t.project ? `<div class="sec"><h3>Related activity (${acts.length})</h3>${activityHtml(acts, 1)}</div>` : ""}
-    ${others.length ? `<div class="sec"><h3>Other open tasks in ${esc(t.project)} (${others.length})</h3><ul class="md">${others.map(o => `<li><a href="#" data-task="${esc(o.id)}">${inlineMd(o.text)}</a> <span class="hint">· ${esc(KIND_LABEL[o.kind] || o.kind)}</span></li>`).join("")}</ul></div>` : ""}
+    ${others.length ? `<div class="sec"><h3>Other open tasks in ${esc(t.project)} (${others.length})</h3><ul class="checklist">${others.map(o => `<li>${tickHtml(o)}<span><a href="#" data-task="${esc(o.id)}">${inlineMd(o.text)}</a> <span class="hint">· ${esc(KIND_LABEL[o.kind] || o.kind)}</span></span></li>`).join("")}</ul></div>` : ""}
     ${backlinks.length ? `<div class="sec"><h3>Also mentioned in</h3>${backlinks.map(f => `<a href="#" class="wl chip" data-note="${esc(f.name)}">${esc(f.path)}</a>`).join(" ")}</div>` : ""}
   </div>`;
   $$("[data-mode]", el).forEach(b => b.addEventListener("click", () => openTaskPrompt([t], b.dataset.mode)));
-  bindDetailLinks(el);
+  $$("[data-set-state]", el).forEach(b => b.addEventListener("click", () => changeState(t, b.dataset.setState)));
+  $$("[data-sub]", el).forEach(b => b.addEventListener("click", () => { const x = t.subtasks[+b.dataset.sub]; changeState(t, x.state === "done" ? "open" : "done", x); }));
+  bindTicks(el); bindDetailLinks(el);
 }
 function renderProjectDetail(name) {
   const el = $("#detail"); const p = V.projects.get(name);
@@ -1223,7 +1252,7 @@ function renderProjectDetail(name) {
     <dt>Tasks</dt><dd>${open.length} open · ${ts.length - open.length} done/cancelled</dd><dt>Activities</dt><dd>${acts.length}${acts[0] ? ` · last ${esc(acts[0].date)}` : ""}</dd></dl>
   </div>
   <div class="detail-body">
-    <div class="sec"><h3>Tasks</h3>${ts.length ? `<ul class="md">${ts.map(o => `<li class="task-li"><span class="cb cb-${o.state}"></span><a href="#" data-task="${esc(o.id)}">${inlineMd(o.text)}</a> <span class="hint">· ${esc(KIND_LABEL[o.kind] || o.kind)}</span> ${dueChip(o.due)}</li>`).join("")}</ul>` : `<div class="hint">No checkbox tasks found.</div>`}</div>
+    <div class="sec"><h3>Tasks</h3>${ts.length ? `<ul class="checklist">${ts.map(o => `<li>${tickHtml(o)}<span class="${o.state === "done" ? "strike" : ""}"><a href="#" data-task="${esc(o.id)}">${inlineMd(o.text)}</a> <span class="hint">· ${esc(KIND_LABEL[o.kind] || o.kind)}</span> ${dueChip(o.due)}${o.pending ? ` <span class="chip soon">✎ unsaved</span>` : ""}</span></li>`).join("")}</ul>` : `<div class="hint">No checkbox tasks found.</div>`}</div>
     ${p.file ? `<div class="sec"><h3>Project note</h3><div class="fm">${esc(p.file.fmRaw)}</div><div class="md">${md(p.file.body)}</div></div>` : ""}
     <div class="sec"><h3>Activity timeline (${acts.length})</h3>${activityHtml(acts, 2)}</div>
   </div>`;
@@ -1231,7 +1260,7 @@ function renderProjectDetail(name) {
     const mode = b.dataset.pmode;
     openTaskPrompt(mode === "review" ? (open.length ? open : ts) : open, mode, { project: name });
   }));
-  bindDetailLinks(el);
+  bindTicks(el); bindDetailLinks(el);
 }
 function bindDetailLinks(el) {
   $$("[data-proj]", el).forEach(a => a.addEventListener("click", e => { e.preventDefault(); showProject(a.dataset.proj); }));
@@ -1285,6 +1314,210 @@ $("#btn-review-all").addEventListener("click", () => {
   const names = [...V.projects.values()].filter(p => p.status === "Ongoing").map(p => p.name);
   openTaskPrompt(V.tasks.filter(t => names.includes(t.project) && ["open", "doing", "blocked"].includes(t.state)), "review", { projects: names });
 });
+
+/* =========================================================================
+   Ticking tasks: write the checkbox straight into the note file
+   (Open vault folder → Chrome asks once "allow editing?"). Without write access
+   the change is kept in this browser ("unsaved") until it can be saved, or is
+   handed to Mage as a precise prompt.
+   ========================================================================= */
+const STATE_CHAR = { open: " ", doing: "/", done: "x", cancelled: "-", blocked: "!" };
+const STATUS_WORD = { open: "Todo", doing: "In Progress", done: "Done", cancelled: "Cancelled", blocked: "Blocked" };
+let PENDING = store.get("wnh.pending", []);
+const savePending = () => store.set("wnh.pending", PENDING);
+const pendingKey = e => `${e.vault}|${e.type}|${e.path}|${e.type === "checkbox" ? e.raw : ""}`;
+const myPending = () => PENDING.filter(p => p.vault === V.label);
+function tickHtml(t, attr) {
+  const done = t.state === "done";
+  return `<button class="tick tick-${t.state}" role="checkbox" aria-checked="${done}" title="${done ? "Mark as not done" : "Mark as done"}" ${attr || `data-tick-id="${esc(t.id)}"`}></button>`;
+}
+function bindTicks(el) {
+  $$("[data-tick-id]", el).forEach(b => b.addEventListener("click", e => {
+    e.stopPropagation(); const t = V.tasks.find(x => x.id === b.dataset.tickId);
+    if (t) changeState(t, t.state === "done" ? "open" : "done");
+  }));
+}
+function setLineState(line, to) {
+  let out = line.replace(/^((?:\s*>)*\s*[-*+]\s+\[)[^\]](\])/, `$1${STATE_CHAR[to]}$2`);
+  if (S.doneDate) { out = out.replace(/\s*✅\s*\d{4}-\d{2}-\d{2}/g, ""); if (to === "done") out = out.replace(/\s+$/, "") + ` ✅ ${ymd(now())}`; }
+  return out;
+}
+function findTaskLine(lines, e) {
+  const hit = i => { const m = (lines[i] || "").match(CB_RE); return !!m && m[3].trim() === e.raw; };
+  if (hit(e.line - 1)) return e.line - 1;
+  const all = lines.map((_, i) => i).filter(hit);
+  if (all.length === 1) return all[0];
+  throw new Error(all.length ? "the same task text appears several times in the file" : "the task line was changed or removed since the vault was loaded (press Reload)");
+}
+function applyEdit(text, e) {
+  const nl = text.includes("\r\n") ? "\r\n" : "\n";
+  if (e.type === "checkbox") {
+    const lines = text.split(/\r?\n/); const i = findTaskLine(lines, e);
+    lines[i] = setLineState(lines[i], e.to); return lines.join(nl);
+  }
+  // Task List note: frontmatter "Status" + a line in "## Log"
+  const m = text.match(/^(﻿?---\r?\n)([\s\S]*?)(\r?\n---)/);
+  if (!m) throw new Error("the task note has no frontmatter");
+  let fm = m[2]; const word = STATUS_WORD[e.to];
+  fm = /^Status:/m.test(fm) ? fm.replace(/^Status:[^\r\n]*((\r?\n)[ \t]+-[^\r\n]*)*/m, `Status: ${word}`) : `Status: ${word}${nl}${fm}`;
+  const lines = (m[1] + fm + text.slice(m[1].length + m[2].length)).split(/\r?\n/);
+  const li = lines.findIndex(l => /^##\s+Log\s*$/.test(l));
+  if (li >= 0) {
+    let end = lines.length; for (let i = li + 1; i < lines.length; i++) if (/^#{1,6}\s/.test(lines[i])) { end = i; break; }
+    let at = end; while (at > li + 1 && !lines[at - 1].trim()) at--;
+    lines.splice(at, 0, `- ${ymd(now())}: Status → ${word} (WorkingNotes Hub)`);
+  }
+  return lines.join(nl);
+}
+/* Remember the state on disk, then show pending changes on top of it. */
+function applyPending() {
+  const all = V.tasks.flatMap(t => [t, ...(t.subtasks || []).map(x => Object.assign(x, { file: t.file }))]);
+  for (const t of all) { if (t.diskState === undefined) t.diskState = t.state; t.state = t.diskState; t.pending = false; }
+  let changed = false;
+  PENDING = PENDING.filter(p => {
+    if (p.vault !== V.label) return true;
+    const t = p.type === "status" ? V.tasks.find(x => x.kind === "tasknote" && x.file.path === p.path) : all.find(x => x.file && x.file.path === p.path && x.raw === p.raw && x.kind !== "tasknote");
+    if (!t) return true;                                  // keep: maybe the note was not loaded
+    if (t.diskState === p.to) { changed = true; return false; } // already in the vault (e.g. Mage applied it)
+    t.state = p.to; t.pending = true; return true;
+  });
+  if (changed) savePending();
+}
+function refreshViews() { applyPending(); renderTasks(); renderDetail(); renderProjects(); renderPendingBar(); }
+async function changeState(t, to, sub) {
+  const target = sub || t;
+  if (target.state === to) return;
+  const e = sub ? { type: "checkbox", path: t.file.path, line: sub.line, raw: sub.raw }
+    : t.kind === "tasknote" ? { type: "status", path: t.file.path }
+    : { type: "checkbox", path: t.file.path, line: t.line, raw: t.raw };
+  Object.assign(e, { vault: V.label, to, label: target.text, at: new Date().toISOString() });
+  const from = target.diskState ?? target.state;
+  const i = PENDING.findIndex(p => pendingKey(p) === pendingKey(e));
+  if (i >= 0) { if (to === PENDING[i].from) PENDING.splice(i, 1); else PENDING[i].to = to; }
+  else PENDING.push({ ...e, from });
+  savePending();
+  const undo = { label: "Undo", run: () => { const nt = V.tasks.find(x => x.id === t.id); if (!nt) return; const ns = sub ? (nt.subtasks || []).find(x => x.line === sub.line) : null; changeState(nt, from, ns || undefined); } };
+  if (V.dirHandle) { await flushPending(to === "done" ? `Done ✓ saved to ${t.file.name}` : `Saved to ${t.file.name}`, undo); return; }
+  refreshViews();
+  toast(V.isDemo ? "Demo vault: the change is only kept in this browser" : "Kept in this browser. Use “Save to vault” in the yellow bar", undo);
+}
+async function getVaultFileHandle(path) {
+  const segs = [...(V.rootPrefix ? V.rootPrefix.split("/") : []), ...path.split("/")];
+  let dir = V.dirHandle;
+  for (const sg of segs.slice(0, -1)) dir = await dir.getDirectoryHandle(sg);
+  return dir.getFileHandle(segs[segs.length - 1]);
+}
+async function ensureWrite() {
+  const h = V.dirHandle; if (!h || !h.requestPermission) return false;
+  if ((await h.queryPermission({ mode: "readwrite" })) === "granted") return true;
+  return (await h.requestPermission({ mode: "readwrite" })) === "granted";
+}
+async function flushPending(okMsg, undo) {
+  const mine = myPending();
+  if (!mine.length || !V.dirHandle) { refreshViews(); return; }
+  try { if (!(await ensureWrite())) throw new DOMException("Chrome did not get permission to edit the vault folder", "NotAllowedError"); }
+  catch (err) {
+    refreshViews();
+    showBanner(`Could not save to the vault (<code>${esc(err.name)}: ${esc(err.message)}</code>). Your ticks are kept in this browser. Use <b>Save to vault</b> to try again, or <b>Prompt for Mage</b> in the yellow bar.`, "warn");
+    return;
+  }
+  const byPath = new Map(); for (const p of mine) { if (!byPath.has(p.path)) byPath.set(p.path, []); byPath.get(p.path).push(p); }
+  const errors = []; let saved = 0;
+  for (const [path, edits] of byPath) {
+    try {
+      const fh = await getVaultFileHandle(path);
+      let text = await (await fh.getFile()).text(); const ok = [];
+      for (const e of edits) { try { text = applyEdit(text, e); ok.push(e); } catch (err) { errors.push(`${path}: ${err.message}`); } }
+      if (!ok.length) continue;
+      const w = await fh.createWritable(); await w.write(text); await w.close();
+      const f2 = await fh.getFile();
+      const f = V.files.find(x => x.path === path); if (f) f.content = text;
+      if (V.cacheLabel) cacheWrite(V.cacheLabel, [{ path: (V.rootPrefix ? V.rootPrefix + "/" : "") + path, content: text, m: f2.lastModified, s: f2.size }], false);
+      PENDING = PENDING.filter(p => !ok.includes(p)); saved += ok.length;
+    } catch (err) { errors.push(`${path}: ${err.name}: ${err.message}`); }
+  }
+  savePending();
+  if (saved) indexVault(V.files.map(f => ({ path: f.path, content: f.content })), V.label); else refreshViews();
+  if (errors.length) showBanner(`${saved ? `Saved ${saved} change(s), but ` : ""}${errors.length} could not be saved: <code>${esc(errors.slice(0, 4).join(" · "))}</code>. They stay in the yellow bar.`, "warn");
+  else if (saved) toast(okMsg || `Saved ${saved} change(s) to the vault ✓`, undo);
+}
+async function connectAndSave() {
+  let h;
+  try { h = await window.showDirectoryPicker({ id: "wnh-vault", mode: "readwrite" }); }
+  catch (e) { if (e && e.name === "AbortError") return; return showBanner(`This browser blocked the folder picker (<code>${esc(e.name)}</code>), so the app cannot save. Use <b>Prompt for Mage</b> instead: Mage will tick the boxes for you.`, "warn"); }
+  let prefix = "";
+  if (h.name.toLowerCase() !== V.label.toLowerCase()) {
+    try { await h.getDirectoryHandle(V.label); prefix = V.label; }
+    catch { return showBanner(`“${esc(h.name)}” is not the vault “${esc(V.label)}”. Pick the <b>${esc(V.label)}</b> folder.`, "warn"); }
+  }
+  V.dirHandle = h; V.rootPrefix = prefix; V.cacheLabel = h.name; idb.set("vault", h);
+  await flushPending();
+}
+function renderPendingBar() {
+  const bar = $("#pending-bar"), mine = V.loaded ? myPending() : [];
+  if (!mine.length) { bar.classList.add("hidden"); return; }
+  bar.classList.remove("hidden");
+  const canSave = !V.isDemo && !!window.showDirectoryPicker;
+  bar.innerHTML = `<span class="msg">✎ <b>${mine.length} task change${mine.length > 1 ? "s" : ""} not saved in the vault yet</b>: ${esc(mine.slice(0, 3).map(p => `${STATE_LABEL[p.to]}: ${p.label}`).join(" · "))}${mine.length > 3 ? " …" : ""}
+    <span class="acts">${canSave ? `<button class="btn small" id="pb-save">💾 Save to vault</button>` : ""}<button class="btn small" id="pb-prompt">🤖 Prompt for Mage</button><button class="btn small" id="pb-discard">Discard</button></span></span>`;
+  if (canSave) $("#pb-save").onclick = () => (V.dirHandle ? flushPending() : connectAndSave());
+  $("#pb-prompt").onclick = openPendingPrompt;
+  $("#pb-discard").onclick = () => { if (!confirm(`Discard ${mine.length} unsaved task change(s)?`)) return; PENDING = PENDING.filter(p => p.vault !== V.label); savePending(); refreshViews(); };
+}
+function describeEdit(e) {
+  const f = V.files.find(x => x.path === e.path); if (!f) return null;
+  if (e.type === "status") return { key: "Status", cur: scalar(f.fm.Status) || "(missing)", next: STATUS_WORD[e.to] };
+  const lines = f.content.split(/\r?\n/); let i;
+  try { i = findTaskLine(lines, e); } catch { return { lineNo: e.line, cur: `- [${STATE_CHAR[e.from] || " "}] ${e.raw}`, next: setLineState(`- [${STATE_CHAR[e.from] || " "}] ${e.raw}`, e.to), approx: true }; }
+  return { lineNo: i + 1, cur: lines[i], next: setLineState(lines[i], e.to) };
+}
+function buildPendingPrompt(extra) {
+  const H = headerBlock(); const mine = myPending();
+  const blocks = mine.map((e, i) => {
+    const d = describeEdit(e) || {};
+    return e.type === "status"
+? `### CHANGE ${i + 1}: ${e.label}
+| Field | Value |
+|---|---|
+| File | \`${vaultFile(e.path)}\` |
+| What | Frontmatter key \`Status\` |
+| Current value | \`${d.cur}\` |
+| New value | \`${d.next}\` |
+| Also | If the note has a \`## Log\` section, append \`- ${ymd(now())}: Status → ${d.next}\` as its last line |`
+: `### CHANGE ${i + 1}: ${e.label}
+| Field | Value |
+|---|---|
+| File | \`${vaultFile(e.path)}\` |
+| Line number (approximate) | ${d.lineNo || e.line} |
+| New state | ${STATE_LABEL[e.to]} |
+
+Current line (exact):
+${fenced(d.cur || "", "markdown")}
+Replace it with exactly:
+${fenced(d.next || "", "markdown")}`;
+  }).join("\n\n");
+  const P = [`# PROMPT FOR MAGE: Update task checkboxes in my Obsidian vault
+
+You are **${S.modelName || "the local LLM"}** running as **Mage (opencode)**. I ticked tasks in my WorkingNotes Hub, but the app could not write to the vault. Your ONLY job: apply the ${mine.length} change(s) below **exactly**. Do nothing else.`, H.text, `## 1. CHANGES (${mine.length})\n\n${blocks}`,
+`## 2. PROCEDURE: for every change
+1. Open the file (full path above). Read it before editing.
+2. Find the line that is exactly "Current line". Look near the given line number first, then in the whole file. Ignore trailing spaces.
+3. Replace ONLY that line with "Replace it with". Only the checkbox character inside \`[ ]\` changes (and a \`✅ YYYY-MM-DD\` if shown). Do not touch any other line, do not reformat, keep the line endings.
+4. For a Status change, edit only the \`Status:\` line of the frontmatter (and append the Log line if the note has \`## Log\`).
+5. The line is not found exactly? Find the task by its text. If it is already in the new state, report "already". If you are not sure which line is meant, do NOT edit and report "not found".
+6. Do not create, rename or delete files. No Activity/Daily notes for this job.`,
+`## 3. REPORT: print only this
+${fenced(`| # | File | Result (changed / already / not found) |
+|---|---|---|`, "markdown")}`];
+  if (extra && extra.trim()) P.push(`## 4. EXTRA INSTRUCTIONS FROM ME\n${extra.trim()}`);
+  return { text: P.join("\n\n"), missing: H.missing };
+}
+function openPendingPrompt() {
+  PD.kind = "pending"; PD.payload = myPending(); PD.opts = {}; PD.mode = null;
+  $("#prompt-title").textContent = `Tick ${PD.payload.length} task change(s) in the vault via Mage`;
+  $("#prompt-options").innerHTML = `<div class="hint">After Mage has applied it, press <b>↻ Reload</b> (or load a new snapshot). The yellow bar clears by itself once the vault shows the new state.</div>`;
+  $("#prompt-extra").value = ""; regenPrompt(); $("#dlg-prompt").showModal();
+}
 
 /* =========================================================================
    Capture notes + inbox
@@ -1962,6 +2195,7 @@ function openTaskPrompt(tasks, mode, opts = {}) {
 function regenPrompt() {
   const extra = $("#prompt-extra").value; let r;
   if (PD.kind === "notes") r = buildNotesPrompt(PD.payload, extra);
+  else if (PD.kind === "pending") r = buildPendingPrompt(extra);
   else {
     r = buildTaskPrompt(PD.payload, PD.mode, extra, PD.opts);
     $("#prompt-title").textContent = `${MODES[PD.mode].title} — ${PD.payload.length} task${PD.payload.length === 1 ? "" : "s"}`;
@@ -1971,7 +2205,7 @@ function regenPrompt() {
   $("#prompt-warn").innerHTML = r.missing.length ? `<div class="warnbox">⚠ ${r.missing.join(" and ")} not set — the prompt contains <code>&lt;&lt;FILL…&gt;&gt;</code> placeholders. <a href="#" id="pw-fix">Set paths in Settings</a></div>` : "";
   const fx = $("#pw-fix"); if (fx) fx.addEventListener("click", e => { e.preventDefault(); openSettings(S.skillRepo ? "s-vaultPath" : "s-skillRepo"); });
   const stamp = localISO(now()).replace(/[-:]/g, "").replace("T", "-");
-  PD.file = `mage-prompt-${stamp}-${PD.kind === "notes" ? "categorize" : PD.mode}.md`;
+  PD.file = `mage-prompt-${stamp}-${PD.kind === "notes" ? "categorize" : PD.kind === "pending" ? "checkboxes" : PD.mode}.md`;
   updatePromptStats();
 }
 function updatePromptStats() {
@@ -2053,7 +2287,7 @@ $$("dialog").forEach(d => d.addEventListener("click", e => { if (e.target === d)
 $("#btn-open").addEventListener("click", openVault);
 $("#btn-load-stop").addEventListener("click", () => { LOAD.cancel = true; $("#lp-text").textContent = "Stopping…"; });
 $("#btn-reload").addEventListener("click", reloadVault);
-$("#btn-demo").addEventListener("click", () => { if (!DEMO_VAULT.length) return toast("Demo vault not embedded"); V.dirHandle = null; indexVault(DEMO_VAULT, "Demo WorkingNotes"); toast("Demo vault loaded — nothing on disk is touched"); });
+$("#btn-demo").addEventListener("click", () => { if (!DEMO_VAULT.length) return toast("Demo vault not embedded"); V.dirHandle = null; V.isDemo = true; V.rootPrefix = ""; V.cacheLabel = ""; indexVault(DEMO_VAULT, "Demo WorkingNotes"); toast("Demo vault loaded — nothing on disk is touched"); });
 function applyTheme(t) { if (t) document.documentElement.setAttribute("data-theme", t); else document.documentElement.removeAttribute("data-theme"); }
 applyTheme(store.get("wnh.theme", null));
 $("#btn-theme").addEventListener("click", () => {
@@ -2073,6 +2307,11 @@ Both are written at the very top of every generated prompt so Qwen / Mage knows 
 - Notes are cached in this browser, so after the first load only changed notes are re-read.
 - On a slow or locked-down laptop, use **🗂 Snapshot**: one PowerShell command packs the whole vault into one file that loads in about a second.
 - If *Open vault folder* does nothing, use **📁 Select folder (compatible)**.
+
+**Ticking tasks**
+- Click the box in front of a task, or use ☐ To do / ◐ In progress / ☑ Done in the detail view. Task List notes also get a clickable checklist.
+- If you opened the vault with **📂 Open vault folder**, Chrome asks once to allow editing. After that, every tick is written straight into the note file: \`- [ ]\` becomes \`- [x]\`, and a Task List note gets \`Status: Done\` plus a Log line. Obsidian picks up the change immediately. **Undo** appears for a few seconds.
+- Opened with a snapshot, the compatible selector, or the demo? Ticks are kept in this browser (✎ unsaved) and a yellow bar offers **Save to vault** (pick the folder once) or **Prompt for Mage** (Mage ticks them for you).
 
 **3. Tasks tab** — every checkbox in Project TODO callouts, Activity action items, Daily “Tomorrow” lists, plus every note in \`Task List/\`. Filter by state, project status, project, source, tag. Click a task to review it with its source context, Project note and all related Activity notes.
 - **Ask Mage to work on it / Break down / Create task note / Review status / New task from this** → builds a very detailed prompt with all that context.

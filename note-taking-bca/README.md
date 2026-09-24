@@ -46,6 +46,10 @@ Every prompt starts with the two repositories the LLM needs: **1. Skill reposito
   - **New task from this** (describe the new task in "Extra instructions")
 
   To send several tasks at once, tick them and click **Prompt for selected**.
+- **Ticking tasks off**: click the box in front of any task, or use ☐ To do / ◐ In progress / ☑ Done in the detail view. Task List notes get a clickable checklist.
+  - With **📂 Open vault folder**, Chrome asks once to allow editing. After that, each tick is saved straight into the note file: `- [ ]` becomes `- [x]` (`[/]` for in progress), and a Task List note gets `Status: Done` plus a line in `## Log`. Only that one line changes. Obsidian shows it immediately, and **Undo** appears for a few seconds.
+  - Opened via 🗂 Snapshot or 📁 Select folder (compatible)? The browser can't write then. Ticks are kept in the browser (✎ unsaved), and a yellow bar offers **💾 Save to vault** (pick the folder once) or **🤖 Prompt for Mage**, an exact "change this line to that line" prompt. The bar clears by itself once the vault shows the new state.
+  - Optional (Settings): add `✅ YYYY-MM-DD` when a task is ticked done.
 - **Projects**: shows Ongoing, Explore and Done cards with overdue follow-ups. **Review prompt** creates a review prompt for one project or for all Ongoing projects.
 
 ### Execution modes (Settings)
