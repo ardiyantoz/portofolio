@@ -220,6 +220,7 @@ label.btn.disabled{opacity:.5;pointer-events:none}
     <div class="brand"><div class="logo" aria-hidden="true">WN</div><div>WorkingNotes Hub<small id="vault-status">No vault loaded</small></div></div>
     <button class="btn primary" id="btn-open" title="Chrome / Edge: pick the vault folder (remembered for Reload)">📂 Open vault folder</button>
     <label class="btn" for="dir-input" id="btn-open-compat" title="Works in every browser, including company-managed ones. Chrome asks “Upload N files?” — the files still stay on your computer.">📁 Select folder (compatible)</label>
+    <button class="btn" id="btn-snapshot" title="Load the whole vault from ONE file made by a PowerShell command (instant, even on slow / locked-down PCs)">🗂 Snapshot</button>
     <button class="btn" id="btn-reload" title="Re-read the vault from disk" disabled>↻ Reload</button>
     <button class="btn" id="btn-demo" title="Load a small sample vault to try the app">Demo vault</button>
     <button class="btn" id="btn-settings">⚙ Settings</button>
@@ -392,6 +393,22 @@ label.btn.disabled{opacity:.5;pointer-events:none}
   </div>
 </dialog>
 
+<!-- SNAPSHOT -->
+<dialog id="dlg-snapshot">
+  <div class="dlg">
+    <div class="dlg-h"><h2>Load the vault from a snapshot file</h2><button class="btn ghost" data-close>✕</button></div>
+    <div class="dlg-b md">
+      <p>Use this when <b>Open vault folder</b> is slow. On company laptops, security software often scans every file the browser opens. A snapshot packs all notes into <b>one</b> file, which loads in about a second.</p>
+      <p><b>1.</b> Open <b>PowerShell</b> (Start → type <i>PowerShell</i>), paste this command, and press Enter. Paths come from Settings (VAULT_ROOT and the prompts folder).</p>
+      <div class="cmd"><code id="snap-cmd" style="white-space:pre-wrap"></code><button class="btn small" id="btn-copy-snap">Copy</button></div>
+      <div id="snap-warn"></div>
+      <p><b>2.</b> Choose the file it created, <code>vault-snapshot.json</code>:</p>
+      <label class="btn primary" style="cursor:pointer">Choose vault-snapshot.json<input type="file" id="snap-file" accept=".json,application/json" hidden></label>
+      <p class="hint">Run the command again whenever the vault changes (for example after Mage filed notes), then load the new file. Nothing leaves your computer.</p>
+    </div>
+  </div>
+</dialog>
+
 <!-- SETTINGS -->
 <dialog id="dlg-settings">
   <div class="dlg">
@@ -401,10 +418,11 @@ label.btn.disabled{opacity:.5;pointer-events:none}
         <div class="settings-grid">
           <div><label class="f" for="s-skillRepo">1. Skill repository (absolute path)</label><input type="text" id="s-skillRepo" placeholder="C:\Users\you\.mage\skills"></div>
           <div><label class="f" for="s-skillFile">Skill file (relative to skill repository; slashes are unified on Save)</label><input type="text" id="s-skillFile" placeholder="obsidian-zettelkasten/SKILL.md"></div>
-          <div><label class="f" for="s-vaultPath">2. Obsidian vault position (absolute path)</label><input type="text" id="s-vaultPath" placeholder="D:\Obsidian\WorkingNotes"></div>
-          <div><label class="f" for="s-vaultName">Obsidian vault name (= folder name of the vault, for obsidian:// links)</label><input type="text" id="s-vaultName" placeholder="WorkingNotes"></div>
+          <div><label class="f" for="s-vaultPath">2. Obsidian vault position (absolute path)</label><input type="text" id="s-vaultPath" placeholder="C:\Users\you\Documents\catatan-yanto\WorkingNotes (the folder that contains .obsidian)"></div>
+          <div><label class="f" for="s-vaultName">Obsidian vault name (automatic: folder name of VAULT_ROOT)</label><input type="text" id="s-vaultName" placeholder="WorkingNotes"></div>
           <div><label class="f" for="s-workRepo">Default work / code repository (optional, for tasks)</label><input type="text" id="s-workRepo" placeholder="D:\repo\wealth-frontend"></div>
           <div><label class="f" for="s-timezone">Timezone label</label><input type="text" id="s-timezone"></div>
+          <div class="full"><label class="f" for="s-skipFolders">Folders to skip when loading (comma separated, any depth, case-insensitive)</label><input type="text" id="s-skipFolders" placeholder="Archive, Attachment, node_modules"></div>
         </div>
       </fieldset>
       <fieldset><legend>How the LLM runs</legend>
@@ -531,7 +549,7 @@ const DEFAULTS = {
   mageCommand: 'mage "{{file}}"', promptFolder: "",
   embedSkill: true, includeVaultIndex: true, updateDaily: true, allowNewProject: true,
   llmBaseUrl: "", llmModel: "qwen3.6", llmApiKey: "",
-  projectMap: DEFAULT_PROJECT_MAP, skillText: ""
+  projectMap: DEFAULT_PROJECT_MAP, skillText: "", skipFolders: "Archive, Attachment, node_modules"
 };
 let S = Object.assign({}, DEFAULTS, store.get("wnh.settings", {}));
 setTimeout(() => { normalizePaths(); store.set("wnh.settings", S); renderPaths(); });
@@ -747,12 +765,48 @@ const obsidianUrl = f => `obsidian://open?vault=${encodeURIComponent(S.vaultName
 
 /* ---------- loading from disk ---------- */
 const idb = {
-  open() { return new Promise((res, rej) => { const r = indexedDB.open("wnh", 1); r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
-  async get(k) { try { const db = await this.open(); return await new Promise(res => { const q = db.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => res(q.result); q.onerror = () => res(undefined); }); } catch { return undefined; } },
-  async set(k, v) { try { const db = await this.open(); await new Promise(res => { const tx = db.transaction("kv", "readwrite"); tx.objectStore("kv").put(v, k); tx.oncomplete = res; tx.onerror = res; }); } catch {} }
+  _db: null,
+  open() {
+    if (this._db) return Promise.resolve(this._db);
+    return new Promise((res, rej) => {
+      const r = indexedDB.open("wnh", 2);
+      r.onupgradeneeded = () => { const db = r.result; for (const n of ["kv", "files"]) if (!db.objectStoreNames.contains(n)) db.createObjectStore(n); };
+      r.onsuccess = () => { this._db = r.result; res(r.result); }; r.onerror = () => rej(r.error);
+    });
+  },
+  async get(k, store = "kv") { try { const db = await this.open(); return await new Promise(res => { const q = db.transaction(store).objectStore(store).get(k); q.onsuccess = () => res(q.result); q.onerror = () => res(undefined); }); } catch { return undefined; } },
+  async set(k, v, store = "kv") { try { const db = await this.open(); await new Promise(res => { const tx = db.transaction(store, "readwrite"); tx.objectStore(store).put(v, k); tx.oncomplete = res; tx.onerror = res; }); } catch {} },
+  async getPrefix(store, prefix) {
+    const m = new Map();
+    try {
+      const db = await this.open();
+      await new Promise(res => {
+        const q = db.transaction(store).objectStore(store).openCursor(IDBKeyRange.bound(prefix, prefix + "\uffff"));
+        q.onsuccess = () => { const c = q.result; if (!c) return res(); m.set(String(c.key).slice(prefix.length), c.value); c.continue(); };
+        q.onerror = () => res();
+      });
+    } catch {}
+    return m;
+  },
+  async putPrefix(store, prefix, pairs, replace) {
+    try {
+      const db = await this.open();
+      await new Promise(res => {
+        const tx = db.transaction(store, "readwrite"), os = tx.objectStore(store);
+        if (replace) os.delete(IDBKeyRange.bound(prefix, prefix + "\uffff"));
+        for (const [k, v] of pairs) os.put(v, prefix + k);
+        tx.oncomplete = res; tx.onerror = res; tx.onabort = res;
+      });
+    } catch {}
+  }
 };
+/* Note cache: after the first load only changed notes (different size / modified time) are read again. */
+const cachePrefix = label => `v:${String(label).toLowerCase()}|`;
+const cacheRead = label => idb.getPrefix("files", cachePrefix(label));
+const cacheWrite = (label, list, replace) => idb.putPrefix("files", cachePrefix(label), list.filter(e => e.m != null).map(e => [e.path, { m: e.m, s: e.s, c: e.content }]), replace);
 /* Folders that never contain notes (skipping them also keeps big vaults fast). */
-const SKIP_DIRS = new Set(["Attachment", "node_modules"]);
+const skipSet = () => new Set(String(S.skipFolders || "").split(",").map(x => x.trim().toLowerCase()).filter(Boolean));
+const isSkipped = (name, set = skipSet()) => set.has(String(name).toLowerCase());
 const VAULT_DIRS = ["Project", "Activity", "Daily", "Knowledge", "Task List"];
 const setStatus = t => { $("#vault-status").textContent = t; };
 function showBanner(html, kind = "warn") { const b = $("#load-banner"); b.className = "banner " + kind; b.innerHTML = `<span class="msg">${html}</span><button class="btn small ghost" onclick="this.parentElement.classList.add('hidden')" aria-label="Dismiss">✕</button>`; }
@@ -762,13 +816,16 @@ const COMPAT_HINT = `Click <b>📁 Select folder (compatible)</b> next to it ins
 /* ---------- Loading with live progress, parallel reads and time limits ----------
    OneDrive "online-only" files and network drives can make a single read hang for minutes,
    so every folder listing / file read has a time limit and is skipped (and reported) if it expires. */
-const LOAD = { active: false, cancel: false, started: 0, lastChange: 0, phase: "", done: 0, total: 0, folders: 0, current: "", timer: null, drawn: 0 };
-const READ_TIMEOUT = 15000, LIST_TIMEOUT = 20000, READ_PARALLEL = 8;
+const LOAD = { active: false, cancel: false, started: 0, lastChange: 0, phase: "", done: 0, total: 0, folders: 0, current: "", timer: null, drawn: 0, fromCache: 0, readStart: 0 };
+/* Security software on company laptops can make every file read take seconds, and reads are often
+   handled one after another. Few parallel reads + a generous limit keep slow-but-working files. */
+const READ_TIMEOUT = 120000, LIST_TIMEOUT = 60000, READ_PARALLEL = 3;
 function withTimeout(promise, ms, what) {
   let t; return Promise.race([promise, new Promise((_, rej) => { t = setTimeout(() => rej(new DOMException(`${what} took longer than ${ms / 1000}s`, "TimeoutError")), ms); })]).finally(() => clearTimeout(t));
 }
 function loadStart(label) {
-  Object.assign(LOAD, { active: true, cancel: false, started: Date.now(), lastChange: Date.now(), phase: "Scanning folders", done: 0, total: 0, folders: 0, current: "", drawn: 0 });
+  Object.assign(LOAD, { active: true, cancel: false, started: Date.now(), lastChange: Date.now(), phase: "Scanning folders", done: 0, total: 0, folders: 0, current: "", drawn: 0, fromCache: 0, readStart: 0 });
+  LOAD.cancelWait = new Promise(r => (LOAD.cancelResolve = r));
   hideBanner(); $("#load-progress").classList.remove("hidden"); $("#lp-title").textContent = `Loading “${label}”`;
   $("#btn-open").disabled = $("#btn-reload").disabled = true; $("#btn-open-compat").classList.add("disabled");
   clearInterval(LOAD.timer); LOAD.timer = setInterval(() => drawProgress(true), 1000); drawProgress(true);
@@ -779,22 +836,28 @@ function drawProgress(force) {
   LOAD.drawn = Date.now();
   const secs = Math.round((Date.now() - LOAD.started) / 1000), idle = Math.round((Date.now() - LOAD.lastChange) / 1000);
   const reading = LOAD.phase === "Reading notes";
-  const txt = reading ? `Reading notes ${LOAD.done} / ${LOAD.total}` : `Scanning folders… ${LOAD.folders} folders · ${LOAD.total} notes found`;
+  let txt = reading ? `Reading notes ${LOAD.done} / ${LOAD.total}` : `Scanning folders… ${LOAD.folders} folders · ${LOAD.total} notes found`;
+  if (reading && LOAD.fromCache) txt += ` · ${LOAD.fromCache} unchanged (cache)`;
+  if (reading && LOAD.done > LOAD.fromCache && LOAD.done < LOAD.total) {
+    const rate = (LOAD.done - LOAD.fromCache) / Math.max(1, (Date.now() - LOAD.readStart) / 1000);
+    const left = Math.round((LOAD.total - LOAD.done) / Math.max(rate, 0.01));
+    txt += ` · ${(1 / Math.max(rate, 0.001)).toFixed(1)} s per note · ~${left >= 90 ? Math.round(left / 60) + " min" : left + "s"} left`;
+  }
   setStatus(txt + ` · ${secs}s`);
   $("#lp-text").textContent = txt; $("#lp-time").textContent = `${secs}s`;
   const bar = $("#lp-bar"); if (reading && LOAD.total) { bar.max = LOAD.total; bar.value = LOAD.done; } else bar.removeAttribute("value");
   $("#lp-current").textContent = LOAD.current ? "… " + LOAD.current : "";
   $("#lp-slow").classList.toggle("hidden", idle < 8);
-  $("#lp-slow").innerHTML = `No progress for ${idle}s. The vault is probably in <b>OneDrive</b> or on a <b>network drive</b> and this file is still downloading. Each file is skipped after ${READ_TIMEOUT / 1000}s. You can also press <b>Stop</b> to use what has been read so far.`;
+  $("#lp-slow").innerHTML = `No progress for ${idle}s. Something on this PC reads files slowly: security software scanning each file, OneDrive, or a network drive. Loading continues, and after this first load only changed notes are re-read. <b>Stop</b> uses what has been read so far. For an instant load, use <b>🗂 Snapshot</b>.`;
 }
-function loadEnd() { LOAD.active = false; clearInterval(LOAD.timer); $("#load-progress").classList.add("hidden"); $("#btn-open").disabled = false; $("#btn-reload").disabled = !(V.dirHandle || V.loaded); $("#btn-open-compat").classList.remove("disabled"); }
+function loadEnd() { LOAD.active = false; if (LOAD.cancelResolve) LOAD.cancelResolve(); clearInterval(LOAD.timer); $("#load-progress").classList.add("hidden"); $("#btn-open").disabled = false; $("#btn-reload").disabled = !(V.dirHandle || V.loaded); $("#btn-open-compat").classList.remove("disabled"); }
 async function listDir(dir) {
   const items = [], it = dir.values();
   for (;;) { const r = await withTimeout(it.next(), LIST_TIMEOUT, "Listing the folder"); if (r.done) break; items.push(r.value); }
   return items;
 }
 async function collectFiles(root, stats) {
-  const files = [], queue = [{ h: root, p: "" }];
+  const files = [], queue = [{ h: root, p: "" }], skip = skipSet();
   while (queue.length && !LOAD.cancel) {
     const { h, p } = queue.shift();
     loadProgress({ current: (p || root.name) + "/" });
@@ -802,25 +865,40 @@ async function collectFiles(root, stats) {
     for (const c of items) {
       if (c.name.startsWith(".")) continue;
       const cp = p ? p + "/" + c.name : c.name;
-      if (c.kind === "directory") { if (!SKIP_DIRS.has(c.name)) queue.push({ h: c, p: cp }); }
-      else if (/\.md$/i.test(c.name)) files.push({ p: cp, read: async () => (await c.getFile()).text() });
+      if (c.kind === "directory") { if (!isSkipped(c.name, skip)) queue.push({ h: c, p: cp }); }
+      else if (/\.md$/i.test(c.name)) files.push({ p: cp, file: () => c.getFile() });
     }
     loadProgress({ folders: LOAD.folders + 1, total: files.length });
   }
   return files;
 }
-async function readAll(items, stats) {
+async function readAll(items, stats, cache) {
   const out = []; let next = 0;
-  loadProgress({ phase: "Reading notes", total: items.length, done: 0 });
+  loadProgress({ phase: "Reading notes", total: items.length, done: 0 }); LOAD.readStart = Date.now();
+  const readOne = async it => {
+    const f = await it.file(); const hit = cache.get(it.p);
+    if (hit && hit.m === f.lastModified && hit.s === f.size) return { content: hit.c, m: hit.m, s: hit.s, cached: true };
+    return { content: await f.text(), m: f.lastModified, s: f.size, cached: false };
+  };
   const worker = async () => {
     while (next < items.length && !LOAD.cancel) {
       const it = items[next++];
-      try { out.push({ path: it.p, content: await withTimeout(it.read(), READ_TIMEOUT, "Reading the file") }); }
-      catch (e) { stats.skipped.push(`${it.p} (${e.name})`); }
+      try {
+        const r = await withTimeout(readOne(it), READ_TIMEOUT, "Reading the file");
+        if (LOAD.cancel) return;
+        out.push({ path: it.p, ...r });
+        if (r.cached) { LOAD.fromCache++; LOAD.readStart += 0; }
+      } catch (e) { stats.skipped.push(`${it.p} (${e.name})`); }
       loadProgress({ done: LOAD.done + 1, current: it.p });
     }
   };
-  await Promise.all(Array.from({ length: READ_PARALLEL }, worker));
+  // Stop resolves immediately, even while slow reads are still in flight.
+  await Promise.race([Promise.all(Array.from({ length: READ_PARALLEL }, worker)), LOAD.cancelWait]);
+  // Anything not read (stopped / timed out) falls back to the last cached copy, if there is one.
+  const got = new Set(out.map(o => o.path)); let stale = 0;
+  for (const it of items) if (!got.has(it.p) && cache.has(it.p)) { const c = cache.get(it.p); out.push({ path: it.p, content: c.c, m: c.m, s: c.s, cached: true, stale: true }); stale++; }
+  stats.skipped = stats.skipped.filter(x => !cache.has(x.replace(/ \([^)]*\)$/, "")));
+  stats.stale = stale;
   return out;
 }
 /* If the user picked a parent folder (e.g. D:\Obsidian instead of D:\Obsidian\WorkingNotes),
@@ -836,7 +914,8 @@ function normalizeRoot(entries) {
   const prefix = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].length - b[0].length)[0][0];
   return { prefix, entries: entries.filter(e => e.path.startsWith(prefix + "/")).map(e => ({ path: e.path.slice(prefix.length + 1), content: e.content })) };
 }
-function finishLoad(entries, label, skipped, how) {
+function finishLoad(entries, label, stats, how) {
+  const skipped = Array.isArray(stats) ? stats : (stats && stats.skipped) || [], stale = (stats && stats.stale) || 0;
   if (!entries.length) {
     setStatus(V.loaded ? `${V.label} (unchanged)` : "No vault loaded");
     showBanner(`No Markdown (<code>.md</code>) notes found in “${esc(label)}”${skipped.length ? ` — ${skipped.length} file(s) could not be read` : ""}. Choose the vault folder itself (the one that contains <code>Project/</code>, <code>Activity/</code>, <code>Daily/</code>…).`, "warn");
@@ -850,28 +929,42 @@ function finishLoad(entries, label, skipped, how) {
     showBanner(`Read ${entries.length} notes but could not index them: <code>${esc(e.name + ": " + e.message)}</code>. Please send this message to whoever maintains the app.`, "error");
     return false;
   }
-  if (!S.vaultName || S.vaultName === DEFAULTS.vaultName) { S.vaultName = vaultLabel; saveSettings(false); }
+  V.fromCache = false;
+  if (!S.vaultPath && (!S.vaultName || S.vaultName === DEFAULTS.vaultName)) { S.vaultName = vaultLabel; saveSettings(false); }
   const msgs = [];
-  if (norm.prefix) msgs.push(`You picked a parent folder, so the vault root was detected as <code>${esc(norm.prefix)}</code>.`);
+  if (norm.prefix) msgs.push(`You picked the parent folder “${esc(label)}”; the vault is its subfolder <code>${esc(norm.prefix)}</code>. Next time pick <b>${esc(vaultLabel)}</b> directly: it is faster.`);
+  const rootName = S.vaultPath ? S.vaultPath.split(/[\\/]/).pop() : "";
+  if (rootName && rootName.toLowerCase() !== vaultLabel.toLowerCase()) {
+    const fix = norm.prefix && rootName.toLowerCase() === String(label).toLowerCase() ? joinPath(S.vaultPath, ...norm.prefix.split("/")) : "";
+    msgs.push(`⚠ VAULT_ROOT in Settings is <code>${esc(S.vaultPath)}</code>, but the vault you opened is “${esc(vaultLabel)}”. Mage would write notes into the wrong folder.` +
+      (fix ? ` <button class="btn small" data-fix-root="${esc(fix)}">Set VAULT_ROOT to ${esc(fix)}</button>` : ` Fix it in ⚙ Settings.`));
+  }
+  if (stale) msgs.push(`${stale} note(s) could not be re-read in time, so their last cached copy is shown (it may be slightly outdated).`);
   if (!V.projects.size && !V.activities.length) msgs.push(`No <code>Project/</code> or <code>Activity/</code> notes found. Is this the right vault folder?`);
-  if (skipped.length) msgs.push(`${skipped.length} file(s) could not be read and were skipped (OneDrive “online-only” files must be downloaded first — right-click → <i>Always keep on this device</i>): <code>${esc(skipped.slice(0, 5).join(", "))}${skipped.length > 5 ? " …" : ""}</code>`);
-  if (msgs.length) showBanner(msgs.join("<br>"), skipped.length || (!V.projects.size && !V.activities.length) ? "warn" : "info"); else hideBanner();
+  if (skipped.length) msgs.push(`${skipped.length} file(s) could not be read and were skipped: <code>${esc(skipped.slice(0, 5).join(", "))}${skipped.length > 5 ? " …" : ""}</code>. If this keeps happening, use <b>🗂 Snapshot</b> (one file, loads instantly).`);
+  if (msgs.length) showBanner(msgs.join("<br>"), skipped.length || rootName && rootName.toLowerCase() !== vaultLabel.toLowerCase() || (!V.projects.size && !V.activities.length) ? "warn" : "info"); else hideBanner();
   toast(`Loaded ${norm.entries.length} notes from “${vaultLabel}”${how ? " " + how : ""}`);
   return true;
+}
+async function showCachedCopy(cache, label) {
+  if (!cache.size || V.loaded) return;
+  try { const n = normalizeRoot([...cache].map(([path, v]) => ({ path, content: v.c }))); indexVault(n.entries, n.prefix ? n.prefix.split("/").pop() : label); V.fromCache = true; } catch (e) { console.warn(e); }
 }
 async function loadFromHandle(h) {
   if (LOAD.active) return false;
   loadStart(h.name);
   const stats = { skipped: [] }; let out = [];
-  try { out = await readAll(await collectFiles(h, stats), stats); }
+  const cache = await cacheRead(h.name);
+  await showCachedCopy(cache, h.name);
+  try { out = await readAll(await collectFiles(h, stats), stats, cache); }
   catch (e) {
     console.error(e); loadEnd(); setStatus(V.loaded ? V.label : "No vault loaded");
     showBanner(`Could not read the folder “${esc(h.name)}”: <code>${esc(e.name + ": " + e.message)}</code>. ${COMPAT_HINT}`, "error");
     return false;
   }
   const stopped = LOAD.cancel; loadEnd();
-  const ok = finishLoad(out, h.name, stats.skipped, stopped ? "(stopped early: partial vault)" : "");
-  if (ok) { V.dirHandle = h; idb.set("vault", h); $("#btn-reload").disabled = false; $("#btn-reload").textContent = "↻ Reload"; }
+  const ok = finishLoad(out, h.name, stats, stopped ? "(stopped early)" : "");
+  if (ok) { V.dirHandle = h; idb.set("vault", h); $("#btn-reload").disabled = false; $("#btn-reload").textContent = "↻ Reload"; cacheWrite(h.name, out, !stopped && !stats.skipped.length); }
   return ok;
 }
 async function openVault() {
@@ -904,16 +997,51 @@ $("#dir-input").addEventListener("change", async e => {
   if (!all.length || LOAD.active) return;
   const root = (all[0].webkitRelativePath || "").split("/")[0] || "vault";
   loadStart(root);
-  const items = [];
+  const items = [], skip = skipSet();
   for (const f of all) {
     const segs = (f.webkitRelativePath || f.name).split("/").slice(1);
-    if (!/\.md$/i.test(f.name) || segs.some(x => x.startsWith(".")) || SKIP_DIRS.has(segs[0])) continue;
-    items.push({ p: segs.join("/") || f.name, read: () => f.text() });
+    if (!/\.md$/i.test(f.name) || segs.some(x => x.startsWith(".")) || segs.slice(0, -1).some(x => isSkipped(x, skip))) continue;
+    items.push({ p: segs.join("/") || f.name, file: async () => f });
   }
   const stats = { skipped: [] };
-  const out = await readAll(items, stats);
+  const cache = await cacheRead(root);
+  await showCachedCopy(cache, root);
+  const out = await readAll(items, stats, cache);
   const stopped = LOAD.cancel; loadEnd();
-  if (finishLoad(out, root, stats.skipped, stopped ? "(stopped early: partial vault)" : "(to refresh later, select the folder again)")) V.dirHandle = null;
+  if (finishLoad(out, root, stats, stopped ? "(stopped early)" : "(to refresh later, select the folder again)")) { V.dirHandle = null; cacheWrite(root, out, !stopped && !stats.skipped.length); }
+});
+/* ---------- Snapshot: whole vault in one JSON file made by PowerShell ---------- */
+function snapshotCommand() {
+  const v = S.vaultPath || "C:\\path\\to\\WorkingNotes";
+  const outDir = S.promptFolder || "$env:USERPROFILE\\Downloads";
+  const q = x => x.startsWith("$env:") ? `"${x}\\vault-snapshot.json"` : `'${x.replace(/'/g, "''")}\\vault-snapshot.json'`;
+  const skip = String(S.skipFolders || "").split(",").map(x => x.trim()).filter(Boolean).map(x => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  return `$v='${v.replace(/'/g, "''")}'; $o=${q(outDir)}; ` +
+    `$f = Get-ChildItem -LiteralPath $v -Recurse -File -Filter *.md | Where-Object { $_.FullName.Substring($v.Length) -notmatch '\\\\\\.'${skip ? ` -and $_.FullName.Substring($v.Length) -notmatch '(?i)\\\\(${skip})\\\\'` : ""} } | ` +
+    `ForEach-Object { [pscustomobject]@{ path = $_.FullName.Substring($v.Length).TrimStart('\\').Replace('\\','/'); content = [IO.File]::ReadAllText($_.FullName) } }; ` +
+    `ConvertTo-Json -InputObject @{ vault = (Split-Path $v -Leaf); files = @($f) } -Depth 4 -Compress | Out-File -Encoding utf8 -LiteralPath $o; "Saved $($f.Count) notes to $o"`;
+}
+$("#btn-snapshot").addEventListener("click", () => {
+  $("#snap-cmd").textContent = snapshotCommand();
+  $("#snap-warn").innerHTML = S.vaultPath ? "" : `<div class="warnbox">Set <b>VAULT_ROOT</b> in ⚙ Settings first (e.g. <code>C:\\Users\\you\\Documents\\catatan-yanto\\WorkingNotes</code>), or edit the path in the command.</div>`;
+  $("#dlg-snapshot").showModal();
+});
+$("#btn-copy-snap").addEventListener("click", async () => toast((await copyText($("#snap-cmd").textContent)) ? "Command copied — paste it into PowerShell" : "Copy failed"));
+$("#snap-file").addEventListener("change", async e => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  let data;
+  try { data = JSON.parse((await f.text()).replace(/^\uFEFF/, "")); } catch (err) { return toast("This is not a valid snapshot file"); }
+  let files = Array.isArray(data) ? data : data && (Array.isArray(data.files) ? data.files : data.files ? [data.files] : []);
+  const skip = skipSet();
+  files = files.filter(x => x && typeof x.path === "string").map(x => ({ path: x.path.replace(/\\/g, "/").replace(/^\/+/, ""), content: String(x.content ?? "") }))
+    .filter(x => /\.md$/i.test(x.path) && !x.path.split("/").some(seg => seg.startsWith(".")) && !x.path.split("/").slice(0, -1).some(seg => isSkipped(seg, skip)));
+  const label = (data && data.vault) || (S.vaultPath ? S.vaultPath.split(/[\\/]/).pop() : "vault");
+  $("#dlg-snapshot").close(); V.dirHandle = null;
+  finishLoad(files, label, { skipped: [] }, `(snapshot from ${new Date(f.lastModified).toLocaleString()})`);
+});
+$("#load-banner").addEventListener("click", e => {
+  const b = e.target.closest("[data-fix-root]"); if (!b) return;
+  S.vaultPath = b.dataset.fixRoot; S.vaultName = ""; saveSettings(false); toast("VAULT_ROOT updated"); b.closest(".banner").classList.add("hidden");
 });
 window.addEventListener("error", e => showBanner(`Unexpected error: <code>${esc(e.message)}</code>`, "error"));
 window.addEventListener("unhandledrejection", e => showBanner(`Unexpected error: <code>${esc((e.reason && (e.reason.message || e.reason.name)) || e.reason)}</code>`, "error"));
@@ -1903,7 +2031,7 @@ function normalizePaths() {
   const win = S.skillRepo ? winStyle(S.skillRepo) : winStyle(S.vaultPath);
   S.skillFile = normPath(S.skillFile || DEFAULTS.skillFile, win).replace(/^[\\/]+/, "");
   // Obsidian names a vault after its folder, so obsidian:// links need the folder name of VAULT_ROOT.
-  if (S.vaultPath && (!S.vaultName || S.vaultName === DEFAULTS.vaultName)) S.vaultName = S.vaultPath.split(/[\\/]/).pop() || S.vaultName;
+  if (S.vaultPath) S.vaultName = S.vaultPath.split(/[\\/]/).pop() || S.vaultName;
 }
 function saveSettings(fromForm = true) {
   if (fromForm) for (const k of SETTING_KEYS) { const el = $("#s-" + k); if (!el) continue; S[k] = el.type === "checkbox" ? el.checked : el.value.trim(); }
@@ -1940,10 +2068,11 @@ $("#help").innerHTML = md(`# How it works
 Both are written at the very top of every generated prompt so Qwen / Mage knows exactly where to read and write.
 
 **2. Open the vault**
-- *Open vault folder* reads every \`.md\` file locally in the browser (nothing is uploaded). Chrome and Edge remember the folder, so **Reload** re-reads it after Mage changes files.
-- If that button does nothing (company browser policy, Firefox, Brave), use **📁 Select folder (compatible)**.
-- Typing VAULT_ROOT in Settings does not load anything, because a web page cannot open a typed path. You have to pick the folder.
-- Unreadable files (e.g. OneDrive "online-only" files) are skipped and listed in a banner.
+- Pick the folder that contains \`.obsidian\`, \`Activity\`, \`Project\`… (e.g. \`…\\catatan-yanto\\WorkingNotes\`) and use the same folder as VAULT_ROOT.
+- Every \`.md\` note in every subfolder is read. Dot-folders and the “Folders to skip” from Settings (default Archive, Attachment) are left out.
+- Notes are cached in this browser, so after the first load only changed notes are re-read.
+- On a slow or locked-down laptop, use **🗂 Snapshot**: one PowerShell command packs the whole vault into one file that loads in about a second.
+- If *Open vault folder* does nothing, use **📁 Select folder (compatible)**.
 
 **3. Tasks tab** — every checkbox in Project TODO callouts, Activity action items, Daily “Tomorrow” lists, plus every note in \`Task List/\`. Filter by state, project status, project, source, tag. Click a task to review it with its source context, Project note and all related Activity notes.
 - **Ask Mage to work on it / Break down / Create task note / Review status / New task from this** → builds a very detailed prompt with all that context.
