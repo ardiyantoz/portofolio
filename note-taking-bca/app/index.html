@@ -184,6 +184,14 @@ legend{font-weight:700;padding:0 6px}
 .banner.error{background:var(--danger-bg);color:var(--danger)}
 .banner.info{background:var(--accent-2);color:var(--accent)}
 .banner .msg{flex:1;min-width:0}
+#load-progress .msg{display:flex;flex-direction:column;gap:4px}
+.lp-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+#lp-bar{width:100%;height:8px;accent-color:var(--accent)}
+.lp-current{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lp-slow{color:var(--warn)}
+.spinner{width:13px;height:13px;border:2px solid var(--accent);border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+label.btn.disabled{opacity:.5;pointer-events:none}
 .banner code{background:transparent;font-family:var(--mono);overflow-wrap:anywhere}
 .banner .btn{color:inherit;flex:0 0 auto}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:100;max-width:calc(100vw - 32px)}
@@ -219,6 +227,15 @@ legend{font-weight:700;padding:0 6px}
   </div>
   <div class="paths" id="paths"></div>
   <div id="load-banner" class="banner hidden" role="alert"></div>
+  <div id="load-progress" class="banner info hidden" role="status" aria-live="polite">
+    <span class="msg">
+      <span class="lp-row"><span class="spinner" aria-hidden="true"></span><b id="lp-title">Loading</b> · <span id="lp-text"></span> · <span id="lp-time"></span></span>
+      <progress id="lp-bar"></progress>
+      <span id="lp-current" class="lp-current"></span>
+      <span id="lp-slow" class="lp-slow hidden"></span>
+    </span>
+    <button class="btn small" id="btn-load-stop" title="Stop reading and use the notes read so far">Stop</button>
+  </div>
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="tasks" aria-selected="true">Tasks <span class="count" id="c-tasks">0</span></button>
     <button role="tab" data-tab="projects" aria-selected="false">Projects <span class="count" id="c-projects">0</span></button>
@@ -382,7 +399,7 @@ legend{font-weight:700;padding:0 6px}
     <div class="dlg-b">
       <fieldset><legend>Repositories &amp; paths (written at the top of every prompt)</legend>
         <div class="settings-grid">
-          <div><label class="f" for="s-skillRepo">1. Skill repository (absolute path)</label><input type="text" id="s-skillRepo" placeholder="D:\repo\opencode-skills"></div>
+          <div><label class="f" for="s-skillRepo">1. Skill repository (absolute path)</label><input type="text" id="s-skillRepo" placeholder="C:\Users\you\.mage\skills"></div>
           <div><label class="f" for="s-skillFile">Skill file (relative to skill repository)</label><input type="text" id="s-skillFile" placeholder="obsidian-zettelkasten/SKILL.md"></div>
           <div><label class="f" for="s-vaultPath">2. Obsidian vault position (absolute path)</label><input type="text" id="s-vaultPath" placeholder="D:\Obsidian\WorkingNotes"></div>
           <div><label class="f" for="s-vaultName">Obsidian vault name (for obsidian:// links)</label><input type="text" id="s-vaultName" placeholder="WorkingNotes"></div>
@@ -534,7 +551,21 @@ function joinPath(base, ...parts) {
 }
 const vaultRootLabel = () => S.vaultPath || "<<FILL: absolute path of the Obsidian vault>>";
 const vaultFile = rel => (S.vaultPath ? joinPath(S.vaultPath, rel) : `<VAULT_ROOT>/${rel}`);
-const skillFileLabel = () => (S.skillRepo ? joinPath(S.skillRepo, S.skillFile || "SKILL.md") : "<<FILL: absolute path of the skill repository>>/" + (S.skillFile || "SKILL.md"));
+/* Accepts SKILL_REPO typed as the skills folder, the skill folder, or the SKILL.md file itself
+   (e.g. C:\Users\me\.mage\skills  |  …\skills\obsidian-zettelkasten  |  …\obsidian-zettelkasten\SKILL.md). */
+function skillPaths() {
+  const raw = String(S.skillRepo || "").trim().replace(/^"|"$/g, "").replace(/[\\/]+$/, "");
+  const segs = String(S.skillFile || "SKILL.md").split(/[\\/]+/).filter(Boolean);
+  if (!raw) return { repo: "", file: "" };
+  const sep = sepOf(raw), r = raw.split(/[\\/]+/);
+  let k = 0;
+  for (let n = Math.min(segs.length, r.length - 1); n > 0; n--) if (r.slice(-n).join("/").toLowerCase() === segs.slice(0, n).join("/").toLowerCase()) { k = n; break; }
+  if (!k && /\.md$/i.test(raw)) { const repo = r.slice(0, -2).join(sep) || r.slice(0, -1).join(sep); return { repo, file: raw }; }
+  const repo = r.slice(0, r.length - k).join(sep);
+  return { repo, file: joinPath(repo, ...segs) };
+}
+const skillRepoLabel = () => skillPaths().repo || "<<FILL: absolute path of the skill repository>>";
+const skillFileLabel = () => skillPaths().file || "<<FILL: absolute path of the skill repository>>/" + (S.skillFile || "SKILL.md");
 
 /* =========================================================================
    Frontmatter + Markdown parsing
@@ -727,21 +758,69 @@ function showBanner(html, kind = "warn") { const b = $("#load-banner"); b.classN
 const hideBanner = () => $("#load-banner").classList.add("hidden");
 const COMPAT_HINT = `Click <b>📁 Select folder (compatible)</b> next to it instead: it works in every browser, including company-managed ones.`;
 
-/* Reads every .md file. One unreadable file (OneDrive “online-only”, locked, too long path…)
-   is skipped and reported instead of aborting the whole load. */
-async function walkDir(dir, prefix, out, stats) {
-  for await (const h of dir.values()) {
-    const name = h.name;
-    if (name.startsWith(".")) continue;
-    const p = prefix ? prefix + "/" + name : name;
-    try {
-      if (h.kind === "directory") { if (!SKIP_DIRS.has(name)) await walkDir(h, p, out, stats); }
-      else if (/\.md$/i.test(name)) {
-        const file = await h.getFile(); out.push({ path: p, content: await file.text() });
-        if (out.length % 50 === 0) setStatus(`Reading… ${out.length} notes`);
-      }
-    } catch (e) { stats.skipped.push(`${p} (${e.name})`); }
+/* ---------- Loading with live progress, parallel reads and time limits ----------
+   OneDrive "online-only" files and network drives can make a single read hang for minutes,
+   so every folder listing / file read has a time limit and is skipped (and reported) if it expires. */
+const LOAD = { active: false, cancel: false, started: 0, lastChange: 0, phase: "", done: 0, total: 0, folders: 0, current: "", timer: null, drawn: 0 };
+const READ_TIMEOUT = 15000, LIST_TIMEOUT = 20000, READ_PARALLEL = 8;
+function withTimeout(promise, ms, what) {
+  let t; return Promise.race([promise, new Promise((_, rej) => { t = setTimeout(() => rej(new DOMException(`${what} took longer than ${ms / 1000}s`, "TimeoutError")), ms); })]).finally(() => clearTimeout(t));
+}
+function loadStart(label) {
+  Object.assign(LOAD, { active: true, cancel: false, started: Date.now(), lastChange: Date.now(), phase: "Scanning folders", done: 0, total: 0, folders: 0, current: "", drawn: 0 });
+  hideBanner(); $("#load-progress").classList.remove("hidden"); $("#lp-title").textContent = `Loading “${label}”`;
+  $("#btn-open").disabled = $("#btn-reload").disabled = true; $("#btn-open-compat").classList.add("disabled");
+  clearInterval(LOAD.timer); LOAD.timer = setInterval(() => drawProgress(true), 1000); drawProgress(true);
+}
+function loadProgress(patch) { Object.assign(LOAD, patch, { lastChange: Date.now() }); drawProgress(false); }
+function drawProgress(force) {
+  if (!LOAD.active || (!force && Date.now() - LOAD.drawn < 120)) return;
+  LOAD.drawn = Date.now();
+  const secs = Math.round((Date.now() - LOAD.started) / 1000), idle = Math.round((Date.now() - LOAD.lastChange) / 1000);
+  const reading = LOAD.phase === "Reading notes";
+  const txt = reading ? `Reading notes ${LOAD.done} / ${LOAD.total}` : `Scanning folders… ${LOAD.folders} folders · ${LOAD.total} notes found`;
+  setStatus(txt + ` · ${secs}s`);
+  $("#lp-text").textContent = txt; $("#lp-time").textContent = `${secs}s`;
+  const bar = $("#lp-bar"); if (reading && LOAD.total) { bar.max = LOAD.total; bar.value = LOAD.done; } else bar.removeAttribute("value");
+  $("#lp-current").textContent = LOAD.current ? "… " + LOAD.current : "";
+  $("#lp-slow").classList.toggle("hidden", idle < 8);
+  $("#lp-slow").innerHTML = `No progress for ${idle}s. The vault is probably in <b>OneDrive</b> or on a <b>network drive</b> and this file is still downloading. Each file is skipped after ${READ_TIMEOUT / 1000}s. You can also press <b>Stop</b> to use what has been read so far.`;
+}
+function loadEnd() { LOAD.active = false; clearInterval(LOAD.timer); $("#load-progress").classList.add("hidden"); $("#btn-open").disabled = false; $("#btn-reload").disabled = !(V.dirHandle || V.loaded); $("#btn-open-compat").classList.remove("disabled"); }
+async function listDir(dir) {
+  const items = [], it = dir.values();
+  for (;;) { const r = await withTimeout(it.next(), LIST_TIMEOUT, "Listing the folder"); if (r.done) break; items.push(r.value); }
+  return items;
+}
+async function collectFiles(root, stats) {
+  const files = [], queue = [{ h: root, p: "" }];
+  while (queue.length && !LOAD.cancel) {
+    const { h, p } = queue.shift();
+    loadProgress({ current: (p || root.name) + "/" });
+    let items; try { items = await listDir(h); } catch (e) { stats.skipped.push(`${p || "(vault root)"}/ (${e.name})`); continue; }
+    for (const c of items) {
+      if (c.name.startsWith(".")) continue;
+      const cp = p ? p + "/" + c.name : c.name;
+      if (c.kind === "directory") { if (!SKIP_DIRS.has(c.name)) queue.push({ h: c, p: cp }); }
+      else if (/\.md$/i.test(c.name)) files.push({ p: cp, read: async () => (await c.getFile()).text() });
+    }
+    loadProgress({ folders: LOAD.folders + 1, total: files.length });
   }
+  return files;
+}
+async function readAll(items, stats) {
+  const out = []; let next = 0;
+  loadProgress({ phase: "Reading notes", total: items.length, done: 0 });
+  const worker = async () => {
+    while (next < items.length && !LOAD.cancel) {
+      const it = items[next++];
+      try { out.push({ path: it.p, content: await withTimeout(it.read(), READ_TIMEOUT, "Reading the file") }); }
+      catch (e) { stats.skipped.push(`${it.p} (${e.name})`); }
+      loadProgress({ done: LOAD.done + 1, current: it.p });
+    }
+  };
+  await Promise.all(Array.from({ length: READ_PARALLEL }, worker));
+  return out;
 }
 /* If the user picked a parent folder (e.g. D:\Obsidian instead of D:\Obsidian\WorkingNotes),
    find the real vault root: the folder that contains Project/, Activity/, Daily/ … */
@@ -780,16 +859,18 @@ function finishLoad(entries, label, skipped, how) {
   return true;
 }
 async function loadFromHandle(h) {
-  hideBanner(); setStatus(`Reading “${h.name}”…`);
-  const out = [], stats = { skipped: [] };
-  try { await walkDir(h, "", out, stats); }
+  if (LOAD.active) return false;
+  loadStart(h.name);
+  const stats = { skipped: [] }; let out = [];
+  try { out = await readAll(await collectFiles(h, stats), stats); }
   catch (e) {
-    console.error(e); setStatus(V.loaded ? V.label : "No vault loaded");
+    console.error(e); loadEnd(); setStatus(V.loaded ? V.label : "No vault loaded");
     showBanner(`Could not read the folder “${esc(h.name)}”: <code>${esc(e.name + ": " + e.message)}</code>. ${COMPAT_HINT}`, "error");
     return false;
   }
-  const ok = finishLoad(out, h.name, stats.skipped);
-  if (ok) { V.dirHandle = h; idb.set("vault", h); }
+  const stopped = LOAD.cancel; loadEnd();
+  const ok = finishLoad(out, h.name, stats.skipped, stopped ? "(stopped early: partial vault)" : "");
+  if (ok) { V.dirHandle = h; idb.set("vault", h); $("#btn-reload").disabled = false; $("#btn-reload").textContent = "↻ Reload"; }
   return ok;
 }
 async function openVault() {
@@ -819,19 +900,19 @@ async function reloadVault() {
 }
 $("#dir-input").addEventListener("change", async e => {
   const all = [...e.target.files]; e.target.value = "";
-  if (!all.length) return;
-  hideBanner();
+  if (!all.length || LOAD.active) return;
   const root = (all[0].webkitRelativePath || "").split("/")[0] || "vault";
-  setStatus(`Reading “${root}”…`);
-  const out = [], skipped = [];
+  loadStart(root);
+  const items = [];
   for (const f of all) {
     const segs = (f.webkitRelativePath || f.name).split("/").slice(1);
-    const rel = segs.join("/") || f.name;
-    if (!/\.md$/i.test(f.name) || segs.some(s => s.startsWith(".")) || SKIP_DIRS.has(segs[0])) continue;
-    try { out.push({ path: rel, content: await f.text() }); if (out.length % 50 === 0) setStatus(`Reading… ${out.length} notes`); }
-    catch (err) { skipped.push(`${rel} (${err.name})`); }
+    if (!/\.md$/i.test(f.name) || segs.some(x => x.startsWith(".")) || SKIP_DIRS.has(segs[0])) continue;
+    items.push({ p: segs.join("/") || f.name, read: () => f.text() });
   }
-  if (finishLoad(out, root, skipped, "(to refresh later, select the folder again)")) V.dirHandle = null;
+  const stats = { skipped: [] };
+  const out = await readAll(items, stats);
+  const stopped = LOAD.cancel; loadEnd();
+  if (finishLoad(out, root, stats.skipped, stopped ? "(stopped early: partial vault)" : "(to refresh later, select the folder again)")) V.dirHandle = null;
 });
 window.addEventListener("error", e => showBanner(`Unexpected error: <code>${esc(e.message)}</code>`, "error"));
 window.addEventListener("unhandledrejection", e => showBanner(`Unexpected error: <code>${esc((e.reason && (e.reason.message || e.reason.name)) || e.reason)}</code>`, "error"));
@@ -852,7 +933,7 @@ $$("nav.tabs button").forEach(b => b.addEventListener("click", () => setTab(b.da
 function renderPaths() {
   const items = [
     ["SKILL_REPO", S.skillRepo, "s-skillRepo"],
-    ["SKILL_FILE", S.skillFile, "s-skillFile"],
+    ["SKILL_FILE", S.skillRepo ? skillPaths().file : S.skillFile, "s-skillFile"],
     ["VAULT_ROOT", S.vaultPath, "s-vaultPath"],
     ["WORK_REPO", S.workRepo || "(optional)", "s-workRepo", true],
     ["MODE", S.execMode === "agent" ? "Agent (edits files)" : "Chat (prints files)", "s-execMode", true],
@@ -1201,7 +1282,7 @@ function headerBlock(extraRows = []) {
   const d = now(); const missing = [];
   if (!S.skillRepo) missing.push("SKILL_REPO"); if (!S.vaultPath) missing.push("VAULT_ROOT");
   const rows = [
-    ["SKILL_REPO", S.skillRepo || "<<FILL: absolute path of the skill repository>>", "Repository that contains the Obsidian Zettelkasten skill"],
+    ["SKILL_REPO", skillRepoLabel(), "Repository that contains the Obsidian Zettelkasten skill"],
     ["SKILL_FILE", skillFileLabel(), "The skill you MUST follow"],
     ["VAULT_ROOT", vaultRootLabel(), `Obsidian vault “${S.vaultName || "WorkingNotes"}” — every note path below is relative to this folder`],
     ...extraRows,
@@ -1823,6 +1904,7 @@ $$("dialog").forEach(d => d.addEventListener("click", e => { if (e.target === d)
    Header buttons, theme, help, boot
    ========================================================================= */
 $("#btn-open").addEventListener("click", openVault);
+$("#btn-load-stop").addEventListener("click", () => { LOAD.cancel = true; $("#lp-text").textContent = "Stopping…"; });
 $("#btn-reload").addEventListener("click", reloadVault);
 $("#btn-demo").addEventListener("click", () => { if (!DEMO_VAULT.length) return toast("Demo vault not embedded"); V.dirHandle = null; indexVault(DEMO_VAULT, "Demo WorkingNotes"); toast("Demo vault loaded — nothing on disk is touched"); });
 function applyTheme(t) { if (t) document.documentElement.setAttribute("data-theme", t); else document.documentElement.removeAttribute("data-theme"); }

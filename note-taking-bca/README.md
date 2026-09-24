@@ -13,14 +13,14 @@ Every prompt starts with the two repositories the LLM needs: **1. Skill reposito
 1. Unzip `note-taking-bca.zip`.
 2. Open `app/index.html` in **Chrome or Edge** by double-clicking it.
 3. Click the red chips at the top (or open ⚙ Settings) and fill in:
-   - **SKILL_REPO**: the folder that contains `obsidian-zettelkasten/SKILL.md` (copy `skills/obsidian-zettelkasten/` into your skill repo).
+   - **SKILL_REPO**: the skills folder, e.g. `C:\Users\you\.mage\skills`, which contains `obsidian-zettelkasten\SKILL.md` (copy `skills/obsidian-zettelkasten/` there). Pasting the skill folder or the `SKILL.md` path also works: the app works out the correct paths either way.
    - **VAULT_ROOT**: the absolute path of your vault, e.g. `D:\Obsidian\WorkingNotes`.
    - Optional fields: WORK_REPO (the code repository for tasks), the Mage command template, the prompt download folder, and an OpenAI-compatible endpoint.
 4. Click **📂 Open vault folder** and choose the `WorkingNotes` folder. Files are only **read**, inside the browser. Nothing is uploaded.
    - **If nothing happens** (company browser policy, Firefox, Brave), click **📁 Select folder (compatible)** instead. Chrome then asks "Upload N files to this site?". Say yes: the files still stay on your computer.
    - Typing VAULT_ROOT in Settings does **not** load the vault. A web page isn't allowed to read a typed path, so you have to pick the folder once. The typed path is only written into the prompts.
    - If you pick the parent folder (e.g. `D:\Obsidian`), the app finds the `WorkingNotes` root automatically.
-   - Files it can't read, such as OneDrive "online-only" files, are skipped and listed in a yellow banner. Right-click the vault in Explorer → *Always keep on this device*.
+   - A progress bar shows the folders scanned and notes read, and **Stop** keeps what was read so far. The app reads 8 files at once, and any file that takes longer than 15 s (a OneDrive "online-only" file or a slow network drive) is skipped and listed in a yellow banner. Right-click the vault in Explorer → *Always keep on this device*.
    - Click **Demo vault** instead if you want to try the page on sample data first.
 
 ## Daily workflow
