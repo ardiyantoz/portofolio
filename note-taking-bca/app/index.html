@@ -179,6 +179,13 @@ fieldset{border:1px solid var(--line);border-radius:10px;padding:10px 14px 14px;
 legend{font-weight:700;padding:0 6px}
 .check{display:flex;gap:8px;align-items:flex-start;margin:6px 0;font-size:13px}
 .check input{margin-top:3px}
+.banner{margin:0 16px 10px;padding:8px 12px;border-radius:8px;font-size:13px;display:flex;gap:8px;align-items:flex-start;justify-content:space-between}
+.banner.warn{background:var(--warn-bg);color:var(--warn)}
+.banner.error{background:var(--danger-bg);color:var(--danger)}
+.banner.info{background:var(--accent-2);color:var(--accent)}
+.banner .msg{flex:1;min-width:0}
+.banner code{background:transparent;font-family:var(--mono);overflow-wrap:anywhere}
+.banner .btn{color:inherit;flex:0 0 auto}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:100;max-width:calc(100vw - 32px)}
 #toast.show{opacity:1}
 .mode-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
@@ -203,13 +210,15 @@ legend{font-weight:700;padding:0 6px}
 <header class="top">
   <div class="bar">
     <div class="brand"><div class="logo" aria-hidden="true">WN</div><div>WorkingNotes Hub<small id="vault-status">No vault loaded</small></div></div>
-    <button class="btn primary" id="btn-open">📂 Open vault folder</button>
+    <button class="btn primary" id="btn-open" title="Chrome / Edge: pick the vault folder (remembered for Reload)">📂 Open vault folder</button>
+    <label class="btn" for="dir-input" id="btn-open-compat" title="Works in every browser, including company-managed ones. Chrome asks “Upload N files?” — the files still stay on your computer.">📁 Select folder (compatible)</label>
     <button class="btn" id="btn-reload" title="Re-read the vault from disk" disabled>↻ Reload</button>
     <button class="btn" id="btn-demo" title="Load a small sample vault to try the app">Demo vault</button>
     <button class="btn" id="btn-settings">⚙ Settings</button>
     <button class="btn ghost" id="btn-theme" title="Toggle light/dark">◐</button>
   </div>
   <div class="paths" id="paths"></div>
+  <div id="load-banner" class="banner hidden" role="alert"></div>
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="tasks" aria-selected="true">Tasks <span class="count" id="c-tasks">0</span></button>
     <button role="tab" data-tab="projects" aria-selected="false">Projects <span class="count" id="c-projects">0</span></button>
@@ -564,6 +573,7 @@ function parseNote(text) {
   return { fm: parseYaml(fmRaw), fmRaw, body: text.slice(after), bodyLineOffset: text.slice(0, after).split("\n").length - 1 };
 }
 const asArr = v => (v == null || v === "" ? [] : Array.isArray(v) ? v : [v]);
+const scalar = v => String(Array.isArray(v) ? (v[0] ?? "") : (v ?? "")).trim();
 const linkName = s => String(s).replace(/^!?\[\[/, "").replace(/\]\]$/, "").split("|")[0].split("#")[0].trim();
 const CB_RE = /^((?:\s*>)*\s*)[-*+]\s+\[([^\]])\]\s+(\S.*)$/;
 const stateOf = c => ({ " ": "open", x: "done", X: "done", "/": "doing", "-": "cancelled", "!": "blocked" }[c] || "open");
@@ -637,9 +647,11 @@ const KIND = { "Activity": "activity", "Project": "project", "Knowledge": "knowl
 const SKIP_TASKS = new Set(["template", "archive", "base", "attachment"]);
 const TASKNOTE_STATE = s => { s = String(s || "").toLowerCase(); return /done|selesai|complete/.test(s) ? "done" : /progress|doing|ongoing/.test(s) ? "doing" : /block/.test(s) ? "blocked" : /cancel|batal/.test(s) ? "cancelled" : "open"; };
 
+const RE_CACHE = new Map();
+const wordRe = k => { let r = RE_CACHE.get(k); if (!r) { r = new RegExp("(^|[^\\p{L}\\p{N}])" + escRe(k) + "(?=$|[^\\p{L}\\p{N}])", "iu"); RE_CACHE.set(k, r); } return r; };
 function detectProjects(text) {
   const res = []; const seen = new Set(); if (!text) return res;
-  const test = k => new RegExp("(^|[^\\p{L}\\p{N}])" + escRe(k) + "(?=$|[^\\p{L}\\p{N}])", "iu").test(text);
+  const test = k => wordRe(k).test(text);
   for (const m of MAP) for (const k of m.keywords) if (test(k)) { if (!seen.has(m.project)) { res.push({ project: m.project, keyword: k, tag: m.tag }); seen.add(m.project); } break; }
   for (const name of V.projects.keys()) if (!seen.has(name) && name.length > 2 && test(name)) { res.push({ project: name, keyword: name, tag: "" }); seen.add(name); }
   return res;
@@ -657,23 +669,30 @@ function indexVault(entries, label) {
     if (!/\.md$/i.test(path)) continue;
     const parts = path.split("/"); const folder = parts.length > 1 ? parts[0] : "";
     const name = parts[parts.length - 1].replace(/\.md$/i, "");
-    const n = parseNote(e.content);
+    let n; try { n = parseNote(e.content); } catch { n = { fm: {}, fmRaw: "", body: String(e.content), bodyLineOffset: 0 }; }
     const f = { path, folder, name, content: e.content, ...n, kind: KIND[folder] || (folder ? "other" : "root") };
     V.files.push(f);
     if (!V.byName.has(name) || f.kind !== "archive") V.byName.set(name, f);
     if (f.fm.id) V.ids.add(String(f.fm.id));
   }
   for (const f of V.files) if (f.kind === "project") {
-    V.projects.set(f.name, { name: f.name, file: f, status: f.fm.Status || "", followup: f.fm["Followup Date"] || "", tags: asArr(f.fm.tags).map(String), id: f.fm.id || "", missing: false });
+    V.projects.set(f.name, { name: f.name, file: f, status: scalar(f.fm.Status), followup: scalar(f.fm["Followup Date"]), tags: asArr(f.fm.tags).map(String), id: scalar(f.fm.id), missing: false });
   }
   for (const f of V.files) if (f.kind === "activity") {
-    const a = { file: f, date: String(f.fm.Date || f.name.slice(0, 10)), category: asArr(f.fm.Category).join(", "), projects: asArr(f.fm.Project).map(linkName).filter(Boolean), summary: String(f.fm.Summary || "").trim() };
+    const a = { file: f, date: scalar(f.fm.Date).slice(0, 10) || f.name.slice(0, 10), category: asArr(f.fm.Category).join(", "), projects: asArr(f.fm.Project).map(linkName).filter(Boolean), summary: asArr(f.fm.Summary).map(String).join("\n").trim() };
     V.activities.push(a);
     for (const p of a.projects) if (!V.projects.has(p)) V.projects.set(p, { name: p, file: null, status: "", followup: "", tags: [], id: "", missing: true });
   }
   V.activities.sort((a, b) => b.date.localeCompare(a.date) || b.file.name.localeCompare(a.file.name));
   for (const f of V.files) {
     if (SKIP_TASKS.has(f.kind)) continue;
+    try { scanTasks(f); } catch (e) { console.warn("Could not scan tasks in", f.path, e); }
+  }
+  V.loaded = true; V.label = label; V.loadedAt = new Date();
+  afterLoad();
+}
+function scanTasks(f) {
+  {
     const lines = f.body.split("\n"); let heading = ""; const subs = [];
     lines.forEach((ln, idx) => {
       const h = ln.match(/^\s*(?:>\s*)*#{1,6}\s+(.*)/); if (h) heading = h[1].trim();
@@ -685,11 +704,9 @@ function indexVault(entries, label) {
     });
     if (f.kind === "tasknote") {
       const h1 = (f.body.match(/^#\s+(.+)$/m) || [])[1];
-      V.tasks.push({ id: f.path, text: f.fm.title || h1 || f.name, raw: f.name, state: TASKNOTE_STATE(f.fm.Status), due: String(f.fm.Due || f.fm.due || ""), priority: f.fm.Priority || "", bodyIdx: -1, line: 1, heading: "", file: f, kind: "tasknote", project: projectOfFile(f) || (detectProjects(f.name)[0] || {}).project || "", subtasks: subs });
+      V.tasks.push({ id: f.path, text: String(f.fm.title || h1 || f.name), raw: f.name, state: TASKNOTE_STATE(scalar(f.fm.Status)), due: scalar(f.fm.Due || f.fm.due), priority: String(f.fm.Priority || ""), bodyIdx: -1, line: 1, heading: "", file: f, kind: "tasknote", project: projectOfFile(f) || (detectProjects(f.name)[0] || {}).project || "", subtasks: subs });
     }
   }
-  V.loaded = true; V.label = label; V.loadedAt = new Date();
-  afterLoad();
 }
 const activitiesFor = p => V.activities.filter(a => a.projects.includes(p));
 const tasksFor = p => V.tasks.filter(t => t.project === p);
@@ -702,52 +719,122 @@ const idb = {
   async get(k) { try { const db = await this.open(); return await new Promise(res => { const q = db.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => res(q.result); q.onerror = () => res(undefined); }); } catch { return undefined; } },
   async set(k, v) { try { const db = await this.open(); await new Promise(res => { const tx = db.transaction("kv", "readwrite"); tx.objectStore("kv").put(v, k); tx.oncomplete = res; tx.onerror = res; }); } catch {} }
 };
-async function walkDir(dir, prefix, out) {
-  for await (const [name, h] of dir.entries()) {
+/* Folders that never contain notes (skipping them also keeps big vaults fast). */
+const SKIP_DIRS = new Set(["Attachment", "node_modules"]);
+const VAULT_DIRS = ["Project", "Activity", "Daily", "Knowledge", "Task List"];
+const setStatus = t => { $("#vault-status").textContent = t; };
+function showBanner(html, kind = "warn") { const b = $("#load-banner"); b.className = "banner " + kind; b.innerHTML = `<span class="msg">${html}</span><button class="btn small ghost" onclick="this.parentElement.classList.add('hidden')" aria-label="Dismiss">✕</button>`; }
+const hideBanner = () => $("#load-banner").classList.add("hidden");
+const COMPAT_HINT = `Click <b>📁 Select folder (compatible)</b> next to it instead: it works in every browser, including company-managed ones.`;
+
+/* Reads every .md file. One unreadable file (OneDrive “online-only”, locked, too long path…)
+   is skipped and reported instead of aborting the whole load. */
+async function walkDir(dir, prefix, out, stats) {
+  for await (const h of dir.values()) {
+    const name = h.name;
     if (name.startsWith(".")) continue;
     const p = prefix ? prefix + "/" + name : name;
-    if (h.kind === "directory") { if (p !== "Attachment") await walkDir(h, p, out); }
-    else if (/\.md$/i.test(name)) { const file = await h.getFile(); out.push({ path: p, content: await file.text() }); }
+    try {
+      if (h.kind === "directory") { if (!SKIP_DIRS.has(name)) await walkDir(h, p, out, stats); }
+      else if (/\.md$/i.test(name)) {
+        const file = await h.getFile(); out.push({ path: p, content: await file.text() });
+        if (out.length % 50 === 0) setStatus(`Reading… ${out.length} notes`);
+      }
+    } catch (e) { stats.skipped.push(`${p} (${e.name})`); }
   }
+}
+/* If the user picked a parent folder (e.g. D:\Obsidian instead of D:\Obsidian\WorkingNotes),
+   find the real vault root: the folder that contains Project/, Activity/, Daily/ … */
+function normalizeRoot(entries) {
+  if (entries.some(e => e.path.includes("/") && VAULT_DIRS.includes(e.path.split("/")[0]))) return { entries, prefix: "" };
+  const counts = new Map();
+  for (const e of entries) {
+    const parts = e.path.split("/");
+    for (let i = 1; i < parts.length - 1; i++) if (VAULT_DIRS.includes(parts[i])) { const pre = parts.slice(0, i).join("/"); counts.set(pre, (counts.get(pre) || 0) + 1); break; }
+  }
+  if (!counts.size) return { entries, prefix: "" };
+  const prefix = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].length - b[0].length)[0][0];
+  return { prefix, entries: entries.filter(e => e.path.startsWith(prefix + "/")).map(e => ({ path: e.path.slice(prefix.length + 1), content: e.content })) };
+}
+function finishLoad(entries, label, skipped, how) {
+  if (!entries.length) {
+    setStatus(V.loaded ? `${V.label} (unchanged)` : "No vault loaded");
+    showBanner(`No Markdown (<code>.md</code>) notes found in “${esc(label)}”${skipped.length ? ` — ${skipped.length} file(s) could not be read` : ""}. Choose the vault folder itself (the one that contains <code>Project/</code>, <code>Activity/</code>, <code>Daily/</code>…).`, "warn");
+    return false;
+  }
+  const norm = normalizeRoot(entries);
+  const vaultLabel = norm.prefix ? norm.prefix.split("/").pop() : label;
+  try { indexVault(norm.entries, vaultLabel); }
+  catch (e) {
+    console.error(e); setStatus("No vault loaded");
+    showBanner(`Read ${entries.length} notes but could not index them: <code>${esc(e.name + ": " + e.message)}</code>. Please send this message to whoever maintains the app.`, "error");
+    return false;
+  }
+  if (!S.vaultName || S.vaultName === DEFAULTS.vaultName) { S.vaultName = vaultLabel; saveSettings(false); }
+  const msgs = [];
+  if (norm.prefix) msgs.push(`You picked a parent folder, so the vault root was detected as <code>${esc(norm.prefix)}</code>.`);
+  if (!V.projects.size && !V.activities.length) msgs.push(`No <code>Project/</code> or <code>Activity/</code> notes found. Is this the right vault folder?`);
+  if (skipped.length) msgs.push(`${skipped.length} file(s) could not be read and were skipped (OneDrive “online-only” files must be downloaded first — right-click → <i>Always keep on this device</i>): <code>${esc(skipped.slice(0, 5).join(", "))}${skipped.length > 5 ? " …" : ""}</code>`);
+  if (msgs.length) showBanner(msgs.join("<br>"), skipped.length || (!V.projects.size && !V.activities.length) ? "warn" : "info"); else hideBanner();
+  toast(`Loaded ${norm.entries.length} notes from “${vaultLabel}”${how ? " " + how : ""}`);
+  return true;
 }
 async function loadFromHandle(h) {
-  const out = []; await walkDir(h, "", out);
-  V.dirHandle = h; indexVault(out, h.name);
-  if (!S.vaultName || S.vaultName === DEFAULTS.vaultName) { S.vaultName = h.name; saveSettings(false); }
-  toast(`Loaded ${out.length} notes from “${h.name}”`);
+  hideBanner(); setStatus(`Reading “${h.name}”…`);
+  const out = [], stats = { skipped: [] };
+  try { await walkDir(h, "", out, stats); }
+  catch (e) {
+    console.error(e); setStatus(V.loaded ? V.label : "No vault loaded");
+    showBanner(`Could not read the folder “${esc(h.name)}”: <code>${esc(e.name + ": " + e.message)}</code>. ${COMPAT_HINT}`, "error");
+    return false;
+  }
+  const ok = finishLoad(out, h.name, stats.skipped);
+  if (ok) { V.dirHandle = h; idb.set("vault", h); }
+  return ok;
 }
 async function openVault() {
-  if (window.showDirectoryPicker) {
-    try { const h = await window.showDirectoryPicker({ id: "wnh-vault", mode: "read" }); await loadFromHandle(h); idb.set("vault", h); return; }
-    catch (e) { if (e && e.name === "AbortError") return; console.warn("Directory picker failed, falling back", e); }
+  hideBanner();
+  if (!window.showDirectoryPicker) { $("#dir-input").click(); return; }
+  let h;
+  try { h = await window.showDirectoryPicker({ id: "wnh-vault", mode: "read" }); }
+  catch (e) {
+    if (e && e.name === "AbortError") return; // user pressed Cancel
+    // The picker consumed the click, so the browser would silently block opening another
+    // dialog from here: tell the user what to click instead of failing silently.
+    console.warn("showDirectoryPicker failed", e);
+    showBanner(`This browser blocked the folder picker (<code>${esc((e && e.name) || "Error")}${e && e.message ? ": " + esc(e.message) : ""}</code>). ${COMPAT_HINT}`, "warn");
+    return;
   }
-  $("#dir-input").click();
+  await loadFromHandle(h);
 }
 async function reloadVault() {
-  let h = V.dirHandle || await idb.get("vault");
-  if (!h) return openVault();
+  const h = V.dirHandle || await idb.get("vault");
+  if (!h) { if (V.loaded && !V.dirHandle) return showBanner(`This vault was loaded with the compatible folder selector, which cannot re-read by itself. Select the folder again to refresh.`, "info"); return openVault(); }
   try {
     if (h.queryPermission && (await h.queryPermission({ mode: "read" })) !== "granted") {
-      if ((await h.requestPermission({ mode: "read" })) !== "granted") return toast("Permission denied");
+      if ((await h.requestPermission({ mode: "read" })) !== "granted") return showBanner(`Permission to read “${esc(h.name)}” was not granted. Click <b>Reload</b> again and choose <i>Allow</i>, or use <b>📂 Open vault folder</b>.`, "warn");
     }
     await loadFromHandle(h);
-  } catch (e) { console.warn(e); openVault(); }
+  } catch (e) { console.warn(e); showBanner(`Could not reconnect to “${esc(h.name)}” (<code>${esc(e.name)}</code>). Click <b>📂 Open vault folder</b> and choose it again.`, "warn"); }
 }
 $("#dir-input").addEventListener("change", async e => {
-  const files = [...e.target.files].filter(f => /\.md$/i.test(f.name));
-  if (!files.length) return toast("No .md files found in that folder");
-  const root = (files[0].webkitRelativePath || "").split("/")[0];
-  const out = [];
-  for (const f of files) {
-    const rel = (f.webkitRelativePath || f.name).split("/").slice(1).join("/") || f.name;
-    if (rel.split("/").some(s => s.startsWith("."))) continue;
-    out.push({ path: rel, content: await f.text() });
+  const all = [...e.target.files]; e.target.value = "";
+  if (!all.length) return;
+  hideBanner();
+  const root = (all[0].webkitRelativePath || "").split("/")[0] || "vault";
+  setStatus(`Reading “${root}”…`);
+  const out = [], skipped = [];
+  for (const f of all) {
+    const segs = (f.webkitRelativePath || f.name).split("/").slice(1);
+    const rel = segs.join("/") || f.name;
+    if (!/\.md$/i.test(f.name) || segs.some(s => s.startsWith(".")) || SKIP_DIRS.has(segs[0])) continue;
+    try { out.push({ path: rel, content: await f.text() }); if (out.length % 50 === 0) setStatus(`Reading… ${out.length} notes`); }
+    catch (err) { skipped.push(`${rel} (${err.name})`); }
   }
-  V.dirHandle = null; indexVault(out, root || "vault");
-  if (root && (!S.vaultName || S.vaultName === DEFAULTS.vaultName)) { S.vaultName = root; saveSettings(false); }
-  toast(`Loaded ${out.length} notes from “${root}” (use “Open vault folder” again to refresh)`);
-  e.target.value = "";
+  if (finishLoad(out, root, skipped, "(to refresh later, select the folder again)")) V.dirHandle = null;
 });
+window.addEventListener("error", e => showBanner(`Unexpected error: <code>${esc(e.message)}</code>`, "error"));
+window.addEventListener("unhandledrejection", e => showBanner(`Unexpected error: <code>${esc((e.reason && (e.reason.message || e.reason.name)) || e.reason)}</code>`, "error"));
 
 /* =========================================================================
    UI state
@@ -813,7 +900,7 @@ function dueChip(due) {
 const KIND_LABEL = { project: "Project TODO", tasknote: "Task note", activity: "Activity", daily: "Daily", knowledge: "Knowledge", other: "Note", root: "Note" };
 function renderTasks() {
   const el = $("#task-list"); $("#c-tasks").textContent = V.tasks.filter(t => ["open", "doing", "blocked"].includes(t.state)).length;
-  if (!V.loaded) { el.innerHTML = `<div class="empty"><h3>No vault loaded</h3>Click <b>Open vault folder</b> and choose your <code>WorkingNotes</code> folder, or try the <b>Demo vault</b>.<br><br><span class="hint">Nothing is uploaded — files are read only inside this browser tab.</span></div>`; updateSelBar(); return; }
+  if (!V.loaded) { el.innerHTML = `<div class="empty"><h3>No vault loaded</h3>Click <b>📂 Open vault folder</b> and choose your <code>WorkingNotes</code> folder. If nothing happens, use <b>📁 Select folder (compatible)</b>. Or try the <b>Demo vault</b>.<br><br><span class="hint">The VAULT_ROOT path in Settings is only written into the prompts. A web page is not allowed to read a typed path, so you have to pick the folder once here.<br>Nothing is uploaded: the files are only read inside this browser tab.</span></div>`; updateSelBar(); return; }
   const list = filteredTasks();
   if (!list.length) { el.innerHTML = `<div class="empty"><h3>No tasks match</h3>Try “All states” or clear the filters.</div>`; updateSelBar(); return; }
   const groups = new Map();
@@ -1751,7 +1838,11 @@ $("#help").innerHTML = md(`# How it works
 - **VAULT_ROOT** — absolute path of your Obsidian vault (\`WorkingNotes\`).
 Both are written at the very top of every generated prompt so Qwen / Mage knows exactly where to read and write.
 
-**2. Open the vault** — *Open vault folder* reads every \`.md\` file locally in the browser (nothing is uploaded). Chrome / Edge remember the folder so **Reload** re-reads it after Mage changed files.
+**2. Open the vault**
+- *Open vault folder* reads every \`.md\` file locally in the browser (nothing is uploaded). Chrome and Edge remember the folder, so **Reload** re-reads it after Mage changes files.
+- If that button does nothing (company browser policy, Firefox, Brave), use **📁 Select folder (compatible)**.
+- Typing VAULT_ROOT in Settings does not load anything, because a web page cannot open a typed path. You have to pick the folder.
+- Unreadable files (e.g. OneDrive "online-only" files) are skipped and listed in a banner.
 
 **3. Tasks tab** — every checkbox in Project TODO callouts, Activity action items, Daily “Tomorrow” lists, plus every note in \`Task List/\`. Filter by state, project status, project, source, tag. Click a task to review it with its source context, Project note and all related Activity notes.
 - **Ask Mage to work on it / Break down / Create task note / Review status / New task from this** → builds a very detailed prompt with all that context.

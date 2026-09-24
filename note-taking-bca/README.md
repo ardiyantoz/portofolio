@@ -17,7 +17,11 @@ Every prompt starts with the two repositories the LLM needs: **1. Skill reposito
    - **VAULT_ROOT**: the absolute path of your vault, e.g. `D:\Obsidian\WorkingNotes`.
    - Optional fields: WORK_REPO (the code repository for tasks), the Mage command template, the prompt download folder, and an OpenAI-compatible endpoint.
 4. Click **📂 Open vault folder** and choose the `WorkingNotes` folder. Files are only **read**, inside the browser. Nothing is uploaded.
-   Click **Demo vault** instead if you want to try the page on sample data first.
+   - **If nothing happens** (company browser policy, Firefox, Brave), click **📁 Select folder (compatible)** instead. Chrome then asks "Upload N files to this site?". Say yes: the files still stay on your computer.
+   - Typing VAULT_ROOT in Settings does **not** load the vault. A web page isn't allowed to read a typed path, so you have to pick the folder once. The typed path is only written into the prompts.
+   - If you pick the parent folder (e.g. `D:\Obsidian`), the app finds the `WorkingNotes` root automatically.
+   - Files it can't read, such as OneDrive "online-only" files, are skipped and listed in a yellow banner. Right-click the vault in Explorer → *Always keep on this device*.
+   - Click **Demo vault** instead if you want to try the page on sample data first.
 
 ## Daily workflow
 
@@ -79,6 +83,6 @@ When a vault is loaded, the prompt also includes a **vault snapshot**: existing 
 
 ## Notes and limits
 - The inbox, settings and filters are stored in this browser's localStorage. Use **Export** in the Inbox and in Settings to back them up.
-- **Open vault folder** remembers the folder in Chrome and Edge, and **Reload** re-reads it. Firefox uses a folder-upload dialog instead, so choose the folder again to refresh.
+- **Open vault folder** remembers the folder in Chrome and Edge, and **Reload** re-reads it. With **Select folder (compatible)**, choose the folder again to refresh.
 - **Send to local LLM** POSTs to `<base>/chat/completions`. Your server must allow CORS for pages opened from `file://`. If it doesn't, use Copy or Download.
 - The app never writes to the vault. Only Mage does, through the prompt.
