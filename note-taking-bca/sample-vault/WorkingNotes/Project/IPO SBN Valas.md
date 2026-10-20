@@ -11,6 +11,7 @@ tags:
 
 > [!TODO] TODO
 > - [x] Kickoff dengan tim bisnis SBN Valas
+> 	- 📝 2026-09-22 11:30: Kickoff selesai; scope form pemesanan, integrasi kurs dan target UAT disepakati.
 > - [ ] Buat form pemesanan SBN Valas (Angular 20) 📅 2026-09-30
 > - [ ] Integrasi API kurs valas dengan backend
 > - [ ] Siapkan skenario UAT bersama QA

@@ -7,112 +7,108 @@
 <meta name="description" content="Note taking BCA — browse Obsidian WorkingNotes tasks, capture notes, and generate detailed prompts for the local LLM (Mage / opencode / Qwen).">
 <style>
 /* ==========================================================================
-   WorkingNotes Hub: dark-only design system
-   Tinted ink neutrals (hue ~250), one cool accent, semantic status hues.
-   Metadata in mono, content in a humanist sans; surfaces separate by
-   lightness steps rather than shadows.
+   WorkingNotes Hub: Passbook (dark, teller-counter green)
+   Ground: teller-counter green-black. Ink-blue = actions + selection.
+   Stamp red = stamps and lateness only. Posted green = done.
+   Mono (Cascadia) for every date, time, path, ID and count; Segoe UI
+   Variable for task text and controls. Hairline passbook rules, no shadows
+   except the dialog lift, no glow, no decorative blur.
    ========================================================================== */
 :root{
   color-scheme: dark;
-  /* surfaces: each step is a little lighter */
-  --bg:#0c0f14; --bg-2:#10141b; --panel:#141922; --panel-2:#19202b; --panel-3:#1f2733;
-  --line:#232b38; --line-2:#2d3747;
-  /* ink */
-  --ink:#e4e9f1; --ink-2:#b7c0cf; --muted:#7f8a9c; --faint:#5a6476;
-  /* accent: a calm cyan-blue */
-  --accent:#6cb6ff; --accent-strong:#8cc8ff; --accent-2:rgba(108,182,255,.12); --accent-3:rgba(108,182,255,.22); --accent-ink:#06121f;
-  /* semantic */
-  --ok:#5fd394; --ok-bg:rgba(95,211,148,.12);
-  --warn:#f2b866; --warn-bg:rgba(242,184,102,.12);
-  --danger:#ff8a80; --danger-bg:rgba(255,138,128,.12);
-  --doing:#b49cff; --doing-bg:rgba(180,156,255,.13);
-  --chip:#1c2330;
-  --shadow:0 18px 50px rgba(0,0,0,.45);
-  --radius:12px; --radius-s:8px;
+  --bg:#0b1310; --bg-2:#0e1814; --rail:#0f1915; --panel:#111c18; --panel-2:#15231e; --panel-3:#1a2b25;
+  --line:#1f2e28; --line-2:#2a3c35; --line-3:#364b43;
+  --ink:#e6ece7; --ink-2:#bccac3; --muted:#90a39a; --faint:#7d9188;
+  --blue:#7fa8ff; --blue-hi:#a3c0ff; --blue-ink:#0a1325; --blue-bg:rgba(127,168,255,.11); --blue-line:rgba(127,168,255,.38);
+  --stamp:#ee6b60; --stamp-bg:rgba(238,107,96,.11);
+  --green:#5fd39a; --green-bg:rgba(95,211,154,.11);
+  --amber:#f0b45e; --amber-bg:rgba(240,180,94,.11);
+  --radius:10px; --radius-s:6px;
   --sans:"Segoe UI Variable Text","Segoe UI Variable","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
-  --display:"Segoe UI Variable Display","Segoe UI Variable","Segoe UI",system-ui,sans-serif;
-  --mono:"Cascadia Code","Cascadia Mono",ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+  --mono:"Cascadia Mono","Cascadia Code",Consolas,ui-monospace,"Liberation Mono",monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.55 var(--sans);-webkit-font-smoothing:antialiased;font-feature-settings:"tnum" 1}
-::selection{background:var(--accent-3)}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+::selection{background:rgba(127,168,255,.3);color:var(--ink)}
 button,input,select,textarea{font:inherit;color:inherit}
-a{color:var(--accent);text-decoration-color:rgba(108,182,255,.35);text-underline-offset:3px}
-a:hover{color:var(--accent-strong);text-decoration-color:currentColor}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+input,textarea{caret-color:var(--blue)}
+a{color:var(--blue);text-decoration-color:var(--blue-line);text-underline-offset:3px}
+a:hover{color:var(--blue-hi);text-decoration-color:currentColor}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
+code,kbd,.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .ic{width:16px;height:16px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px}
+*{scrollbar-color:var(--line-3) transparent;scrollbar-width:thin}
 ::-webkit-scrollbar{width:10px;height:10px}
-::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:10px;border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:10px;border:2px solid var(--bg);}
+::-webkit-scrollbar-thumb:hover{background:var(--line-3)}
 ::-webkit-scrollbar-track{background:transparent}
 
 /* ---------- app bar ---------- */
-header.top{position:sticky;top:0;z-index:20;background:rgba(12,15,20,.86);backdrop-filter:saturate(140%) blur(12px);border-bottom:1px solid var(--line)}
-.bar{display:flex;align-items:center;gap:8px;padding:12px 20px 10px;flex-wrap:wrap;max-width:1560px;margin:0 auto}
+header.top{position:sticky;top:0;z-index:20;background:var(--rail);border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;gap:8px;padding:12px 22px 8px;flex-wrap:wrap;max-width:1560px;margin:0 auto}
 .brand{display:flex;align-items:center;gap:12px;margin-right:auto;min-width:0}
-.logo{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:linear-gradient(160deg,#1d3550,#12202f);border:1px solid #2a4664;color:var(--accent);font:700 12px/1 var(--mono);letter-spacing:.02em}
-.brand>div{font:600 15px/1.2 var(--display);letter-spacing:-.01em;min-width:0}
-.brand small{display:block;font:500 11.5px/1.4 var(--mono);color:var(--muted);letter-spacing:0;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46vw}
+.logo{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;border:1.5px solid var(--blue);color:var(--blue);font:600 12px/1 var(--mono);letter-spacing:.02em}
+.brand>div{font:600 16px/1.2 var(--sans);letter-spacing:-.01em;min-width:0}
+.brand small{display:block;font:400 12px/1.4 var(--mono);color:var(--muted);letter-spacing:0;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:48vw}
 .bar .sep{width:1px;height:22px;background:var(--line-2);margin:0 4px}
 
 /* ---------- buttons ---------- */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:32px;padding:0 12px;border-radius:var(--radius-s);border:1px solid var(--line-2);background:var(--panel-2);color:var(--ink-2);font-weight:550;font-size:13px;cursor:pointer;text-decoration:none;white-space:nowrap;transition:background .15s,border-color .15s,color .15s}
-.btn:hover{background:var(--panel-3);border-color:#3a4659;color:var(--ink)}
-.btn:active{transform:translateY(.5px)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:650}
-.btn.primary:hover{background:var(--accent-strong);border-color:var(--accent-strong);color:var(--accent-ink)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:32px;padding:0 12px;border-radius:var(--radius-s);border:1px solid var(--line-2);background:var(--panel-2);color:var(--ink-2);font-weight:560;font-size:13px;cursor:pointer;text-decoration:none;white-space:nowrap;transition:background .15s,border-color .15s,color .15s}
+.btn:hover{background:var(--panel-3);border-color:var(--line-3);color:var(--ink)}
+.btn:active{background:var(--line-2)}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:var(--blue-ink);font-weight:620}
+.btn.primary:hover{background:var(--blue-hi);border-color:var(--blue-hi);color:var(--blue-ink)}
 .btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
 .btn.ghost:hover{background:var(--panel-2);color:var(--ink)}
 .btn.small{height:26px;padding:0 9px;font-size:12px;gap:5px}
 .btn.small .ic{width:14px;height:14px}
-.btn.danger{color:var(--danger)}
-.btn.danger:hover{border-color:rgba(255,138,128,.45)}
-.btn:disabled,label.btn.disabled{opacity:.42;cursor:not-allowed;pointer-events:none}
+.btn.danger{color:var(--stamp)}
+.btn.danger:hover{border-color:rgba(238,107,96,.45)}
+.btn:disabled,label.btn.disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
 
 /* ---------- context strip (paths) ---------- */
-.paths{display:flex;gap:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:0 20px 10px;font-size:11.5px;max-width:1560px;margin:0 auto;mask-image:linear-gradient(90deg,#000 92%,transparent)}
+.paths{display:flex;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;mask-image:linear-gradient(to right,#000 92%,transparent);padding:0 22px 9px;font:12px/1.4 var(--mono);max-width:1560px;margin:0 auto}
 .paths::-webkit-scrollbar{display:none}
-.path{flex:0 0 auto}
-.path{display:flex;gap:7px;align-items:center;padding:3px 12px 3px 0;margin-right:12px;border-right:1px solid var(--line);cursor:pointer;max-width:100%;min-width:0;background:none}
+.path{flex:0 0 auto;display:flex;gap:7px;align-items:center;padding:2px 14px 2px 0;margin-right:14px;border-right:1px solid var(--line);cursor:pointer;min-width:0}
 .path:last-child{border-right:0}
-.path b{font:600 10.5px/1 var(--mono);color:var(--faint);letter-spacing:.06em}
-.path code{font-family:var(--mono);color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:300px}
-.path:hover code{color:var(--accent)}
-.path.missing code{color:var(--danger)}
-.path.missing b{color:var(--danger)}
-.path.missing b::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--danger);margin-right:6px;vertical-align:1px}
+.path b{font-weight:400;color:var(--faint)}
+.path code{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:330px}
+.path:hover code{color:var(--blue)}
+.path.missing b,.path.missing code{color:var(--stamp)}
 
 /* ---------- tabs ---------- */
-nav.tabs{display:flex;gap:2px;padding:0 14px;overflow-x:auto;max-width:1560px;margin:0 auto;scrollbar-width:none}
-nav.tabs button{position:relative;border:0;background:none;padding:10px 12px 11px;cursor:pointer;color:var(--muted);font-weight:600;font-size:13.5px;white-space:nowrap;display:flex;gap:8px;align-items:center;border-radius:8px 8px 0 0}
+nav.tabs{display:flex;gap:2px;padding:0 16px;overflow-x:auto;mask-image:linear-gradient(to right,#000 94%,transparent);max-width:1560px;margin:0 auto;scrollbar-width:none}
+nav.tabs button{position:relative;border:0;background:none;padding:10px 12px 11px;cursor:pointer;color:var(--muted);font-weight:600;font-size:13.5px;white-space:nowrap;display:flex;gap:8px;align-items:baseline}
 nav.tabs button:hover{color:var(--ink)}
 nav.tabs button[aria-selected="true"]{color:var(--ink)}
-nav.tabs button[aria-selected="true"]::after{content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:2px;border-radius:2px;background:var(--accent)}
-nav.tabs .count{font:600 11px/1 var(--mono);color:var(--muted);background:var(--panel-2);border:1px solid var(--line);padding:3px 6px;border-radius:6px}
-nav.tabs button[aria-selected="true"] .count{color:var(--accent);border-color:rgba(108,182,255,.3);background:var(--accent-2)}
+nav.tabs button[aria-selected="true"]::after{content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:2px;background:var(--blue)}
+nav.tabs .count{font:400 11.5px/1.3 var(--mono);color:var(--faint)}
+nav.tabs button[aria-selected="true"] .count{color:var(--blue)}
 
 /* ---------- layout ---------- */
-main{padding:20px;max-width:1560px;margin:0 auto}
-.tab{display:none}.tab.active{display:block;animation:rise .18s ease-out}
-@keyframes rise{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
-.grid-2{display:grid;grid-template-columns:minmax(330px,440px) 1fr;gap:18px;align-items:start}
+main{padding:20px 22px;max-width:1560px;margin:0 auto}
+.tab{display:none}.tab.active{display:block}
+.grid-2{display:grid;grid-template-columns:minmax(340px,560px) 1fr;gap:18px;align-items:start}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius)}
-.card-h{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-.card-h h2{font:650 14px/1.3 var(--display);margin:0;margin-right:auto;letter-spacing:-.005em}
+.card-h{display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.card-h h2{font:620 14px/1.3 var(--sans);margin:0;margin-right:auto}
 .card-b{padding:16px}
 
 /* ---------- form controls ---------- */
-.filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--bg-2)}
+.filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line)}
 .filters .full{grid-column:1/-1}
 input[type=text],input[type=search],input[type=datetime-local],input[type=url],input[type=password],select,textarea{width:100%;background:var(--bg-2);border:1px solid var(--line-2);border-radius:var(--radius-s);padding:7px 10px;min-height:34px;color:var(--ink);transition:border-color .15s,box-shadow .15s}
 select{appearance:none;padding-right:28px;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 15px) 52%,calc(100% - 10px) 52%;background-size:5px 5px;background-repeat:no-repeat}
-input::placeholder,textarea::placeholder{color:var(--faint)}
-input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(.75)}
+input::placeholder,textarea::placeholder{color:var(--muted)}
+input[type=datetime-local]{font-family:var(--mono);font-size:13px}
+input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(.7) sepia(.3) hue-rotate(90deg)}
 textarea{resize:vertical;min-height:84px;line-height:1.55}
 textarea.mono{font-family:var(--mono);font-size:12.5px;line-height:1.5}
-input:hover,select:hover,textarea:hover{border-color:#3a4659}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-2)}
-input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px}
-label.f{display:block;font:600 11px/1.3 var(--sans);color:var(--muted);margin:14px 0 6px;letter-spacing:.04em;text-transform:uppercase}
+input:hover,select:hover,textarea:hover{border-color:var(--line-3)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-bg)}
+input[type=checkbox],input[type=radio]{accent-color:var(--blue);width:15px;height:15px}
+label.f{display:block;font:560 12px/1.3 var(--sans);color:var(--muted);margin:14px 0 6px}
 label.f:first-child{margin-top:0}
 .row>div>label.f:first-child{margin-top:14px}
 .hint{font-size:12px;color:var(--muted)}
@@ -121,202 +117,244 @@ label.f:first-child{margin-top:0}
 .row>*{flex:1 1 140px}
 .row>.btn{flex:0 0 auto}
 
-/* ---------- task list ---------- */
-.task-list{max-height:calc(100vh - 340px);min-height:260px;overflow:auto}
-.group-h{position:sticky;top:0;z-index:1;display:flex;gap:8px;align-items:center;padding:9px 16px 7px;background:var(--panel);border-bottom:1px solid var(--line);font:650 11px/1.3 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
-.group-h .n{margin-left:auto;font:600 11px/1 var(--mono);color:var(--faint);letter-spacing:0}
-.group-h .chip{text-transform:none;letter-spacing:0}
-.task{display:flex;gap:11px;padding:10px 14px 10px 16px;border-bottom:1px solid var(--line);cursor:pointer;align-items:flex-start;position:relative;transition:background .12s}
+/* ---------- task list (passbook entries) ---------- */
+.task-list{max-height:calc(100vh - 330px);min-height:260px;overflow:auto}
+.group-h{position:sticky;top:0;z-index:1;display:flex;gap:8px;align-items:baseline;padding:11px 16px 7px;background:var(--panel);border-bottom:1px dashed var(--line-2);font:600 11.5px/1.3 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.group-h .gs{color:var(--faint);font-weight:400}
+.group-h .gs.warn{color:var(--stamp)}
+.task{display:grid;grid-template-columns:20px minmax(0,1fr) auto auto;gap:4px 11px;padding:10px 14px 10px 16px;border-bottom:1px solid var(--line);cursor:pointer;align-items:start;transition:background .12s}
 .task:hover{background:var(--bg-2)}
-.task.sel{background:var(--accent-2)}
-.task.sel::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--accent)}
-.task input{margin-top:3px;flex:0 0 auto}
-.task .t{flex:1;min-width:0}
-.task .t .txt{overflow-wrap:anywhere;color:var(--ink);line-height:1.45}
-.task .t .txt .ic{color:var(--muted);margin-right:3px}
+.task.sel{background:var(--blue-bg);box-shadow:inset 0 0 0 1px var(--blue-line)}
+.task .t{min-width:0}
+.task .txt{overflow-wrap:anywhere;color:var(--ink);line-height:1.45}
+.task .txt .ic{color:var(--muted);margin-right:4px;width:14px;height:14px}
 .task.done .txt{text-decoration:line-through;text-decoration-color:var(--faint);color:var(--muted)}
-.meta-line{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
-.chip{display:inline-flex;align-items:center;gap:5px;background:var(--chip);border:1px solid transparent;border-radius:6px;padding:0 7px;font-size:11.5px;line-height:20px;color:var(--muted);white-space:nowrap}
+.task .sub{font:12px/1.4 var(--mono);color:var(--muted);margin-top:3px}
+.task .sub .warn{color:var(--amber)}
+.task .st{font:12px/1.45 var(--mono);white-space:nowrap;text-align:right;padding-top:1px}
+.st.late,.st.blocked{color:var(--stamp)}
+.st.today,.st.soon{color:var(--amber)}
+.st.doing{color:var(--blue)}
+.st.open{color:var(--muted)}
+.st.cancelled{color:var(--faint);text-decoration:line-through}
+.detail-head .row .btn.small{height:28px}
+.banner .msg .ic{vertical-align:-3px}
+.task .pick{margin-top:2px;opacity:.35;transition:opacity .12s}
+.task .pick:checked,.task:hover .pick,.task .pick:focus-visible{opacity:1}
+.selbar{display:flex;gap:8px;align-items:center;padding:10px 16px;border-top:1px solid var(--line);flex-wrap:wrap}
+.selbar span{margin-right:auto;color:var(--muted);font:12px/1.3 var(--mono)}
+
+/* chips: small mono facts */
+.meta-line{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:5px}
+.chip{display:inline-flex;align-items:center;gap:5px;background:var(--panel-2);border:1px solid var(--line);border-radius:5px;padding:0 7px;font:12px/21px var(--mono);color:var(--ink-2);white-space:nowrap}
 .chip .ic{width:12px;height:12px;vertical-align:-1px}
-.chip.st-Ongoing,.chip.s-open{background:var(--accent-2);color:var(--accent)}
-.chip.st-Explore,.chip.s-doing{background:var(--doing-bg);color:var(--doing)}
-.chip.st-Done,.chip.s-done{background:var(--ok-bg);color:var(--ok)}
-.chip.s-cancelled{text-decoration:line-through}
-.chip.s-blocked,.chip.overdue{background:var(--danger-bg);color:var(--danger)}
-.chip.soon{background:var(--warn-bg);color:var(--warn)}
-.chip.tag{background:transparent;border-color:var(--line-2);font-family:var(--mono);font-size:11px}
-.selbar{display:flex;gap:8px;align-items:center;padding:10px 16px;border-top:1px solid var(--line);flex-wrap:wrap;background:var(--bg-2);border-radius:0 0 var(--radius) var(--radius)}
-.selbar span{margin-right:auto;color:var(--muted);font:500 12px/1 var(--mono)}
+.chip.st-Ongoing,.chip.s-open{color:var(--blue);border-color:rgba(127,168,255,.25);background:var(--blue-bg)}
+.chip.st-Explore,.chip.s-doing{color:var(--blue)}
+.chip.st-Done,.chip.s-done{color:var(--green);border-color:rgba(95,211,154,.25);background:var(--green-bg)}
+.chip.s-cancelled{text-decoration:line-through;color:var(--faint)}
+.chip.s-blocked,.chip.overdue{color:var(--stamp);border-color:rgba(238,107,96,.3);background:var(--stamp-bg)}
+.chip.soon{color:var(--amber);border-color:rgba(240,180,94,.3);background:var(--amber-bg)}
+.chip.tag{background:transparent}
+
+/* ---------- the stamp (signature) ---------- */
+.stamp{display:inline-block;transform:rotate(-6deg);border:1.5px solid var(--stamp);color:var(--stamp);font:700 10.5px/1.15 var(--mono);letter-spacing:.09em;padding:3px 6px 2px;border-radius:4px;text-align:center;white-space:nowrap;opacity:.92}
+.stamp small{display:block;font:600 9.5px/1.2 var(--mono);letter-spacing:.06em}
+.stamp.big{font-size:13px;padding:5px 10px 4px;border-width:2px}
+.stamp.big small{font-size:11px}
+.stamp.in{animation:stampdown .32s var(--ease) both}
+@keyframes stampdown{0%{transform:rotate(-14deg) scale(1.7);opacity:0;filter:blur(1.5px)}70%{opacity:1;filter:none}100%{transform:rotate(-6deg) scale(1);opacity:.92}}
+
 .empty{padding:56px 28px;text-align:center;color:var(--muted);max-width:520px;margin:0 auto;line-height:1.6}
-.empty h3{color:var(--ink);margin:0 0 8px;font:650 16px/1.3 var(--display)}
+.empty h3{color:var(--ink);margin:0 0 8px;font:620 16px/1.3 var(--sans)}
 
 /* ---------- task detail ---------- */
 .detail{min-height:320px}
-.detail-head{padding:20px 22px 18px;border-bottom:1px solid var(--line)}
-.detail-head h2{margin:8px 0 14px;font:650 21px/1.3 var(--display);letter-spacing:-.015em;overflow-wrap:anywhere;text-wrap:balance}
-.detail-body{padding:4px 22px 22px}
-dl.meta{display:grid;grid-template-columns:max-content 1fr;gap:7px 18px;margin:18px 0 0;font-size:13px}
-dl.meta dt{color:var(--faint);font:600 11px/20px var(--sans);letter-spacing:.05em;text-transform:uppercase}
+.detail-head{padding:20px 24px 18px;border-bottom:1px solid var(--line);position:relative}
+.detail-head h2{margin:0 0 8px;font:620 22px/1.3 var(--sans);letter-spacing:-.012em;overflow-wrap:anywhere;text-wrap:balance;max-width:58ch}
+.detail-head .meta-line{margin:0 0 14px}
+.detail-head .stamp.big{position:absolute;right:24px;top:18px}
+.detail-body{padding:4px 24px 24px}
+dl.meta{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;margin:16px 0 0;font-size:13.5px}
+dl.meta dt{color:var(--muted);font:12px/21px var(--mono)}
 dl.meta dd{margin:0;overflow-wrap:anywhere;color:var(--ink-2)}
 .sec{margin-top:24px}
-.sec>h3{font:650 11px/1.3 var(--sans);text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.sec>h3{font:600 12px/1.3 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 10px;display:flex;align-items:center;gap:10px}
 .sec>h3::after{content:"";flex:1;height:1px;background:var(--line)}
-details.note{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--bg-2);transition:border-color .15s}
-details.note:hover{border-color:var(--line-2)}
-details.note>summary{cursor:pointer;padding:10px 14px;list-style:none;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+details.note{border-top:1px solid var(--line)}
+details.note:last-of-type{border-bottom:1px solid var(--line)}
+details.note:hover>summary{background:var(--bg-2)}
+details.note>summary{cursor:pointer;padding:10px 4px;list-style:none;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
 details.note>summary::-webkit-details-marker{display:none}
 details.note>summary::before{content:"";width:6px;height:6px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(-45deg);transition:transform .15s;align-self:center}
 details.note[open]>summary::before{transform:rotate(45deg)}
 details.note>summary .ttl{font-weight:600;color:var(--ink)}
-details.note>summary .sub{color:var(--muted);font-size:12px;flex-basis:100%;padding-left:14px}
-details.note .inner{padding:2px 16px 14px;border-top:1px solid var(--line)}
+details.note>summary .sub{color:var(--muted);font-size:12.5px;flex-basis:100%;padding-left:14px}
+details.note .inner{padding:2px 4px 14px 18px}
 
 /* ---------- rendered markdown ---------- */
 .md{overflow-wrap:anywhere;color:var(--ink-2);line-height:1.6}
-.md h1,.md h2,.md h3,.md h4,.md h5,.md h6{margin:16px 0 6px;line-height:1.3;color:var(--ink);font-family:var(--display)}
+.md h1,.md h2,.md h3,.md h4,.md h5,.md h6{margin:16px 0 6px;line-height:1.3;color:var(--ink)}
 .md h3{font-size:16px}.md h4{font-size:14.5px}.md h5,.md h6{font-size:13.5px}
 .md p{margin:6px 0}
 .md ul{margin:6px 0;padding-left:20px}
 .md li::marker{color:var(--faint)}
 .md li.task-li{list-style:none;margin-left:-18px}
 .md pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;overflow:auto;font-size:12.5px}
-.md code{font-family:var(--mono);background:var(--panel-3);border-radius:5px;padding:1px 5px;font-size:12.5px;color:var(--ink)}
+.md code{background:var(--panel-3);border-radius:4px;padding:1px 5px;font-size:12.5px;color:var(--ink)}
 .md pre code{background:none;padding:0}
 .md table{border-collapse:collapse;width:100%;margin:10px 0;font-size:13px;display:block;overflow-x:auto}
 .md th,.md td{border:1px solid var(--line);padding:6px 10px;text-align:left}
 .md th{background:var(--panel-2);color:var(--ink);font-weight:600}
-.md blockquote{margin:8px 0;padding:2px 14px;border-left:2px solid var(--line-2);color:var(--muted)}
-.md mark{background:var(--warn-bg);color:var(--warn);border-radius:3px;padding:0 3px}
-.callout{border:1px solid rgba(108,182,255,.22);border-left:3px solid var(--accent);background:rgba(108,182,255,.06);border-radius:8px;padding:8px 14px;margin:10px 0}
-.callout-title{font-weight:650;color:var(--accent);font-size:13px;letter-spacing:.02em}
-.embed{display:inline-block;background:var(--chip);border-radius:6px;padding:0 7px;font:12px/20px var(--mono);color:var(--muted)}
+.md blockquote{margin:8px 0;padding:6px 14px;border:1px solid var(--line);border-radius:6px;color:var(--muted)}
+.md mark{background:var(--amber-bg);color:var(--amber);border-radius:3px;padding:0 3px}
+.callout{border:1px solid rgba(127,168,255,.25);background:rgba(127,168,255,.05);border-radius:8px;padding:10px 14px;margin:10px 0}
+.callout-title{font:600 12.5px/1.4 var(--mono);color:var(--blue);letter-spacing:.04em}
+.embed{display:inline-block;background:var(--panel-2);border-radius:5px;padding:0 7px;font:12px/20px var(--mono);color:var(--muted)}
 .cb{display:inline-block;width:14px;height:14px;border:1.5px solid var(--faint);border-radius:4px;margin-right:7px;vertical-align:-2px;position:relative}
-.cb-done{background:var(--ok);border-color:var(--ok)}
+.cb-done{background:var(--green);border-color:var(--green)}
 .cb-done::after{content:"";position:absolute;left:3.5px;top:.5px;width:4px;height:8px;border:solid var(--bg);border-width:0 2px 2px 0;transform:rotate(45deg)}
-.cb-doing{background:linear-gradient(135deg,var(--doing) 50%,transparent 50%);border-color:var(--doing)}
-.cb-cancelled{border-color:var(--line-2);background:var(--chip)}
-.hl-line{background:var(--warn-bg);border-radius:4px;box-shadow:0 0 0 1px rgba(242,184,102,.4)}
+.cb-doing{background:linear-gradient(90deg,var(--blue) 50%,transparent 50%);border-color:var(--blue)}
+.cb-cancelled{border-color:var(--line-2);background:var(--panel-2)}
+.hl-line{background:var(--amber-bg);border-radius:4px;box-shadow:0 0 0 1px rgba(240,180,94,.35)}
 .fm{font-family:var(--mono);font-size:12px;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;white-space:pre-wrap;margin:8px 0}
 
-/* ---------- projects ---------- */
-.proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
-.proj{padding:16px;cursor:pointer;display:flex;flex-direction:column;gap:10px;transition:border-color .15s,background .15s}
-.proj:hover{border-color:var(--line-2);background:var(--panel-2)}
-.proj h3{margin:0;font:650 15px/1.3 var(--display);letter-spacing:-.01em}
-.proj .stats{display:flex;gap:18px;font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;padding-top:10px;border-top:1px solid var(--line)}
-.proj .stats b{display:block;font:650 18px/1.2 var(--mono);color:var(--ink);letter-spacing:0;text-transform:none}
-.status-h{font:650 11px/1.3 var(--sans);margin:28px 0 10px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;display:flex;gap:10px;align-items:center}
-.status-h::after{content:"";flex:1;height:1px;background:var(--line)}
-.status-h:first-child{margin-top:0}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0;margin-bottom:20px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);overflow:hidden}
-.kpi{padding:14px 18px;border:0;border-radius:0;border-right:1px solid var(--line);background:none}
-.kpi:last-child{border-right:0}
-.kpi .v{font:650 26px/1.15 var(--mono);color:var(--ink);letter-spacing:-.02em}
-.kpi .l{font-size:11.5px;color:var(--muted);margin-top:4px}
+/* ---------- projects (ledger) ---------- */
+.ledger-sum{font:13px/1.6 var(--mono);color:var(--ink-2);margin:0 0 16px;display:flex;flex-wrap:wrap;gap:4px 18px}
+.ledger-sum b{color:var(--ink);font-weight:600}
+.ledger-sum .warn b{color:var(--stamp)}
+.ledger{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.ledger th{font:500 11.5px/1.3 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:11px 14px;border-bottom:1px solid var(--line-2);background:var(--bg-2);white-space:nowrap}
+.ledger td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle}
+.ledger tr.grp td{background:var(--bg-2);font:600 11.5px/1.3 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);padding:10px 14px}
+.ledger tr.grp td span{color:var(--faint);font-weight:400}
+.ledger tr.p{cursor:pointer;transition:background .12s}
+.ledger tr.p:hover{background:var(--panel-2)}
+.ledger tr.p:focus-visible{outline:2px solid var(--blue);outline-offset:-2px}
+.ledger .pn{font-weight:600;color:var(--ink)}
+.ledger .n{font:13px var(--mono);text-align:right;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.ledger .n.zero{color:var(--faint)}
+.ledger .d{font:12.5px var(--mono);color:var(--ink-2);white-space:nowrap}
+.ledger .d.late{color:var(--stamp)}
+.ledger .d.soon{color:var(--amber)}
+.ledger .tags{font:12px var(--mono);color:var(--muted)}
 
 /* ---------- capture + inbox ---------- */
-.detect{background:var(--bg-2);border:1px dashed var(--line-2);border-radius:10px;padding:12px 14px;margin-top:12px;font-size:13px}
+.detect{border:1px dashed var(--line-2);border-radius:8px;padding:12px 14px;margin-top:12px;font-size:13px}
 .detect dl{display:grid;grid-template-columns:max-content 1fr;gap:5px 14px;margin:0}
-.detect dt{color:var(--faint);font:600 11px/20px var(--sans);text-transform:uppercase;letter-spacing:.05em}
+.detect dt{color:var(--muted);font:12px/21px var(--mono)}
 .detect dd{margin:0;overflow-wrap:anywhere}
-.detect code{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+.detect code{font-size:12px;color:var(--ink-2)}
 .inbox-item{display:flex;gap:11px;padding:12px 16px;border-bottom:1px solid var(--line);align-items:flex-start}
 .inbox-item:hover{background:var(--bg-2)}
 .inbox-item .t{flex:1;min-width:0}
+.ib-title{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#inbox-list{min-height:0;max-height:calc(100vh - 300px)}
 .inbox-item .prev{color:var(--muted);font-size:12.5px;white-space:pre-wrap;max-height:3.9em;overflow:hidden;overflow-wrap:anywhere;margin-top:4px}
 .inbox-item .acts{display:flex;gap:4px;flex-wrap:wrap}
-.pill{font:650 10.5px/1 var(--mono);border-radius:6px;padding:4px 7px;text-transform:uppercase;letter-spacing:.04em}
-.pill.draft{background:var(--chip);color:var(--muted)}
-.pill.prompted{background:var(--warn-bg);color:var(--warn)}
-.pill.sent{background:var(--doing-bg);color:var(--doing)}
-.pill.filed{background:var(--ok-bg);color:var(--ok)}
+.pill{font:600 10.5px/1.3 var(--mono);border-radius:4px;padding:4px 7px;text-transform:uppercase;letter-spacing:.06em;border:1px solid currentColor}
+.pill.draft{color:var(--muted)}
+.pill.prompted{color:var(--amber)}
+.pill.sent{color:var(--blue)}
+.pill.filed{color:var(--green)}
 
 /* ---------- dialogs ---------- */
-dialog{border:1px solid var(--line-2);border-radius:16px;padding:0;background:var(--panel);color:var(--ink);width:min(1100px,calc(100vw - 24px));max-height:calc(100vh - 24px);box-shadow:var(--shadow)}
-dialog[open]{animation:pop .16s ease-out}
-@keyframes pop{from{opacity:0;transform:translateY(6px) scale(.99)}to{opacity:1;transform:none}}
-dialog::backdrop{background:rgba(4,6,10,.7);backdrop-filter:blur(3px)}
+dialog{border:1px solid var(--line-2);border-radius:14px;padding:0;background:var(--panel);color:var(--ink);width:min(1100px,calc(100vw - 24px));max-height:calc(100vh - 24px)}
+dialog[open]{animation:dlgin .18s var(--ease)}
+@keyframes dlgin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+dialog::backdrop{background:rgba(3,8,6,.72)}
 .dlg{display:flex;flex-direction:column;max-height:calc(100vh - 26px)}
-.dlg-h{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line)}
-.dlg-h h2{margin:0;font:650 16px/1.3 var(--display);margin-right:auto;letter-spacing:-.01em}
+.dlg-h{display:flex;align-items:center;gap:10px;padding:15px 20px;border-bottom:1px solid var(--line)}
+.dlg-h h2{margin:0;font:620 16px/1.3 var(--sans);margin-right:auto}
 .dlg-b{padding:18px 20px;overflow:auto}
-.dlg-f{display:flex;gap:8px;padding:14px 20px;border-top:1px solid var(--line);flex-wrap:wrap;align-items:center;background:var(--bg-2);border-radius:0 0 16px 16px}
-.dlg-f .grow{margin-right:auto;color:var(--muted);font:500 12px/1.3 var(--mono)}
+.dlg-f{display:flex;gap:8px;padding:13px 20px;border-top:1px solid var(--line);flex-wrap:wrap;align-items:center}
+.dlg-f .grow{margin-right:auto;color:var(--muted);font:12px/1.3 var(--mono)}
 #prompt-text{min-height:46vh;background:var(--bg)}
 .cmd{display:flex;gap:8px;align-items:center;margin-top:10px}
-.cmd code{flex:1;font-family:var(--mono);font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;overflow-x:auto;white-space:nowrap;color:var(--ink-2)}
-.warnbox{background:var(--warn-bg);color:var(--warn);border:1px solid rgba(242,184,102,.25);border-radius:8px;padding:9px 13px;font-size:13px;margin-bottom:12px}
+.cmd code{flex:1;font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 12px;overflow-x:auto;white-space:nowrap;color:var(--ink-2)}
+.warnbox{background:var(--amber-bg);color:var(--amber);border:1px solid rgba(240,180,94,.25);border-radius:8px;padding:9px 13px;font-size:13px;margin-bottom:12px}
 .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 18px}
 .settings-grid .full{grid-column:1/-1}
-fieldset{border:1px solid var(--line);border-radius:var(--radius);padding:12px 16px 16px;margin:0 0 14px;background:var(--bg-2)}
-legend{font:650 12px/1 var(--sans);padding:0 8px;color:var(--ink);letter-spacing:.02em}
+fieldset{border:1px solid var(--line);border-radius:var(--radius);padding:12px 16px 16px;margin:0 0 14px}
+legend{font:600 12.5px/1.3 var(--sans);padding:0 8px;color:var(--ink)}
 .check{display:flex;gap:10px;align-items:flex-start;margin:8px 0;font-size:13px;color:var(--ink-2)}
 .check input{margin-top:3px}
 .mode-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-.mode-row label{display:flex;gap:7px;align-items:center;border:1px solid var(--line-2);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;color:var(--ink-2);background:var(--bg-2)}
-.mode-row label:hover{border-color:#3a4659}
-.mode-row label:has(input:checked){border-color:var(--accent);background:var(--accent-2);color:var(--accent);font-weight:600}
+.mode-row label{display:flex;gap:7px;align-items:center;border:1px solid var(--line-2);border-radius:6px;padding:6px 12px;cursor:pointer;font-size:13px;color:var(--ink-2)}
+.mode-row label:hover{border-color:var(--line-3)}
+.mode-row label:has(input:checked){border-color:var(--blue);background:var(--blue-bg);color:var(--blue);font-weight:600}
 #llm-response{white-space:pre-wrap;font-family:var(--mono);font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;max-height:40vh;overflow:auto;margin-top:12px}
 
 /* ---------- banners & loading ---------- */
-.banner{max-width:1520px;margin:0 auto 10px;padding:9px 14px;border-radius:10px;font-size:13px;display:flex;gap:10px;align-items:flex-start;justify-content:space-between;border:1px solid transparent;width:calc(100% - 40px)}
-.banner.warn{background:var(--warn-bg);color:var(--warn);border-color:rgba(242,184,102,.22)}
-.banner.error{background:var(--danger-bg);color:var(--danger);border-color:rgba(255,138,128,.25)}
-.banner.info{background:var(--accent-2);color:var(--accent);border-color:rgba(108,182,255,.22)}
+.banner{max-width:1516px;margin:0 auto 10px;padding:9px 14px;border-radius:8px;font-size:13px;display:flex;gap:10px;align-items:flex-start;justify-content:space-between;border:1px solid transparent;width:calc(100% - 44px)}
+.banner.warn{background:var(--amber-bg);color:var(--amber);border-color:rgba(240,180,94,.25)}
+.banner.error{background:var(--stamp-bg);color:var(--stamp);border-color:rgba(238,107,96,.3)}
+.banner.info{background:var(--blue-bg);color:var(--blue);border-color:rgba(127,168,255,.25)}
 .banner .msg{flex:1;min-width:0;line-height:1.55}
-.banner code{background:transparent;font-family:var(--mono);overflow-wrap:anywhere}
+.banner code{background:transparent;overflow-wrap:anywhere}
 .banner .btn{flex:0 0 auto}
 .banner .btn:not(.ghost){color:var(--ink)}
 #load-progress .msg{display:flex;flex-direction:column;gap:6px}
 .lp-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+#lp-text,#lp-time{font-family:var(--mono);font-size:12.5px}
 #lp-bar{width:100%;height:4px;appearance:none;border:0;border-radius:4px;background:var(--line);overflow:hidden}
 #lp-bar::-webkit-progress-bar{background:var(--line);border-radius:4px}
-#lp-bar::-webkit-progress-value{background:var(--accent);border-radius:4px}
-#lp-bar::-moz-progress-bar{background:var(--accent)}
+#lp-bar::-webkit-progress-value{background:var(--blue);border-radius:4px}
+#lp-bar::-moz-progress-bar{background:var(--blue)}
 .lp-current{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lp-slow{color:var(--warn)}
-.spinner{width:13px;height:13px;border:2px solid var(--accent);border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite;display:inline-block}
+.lp-slow{color:var(--amber)}
+.spinner{width:13px;height:13px;border:2px solid var(--blue);border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite;display:inline-block}
 @keyframes spin{to{transform:rotate(360deg)}}
 #pending-bar .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 
 /* ---------- ticks, state switch, checklists ---------- */
-.tick{width:18px;height:18px;flex:0 0 auto;margin-top:1px;border:1.5px solid #4a5568;border-radius:6px;background:transparent;cursor:pointer;position:relative;padding:0;transition:border-color .12s,background .12s,box-shadow .12s}
-.tick:hover{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-2)}
-.tick-done{background:var(--ok);border-color:var(--ok)}
+.tick{width:18px;height:18px;flex:0 0 auto;margin-top:1px;border:1.5px solid #557067;border-radius:5px;background:transparent;cursor:pointer;position:relative;padding:0;transition:border-color .12s,background .12s,box-shadow .12s}
+.tick:hover{border-color:var(--blue);box-shadow:0 0 0 4px var(--blue-bg)}
+.tick-done{background:var(--green);border-color:var(--green)}
 .tick-done::after{content:"";position:absolute;left:5px;top:1.5px;width:4.5px;height:9px;border:solid var(--bg);border-width:0 2px 2px 0;transform:rotate(45deg)}
-.tick-done:hover{border-color:var(--ok);box-shadow:0 0 0 4px var(--ok-bg)}
-.tick-doing{border-color:var(--doing);background:linear-gradient(90deg,var(--doing) 50%,transparent 50%)}
-.tick-cancelled{background:var(--chip);border-color:var(--line-2)}
-.tick-blocked{border-color:var(--danger)}
-.task .pick{margin-left:auto;opacity:.35;transition:opacity .12s}
-.task .pick:checked,.task:hover .pick{opacity:1}
-.seg{display:inline-flex;gap:0;margin:0 0 14px;align-items:center;flex-wrap:wrap;border:1px solid var(--line-2);border-radius:10px;padding:3px;background:var(--bg-2)}
+.tick-done:hover{box-shadow:0 0 0 4px var(--green-bg)}
+.tick-doing{border-color:var(--blue);background:linear-gradient(90deg,var(--blue) 50%,transparent 50%)}
+.tick-cancelled{background:var(--panel-2);border-color:var(--line-2)}
+.tick-blocked{border-color:var(--stamp)}
+.seg{display:inline-flex;gap:2px;margin:0 0 14px;align-items:center;flex-wrap:wrap;border:1px solid var(--line-2);border-radius:8px;padding:3px}
 .seg .btn{border-color:transparent;background:transparent;height:28px;color:var(--muted)}
 .seg .btn:hover{color:var(--ink);background:var(--panel-2)}
-.seg .btn::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.6}
-.seg .on{background:var(--panel-3);border-color:var(--line-2);color:var(--ink)}
-.seg .on[data-set-state=done]{color:var(--ok)}
-.seg .on[data-set-state=doing]{color:var(--doing)}
-.seg .on[data-set-state=open]{color:var(--accent)}
-.seg .on::before{opacity:1}
+.seg .on{background:var(--panel-3);color:var(--ink)}
+.seg .on[data-set-state=done]{color:var(--green)}
+.seg .on[data-set-state=doing],.seg .on[data-set-state=open]{color:var(--blue)}
 .seg>.chip,.seg>.hint{margin:0 8px}
 ul.checklist{list-style:none;padding:0;margin:0}
-ul.checklist li{display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--line)}
+ul.checklist li{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--line)}
 ul.checklist li:last-child{border-bottom:0}
 .strike{text-decoration:line-through;text-decoration-color:var(--faint);color:var(--muted)}
 
-/* ---------- completion notes ---------- */
-.notes-box{margin-top:16px;border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--bg-2);position:relative}
-.notes-box::before{content:"";position:absolute;left:-1px;top:14px;bottom:14px;width:2px;border-radius:2px;background:var(--ok)}
-.notes-box h4{margin:0 0 8px;font:650 13px/1.3 var(--display);display:flex;gap:8px;align-items:center;color:var(--ink)}
-.notes-box h4 .ic{color:var(--ok)}
-.notes-box .md{font-size:13px}
-.notes-box textarea{margin-top:10px;min-height:76px;background:var(--bg)}
-.notes-box .row{margin-top:10px}
-.pending-note{font-size:13px;margin:6px 0;padding:6px 10px;border:1px dashed rgba(242,184,102,.45);border-radius:8px;color:var(--ink-2)}
+/* ---------- inline posting (completion note) ---------- */
+.posting{grid-column:1/-1;margin:6px 0 2px;border:1px solid var(--blue-line);background:var(--bg-2);border-radius:8px;padding:12px 14px;cursor:default}
+.posting .pt{font:600 12px/1.3 var(--mono);color:var(--blue);letter-spacing:.04em;margin-bottom:6px}
+.posting textarea{min-height:70px;background:var(--bg)}
+.posting .row{margin-top:8px}
+.posting .hint{margin-top:6px}
+
+/* ---------- completion notes: passbook lines ---------- */
+.notes-box{margin-top:18px;border-top:1px solid var(--line-2);border-bottom:1px solid var(--line)}
+.notes-box h4{margin:0;padding:11px 0;font:620 13px/1.3 var(--sans);display:flex;gap:8px;align-items:center;color:var(--ink);border-bottom:1px solid var(--line)}
+.notes-box h4 .ic{color:var(--green)}
+.pb{padding:2px 0 6px}
+.pb-row{display:grid;grid-template-columns:max-content max-content 1fr;gap:0 14px;font:12.5px/1.75 var(--mono);color:var(--ink-2);border-bottom:1px solid var(--line);padding:5px 0}
+.pb-row:last-child{border-bottom:0}
+.pb-row .dt{color:var(--muted)}
+.pb-row .k{color:var(--green);letter-spacing:.04em}
+.pb-row .k.status{color:var(--blue)}
+.pb-row .k.pending{color:var(--amber)}
+.pb-row .tx{font-family:var(--sans);font-size:13.5px;line-height:1.55;color:var(--ink);overflow-wrap:anywhere;padding-top:1px}
+.pb-row .tx ul{margin:2px 0 0;padding-left:18px;color:var(--ink-2)}
+.pb-other{padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
+.pb-empty{padding:12px 0;color:var(--muted);font-size:13px}
+.notes-box textarea{display:block;width:100%;margin:10px 0 0;min-height:76px;background:var(--bg)}
+.notes-box .row{padding:10px 0 0}
+.notes-box .hint{padding:6px 0 13px}
 
 /* ---------- toast ---------- */
-#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--panel-3);color:var(--ink);border:1px solid var(--line-2);padding:10px 14px 10px 16px;border-radius:12px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;z-index:100;max-width:calc(100vw - 32px);box-shadow:var(--shadow);display:flex;align-items:center;gap:6px}
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--panel-3);color:var(--ink);border:1px solid var(--line-3);padding:10px 14px 10px 16px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .18s var(--ease),transform .18s var(--ease);z-index:100;max-width:calc(100vw - 32px);box-shadow:0 12px 30px rgba(0,0,0,.4);display:flex;align-items:center;gap:6px}
 #toast.show{opacity:1;transform:translateX(-50%)}
 #toast .btn{margin-left:10px}
 .hidden{display:none!important}
@@ -327,6 +365,7 @@ ul.checklist li:last-child{border-bottom:0}
   .settings-grid{grid-template-columns:1fr}
   .path code{max-width:220px}
   .bar .sep{display:none}
+  .ledger .hide-m{display:none}
 }
 @media (max-width: 560px){
   header.top{position:static}
@@ -336,9 +375,12 @@ ul.checklist li:last-child{border-bottom:0}
   .paths{padding:0 12px 8px}
   .filters{grid-template-columns:1fr}
   .btn .lbl{display:none}
-  .kpi{border-right:0;border-bottom:1px solid var(--line)}
   .banner{width:calc(100% - 24px)}
   .detail-head,.detail-body{padding-left:16px;padding-right:16px}
+  .detail-head .stamp.big{position:static;margin-bottom:10px}
+  .pb-row{grid-template-columns:max-content 1fr}
+  .pb-row .k{grid-column:2}
+  .pb-row .tx{grid-column:1/-1}
 }
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -359,6 +401,9 @@ ul.checklist li:last-child{border-bottom:0}
   <symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></symbol>
   <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7M8 20v-6h8v6"/></symbol>
   <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4 2.5 20h19zM12 10v4M12 17h.01"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
 </svg>
 <header class="top">
@@ -440,7 +485,7 @@ ul.checklist li:last-child{border-bottom:0}
 
   <!-- PROJECTS -->
   <section class="tab" id="tab-projects">
-    <div class="kpis" id="kpis"></div>
+    <div class="ledger-sum" id="kpis"></div>
     <div class="row" style="margin-bottom:12px">
       <input type="search" id="p-q" placeholder="Filter projects…">
       <button class="btn" id="btn-review-all" style="flex:0 0 auto"><svg class="ic" aria-hidden="true"><use href="#i-compass"/></svg>Review all Ongoing projects</button>
@@ -540,24 +585,7 @@ ul.checklist li:last-child{border-bottom:0}
   </div>
 </dialog>
 
-<!-- COMPLETION NOTE -->
-<dialog id="dlg-done" style="width:min(560px,calc(100vw - 24px))">
-  <div class="dlg">
-    <div class="dlg-h"><h2>Why is this task done?</h2><button class="btn ghost" data-close>✕</button></div>
-    <div class="dlg-b">
-      <div class="hint">Task</div>
-      <div id="dd-task" style="font-weight:600;margin-bottom:8px;overflow-wrap:anywhere"></div>
-      <label class="f" for="dd-text">Completion note: what was done, the result, and why it can be checked off</label>
-      <textarea id="dd-text" rows="5" placeholder="e.g. Form deployed to SIT, QA tested min USD 1.000 validation OK. Confirmed by Budi in standup."></textarea>
-      <div class="hint" id="dd-where" style="margin-top:6px"></div>
-    </div>
-    <div class="dlg-f"><span class="grow">Ctrl/⌘ + Enter to confirm</span>
-      <button class="btn" data-close>Cancel</button>
-      <button class="btn" id="dd-skip">Done without note</button>
-      <button class="btn primary" id="dd-ok"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>Mark done</button>
-    </div>
-  </div>
-</dialog>
+
 
 <!-- SNAPSHOT -->
 <dialog id="dlg-snapshot">
@@ -641,7 +669,7 @@ ul.checklist li:last-child{border-bottom:0}
 
 <!-- Filled by tools/build.mjs -->
 <script id="skill-text" type="application/json">"# Obsidian Zettelkasten\n\nTrigger when creating, organizing, or linking notes in the Obsidian vault (`WorkingNotes`).\n\n## Vault Structure\n\n```\nRoot-Notes.md\n├── Dashboard.md\n├── Activity/\n│   └── YYYY-MM-DD \u003cDescription>.md (meeting, implementation, discussion notes)\n├── Project/\n│   └── \u003cProject Name>.md (project tracker: Status, TODO, Summary Activity)\n├── Knowledge/\n│   └── \u003cTopic>.md (conceptual/knowledge notes)\n├── Daily/\n│   └── YYYY-MM-DD Kerjaan.md\n├── Template/\n│   ├── Activity Template.md\n│   ├── Project Template.md\n│   └── Daily Template.md\n├── Base/\n│   ├── Activity Base.base\n│   ├── Project Base.base\n│   └── Daily Base.base\n├── Task List/\n│   └── \u003cTask>.md\n├── Attachment/\n│   └── images, files\n└── Archive/\n    ├── Track 9/ (legacy)\n    └── Sidejob/ (legacy)\n```\n\n## Core Concepts\n\n### Activity\nCatatan aktivitas (meeting, kickoff, implementation, deployment, discussion). Setiap activity dikaitkan dengan Project via `Project` field di frontmatter.\n\n### Project\nTracker project/task. Memiliki Status (Explore, Ongoing, Done), TODO list, dan Summary Activity yang otomatis mengambil semua Activity terkait.\n\n### Dashboard\nMenampilkan overview:\n- Ongoing Project (Track 9) — filter `tag: track9`\n- Ongoing Sidejob — filter `tag: sidejob`\n- Daily Activity\n\n## Rules\n\n### 1. Always Check Project First\n\nBefore creating any new note:\n- Check if an **Project** already exists in `Project/` for the related project.\n- If not, create an Project note using `Template/Project Template.md`.\n- Activity notes link to Project via `Project: - \"[[Project Name]]\"` in frontmatter.\n\n### 2. Map Context Automatically\n\nWhen creating a new note from user input:\n- **Identify the type:**\n  - Meeting, kickoff, implementation, deployment, discussion → `Activity/`\n  - Project tracker with TODO → `Project/`\n  - Conceptual/knowledge → `Knowledge/`\n  - Daily summary → `Daily/`\n- **Identify the Project (project):**\n  - \"IPO SBN\", \"SBN Valas\" → Project: `IPO SBN Valas`\n  - \"Avantrade\" → Project: `Avantrade`\n  - \"Tiket\" → Project: `Tiket`\n  - \"Portfolio FI\" → Project: `Informasi Portfolio FI`\n  - \"Autodebet\" → Project: `Autodebet Proteksi`\n  - \"Proteksi Leave Contact\" → Project: `Proteksi Leave Contact`\n  - \"Loket\" → Project: `Loket`\n  - \"ADHOC Reward\" → Project: `Project ADHOC Reward`\n  - \"Pemisahan biaya admin\" → Project: `Project pemisahan biaya admin`\n  - \"Pembiayaan emas Bsya\" → Project: `Pembiayaan emas Bsya`\n  - \"Automation\", \"SAQ\", \"Webhook\" → Project: `Automation Context Window SAQ Webhook`\n  - \"Obsidian\", \"Zettelkasten\", \"Skill\" → Project: `Obsidian Zettelkasten Skill`\n  - \"Angular 20\" → Project: `Angular 20`\n  - \"Prettier\" → Project: `Prettier HTML Whitespace Ignore`\n- Create the note with proper frontmatter (see below).\n\n### 3. Activity Note Structure\n\n```yaml\n---\nid: \"\u003cYYYYMMDDHHmm>\"\nCategory:\n  - Meeting | Kickoff | Implementation | Deployment | Discussion | Documentation\nProject:\n  - \"[[\u003cProject Name>]]\"\nDate: YYYY-MM-DD\nSummary: |\n  - 1-2 line summary of the activity\n---\n\n\u003cBody content preserved>\n```\n\n- Naming: `YYYY-MM-DD \u003cDescription>.md`\n- `Category` determines the type of activity.\n- `Project` links to the Project note (wiki-link format).\n- `Summary` is used by Project's \"Summary Activity\" view.\n- `Date` enables daily filtering in Dashboard.\n\n### 4. Project Note Structure\n\n```yaml\n---\nid: \"\u003cYYYYMMDDHHmm>\"\nStatus: Explore | Ongoing | Done\nFollowup Date: YYYY-MM-DD\ntodo:\ntags:\n  - track9 | sidejob\n---\n\n### TODO\n\n> [!TODO] TODO\n> - [ ] task 1\n> - [ ] task 2\n\n### Summary Activity\n![[Activity Base.base#Specific Activity]]\n```\n\n- `Status` controls visibility in Dashboard (Ongoing shown, Done archived).\n- `tags` determines Dashboard section (`track9` → Project, `sidejob` → Sidejob).\n- `Summary Activity` embeds all Activity notes linked to this Project.\n- One Project per project. Do NOT duplicate.\n\n### 5. Daily Notes\n\n- Daily files live in `Daily/` with format `YYYY-MM-DD Kerjaan.md`.\n- **Daily notes contain summaries, not links.** Write a brief conclusion/summary of the work done under each topic.\n- Tag daily notes with `daily` + relevant project tags.\n- Every daily note MUST include `[[Daily-Notes]]` right after the frontmatter.\n- Use `Template/Daily Template.md` as reference.\n\n### 6. Linking\n\n- Activity → Project via `Project` field in frontmatter.\n- Project → Activity via `![[Activity Base.base#Specific Activity]]` embed.\n- Dashboard → Project via `![[Project Base.base#Ongoing Project]]` and `![[Project Base.base#Ongoing Sidejob]]`.\n- Images use `![[Pasted image YYYYMMDDHHmmss.png]]` format, stored in `Attachment/`.\n\n### 7. Knowledge Notes\n\n- For conceptual/knowledge notes that don't tie to a specific project.\n- Use ZTK rules (atomic, unique ID, linking).\n- Frontmatter:\n```yaml\n---\nid: \"\u003cYYYYMMDDHHmm>\"\ntitle: \"\u003cTitle>\"\ntype: PERMANENT\ncreated: YYYY-MM-DD\nupdated: YYYY-MM-DD\ntags: [knowledge, \u003ctopic>]\nlinks: [related_ids]\n---\n```\n\n### 8. Archive\n\n- Old folder structures (`Track 9/`, `Sidejob/`) are archived in `Archive/`.\n- Do NOT create new notes in `Archive/`.\n- Reference archived notes if needed, but prefer creating new Activity/Project notes.\n\n### 9. Naming Convention\n\n- Activity: `YYYY-MM-DD \u003cDescription>.md`\n- Project: `\u003cProject Name>.md`\n- Daily: `YYYY-MM-DD Kerjaan.md`\n- Knowledge: `\u003cTopic>.md`\n- Use ISO date format (`YYYY-MM-DD`) so files sort chronologically.\n- Keep description concise (max ~60 chars).\n\n### 10. Base Files\n\n- `Base/Activity Base.base` — defines table views for Activity notes.\n- `Base/Project Base.base` — defines table views for Project notes (All, Ongoing Project, Ongoing Sidejob, Explore).\n- `Base/Daily Base.base` — defines table views for Daily Activity.\n- Do NOT modify base files unless explicitly requested.\n\n## Zettelkasten Core Rules (ZTK-001 to ZTK-010)\n\n### ZTK-001: Atomic Notes (Satu Ide, Satu Catatan)\nSetiap catatan HANYA BOLEH berisi SATU ide utama atau konsep tunggal. Pecah catatan yang mencakup banyak ide menjadi beberapa catatan terpisah.\n\n### ZTK-002: Unique Identifier (ID Unik)\nSetiap catatan WAJIB memiliki ID unik. Format: `YYYYMMDDHHmm` pada frontmatter. ID tidak boleh berubah meskipun judul catatan berubah.\n\n### ZTK-003: Judul Catatan\nSetiap catatan WAJIB memiliki judul yang singkat, jelas, dan representatif. Berbentuk pernyataan bermakna atau frasa konsep.\n\n### ZTK-004: Isi Catatan (Body)\nIsi catatan WAJIB ditulis dengan bahasa sendiri dan cukup untuk dipahami tanpa membaca sumber aslinya. Singkat, padat, dan kontekstual.\n\n### ZTK-005: Linking (Tautan Antar Catatan)\nSetiap catatan HARUS memiliki minimal SATU tautan ke catatan lain yang relevan. Activity link ke Project via `Project` field.\n\n### ZTK-006: Tipe Catatan\nKategorikan setiap catatan:\n- `[FLEETING]` → Catatan cepat/kasar, perlu diproses (max 2 hari)\n- `[LITERATURE]` → Catatan dari sumber eksternal\n- `[PERMANENT]` → Catatan final dalam bahasa sendiri\n- `[INDEX]` → Catatan peta/daftar topik besar\n- `[HUB]` → Catatan penghubung cluster topik\n\n### ZTK-007: Metadata Catatan\nSetiap catatan WAJIB menyertakan metadata frontmatter sesuai tipe:\n- **Activity:** `id`, `Category`, `Project`, `Date`, `Summary`\n- **Project:** `id`, `Status`, `Followup Date`, `todo`, `tags`\n- **Knowledge/Daily:** `id`, `title`, `type`, `created`, `updated`, `tags`, `links`\n\n### ZTK-008: Tagging\nMinimal 1, maksimal 5 tags. Gunakan kata benda/frasa konsep, lowercase, tanda hubung untuk multi-word. Primary tags: `track9`, `sidejob`, `daily`, `knowledge`.\n\n### ZTK-009: Sumber Referensi\nJika catatan berasal dari sumber eksternal, WAJIB cantumkan nama sumber, halaman/timestamp, dan tanggal akses.\n\n### ZTK-010: Review dan Pemeliharaan\n- FLEETING → Review max 2 hari\n- LITERATURE → Review max 1 minggu\n- PERMANENT → Review min 1 bulan atau saat ada catatan baru relevan\n- DILARANG menghapus PERMANENT yang sudah ada. Buat catatan baru yang merevisi/perluas ide.\n\n## Templates\n\n### Activity Template (`Template/Activity Template.md`)\n```yaml\n---\nCategory:\n  - Meeting\nProject:\n  - \"[[Replace With Project Name]]\"\nDate: {{date}}\nSummary: |\n  -\n---\n```\n\n### Project Template (`Template/Project Template.md`)\n```yaml\n---\nStatus: Ongoing\nFollowup Date:\ntodo:\ntags:\n  -\n---\n\n### TODO\n\n> [!TODO] TODO\n> - [ ]\n\n### Summary Activity\n![[Activity Base.base#Specific Activity]]\n```\n\n### Daily Template (`Template/Daily Template.md`)\n```yaml\n---\nDate: {{date}}\ntags:\n  - daily\n---\n\n## Activity\n\n| Time | Project | Category | Summary |\n| --- | --- | --- | --- |\n| | | | |\n\n## Notes\n\n-\n\n## Tomorrow\n\n- [ ]\n```\n\n## Zettelkasten Note Template (Knowledge)\n\n```markdown\n---\nid: YYYYMMDDHHmm\ntitle: \"Judul Catatan\"\ntype: PERMANENT\ncreated: YYYY-MM-DD\nupdated: YYYY-MM-DD\ntags: [knowledge, tag1, tag2]\nlinks: [ID-001, ID-002]\n---\n\n# Judul Catatan\n\n[Inti ide dalam bahasa sendiri]\n\n## Mengapa Penting\n[Konteks dan alasan]\n\n## Tautan\n- Berkaitan dengan [[ID|Judul]] karena [alasan]\n```\n"</script>
-<script id="demo-vault" type="application/json">[{"path":"Activity/2026-09-22 Kickoff IPO SBN Valas.md","content":"---\nid: \"202609221000\"\nCategory:\n  - Kickoff\nProject:\n  - \"[[IPO SBN Valas]]\"\nDate: 2026-09-22\nSummary: |\n  - Kickoff IPO SBN Valas: scope form pemesanan, integrasi kurs, target UAT akhir Oktober.\n---\n\n## Peserta\n- Tim bisnis Wealth, tim IT FE/BE, QA\n\n## Poin Diskusi\n- Produk SBN Valas dijual dalam USD, minimal pemesanan USD 1.000.\n- Form pemesanan harus menampilkan kurs terkini dan estimasi nominal IDR.\n- Target UAT: minggu terakhir Oktober 2026.\n\n## Action Item\n- FE: buat form pemesanan (Angular 20).\n- BE: sediakan endpoint kurs valas.\n"},{"path":"Activity/2026-09-23 Discussion Avantrade API.md","content":"---\nid: \"202609231030\"\nCategory:\n  - Discussion\nProject:\n  - \"[[Avantrade]]\"\nDate: 2026-09-23\nSummary: |\n  - Diskusi awal API Avantrade; vendor menyarankan OAuth2 client credentials.\n---\n\n- Vendor mengirim sandbox URL minggu depan.\n- Perlu konfirmasi ke security apakah OAuth2 cukup atau butuh mTLS.\n"},{"path":"Activity/2026-09-23 Implementation SBN Valas order form.md","content":"---\nid: \"202609231400\"\nCategory:\n  - Implementation\nProject:\n  - \"[[IPO SBN Valas]]\"\nDate: 2026-09-23\nSummary: |\n  - Mulai implementasi form pemesanan SBN Valas dengan reactive form + signal; validasi minimal USD 1.000 selesai.\n---\n\n- Membuat komponen `sbn-valas-order-form` (standalone).\n- Validasi nominal minimal USD 1.000 dan kelipatan USD 1.000.\n- Belum: tampilan kurs realtime (menunggu endpoint BE).\n"},{"path":"Archive/Track 9/Legacy note.md","content":"# Legacy note\n- [ ] this old task must NOT show in the app (archived)\n"},{"path":"Daily/2026-09-23 Kerjaan.md","content":"---\nid: \"202609230000\"\ntitle: \"2026-09-23 Kerjaan\"\ntype: PERMANENT\nDate: 2026-09-23\ncreated: 2026-09-23\nupdated: 2026-09-23\ntags:\n  - daily\n  - track9\nlinks: []\n---\n[[Daily-Notes]]\n\n## Activity\n\n| Time | Project | Category | Summary |\n| --- | --- | --- | --- |\n| 10:30 | Avantrade | Discussion | Vendor menyarankan OAuth2, sandbox menyusul. |\n| 14:00 | IPO SBN Valas | Implementation | Form pemesanan dibuat, validasi minimal USD 1.000 selesai. |\n\n## Notes\n\n- Endpoint kurs valas masih ditunggu dari BE.\n\n## Tomorrow\n\n- [ ] Follow up endpoint kurs valas ke tim BE\n- [ ] Konfirmasi kebutuhan mTLS Avantrade ke tim security\n"},{"path":"Dashboard.md","content":"# Dashboard\n\n## Ongoing Project (Track 9)\n![[Project Base.base#Ongoing Project]]\n\n## Ongoing Sidejob\n![[Project Base.base#Ongoing Sidejob]]\n\n## Daily Activity\n![[Daily Base.base#Daily Activity]]\n"},{"path":"Knowledge/Angular Signals.md","content":"---\nid: \"202608251500\"\ntitle: \"Angular Signals menggantikan banyak kebutuhan RxJS untuk state lokal\"\ntype: PERMANENT\ncreated: 2026-08-25\nupdated: 2026-08-25\ntags: [knowledge, angular, signals]\nlinks: []\n---\n\n# Angular Signals menggantikan banyak kebutuhan RxJS untuk state lokal\n\nSignal adalah nilai reaktif sinkron; `computed()` menurunkan nilai, `effect()` untuk side effect.\n\n## Mengapa Penting\nState komponen jadi lebih sederhana dan change detection lebih efisien (zoneless-ready).\n\n## Tautan\n- Berkaitan dengan [[Angular 20]] karena Angular 20 menstabilkan API signal.\n"},{"path":"Project/Angular 20.md","content":"---\nid: \"202608200900\"\nStatus: Done\nFollowup Date:\ntodo:\ntags:\n  - track9\n---\n\n### TODO\n\n> [!TODO] TODO\n> - [x] Upgrade workspace ke Angular 20\n> - [x] Migrasi ke control flow @if/@for\n\n### Summary Activity\n![[Activity Base.base#Specific Activity]]\n"},{"path":"Project/Avantrade.md","content":"---\nid: \"202609100830\"\nStatus: Explore\nFollowup Date: 2026-10-02\ntodo:\ntags:\n  - track9\n---\n\n### TODO\n\n> [!TODO] TODO\n> - [ ] Pelajari dokumentasi API Avantrade\n> - [ ] Tentukan kebutuhan autentikasi (OAuth / mTLS)\n\n### Summary Activity\n![[Activity Base.base#Specific Activity]]\n"},{"path":"Project/IPO SBN Valas.md","content":"---\nid: \"202609150900\"\nStatus: Ongoing\nFollowup Date: 2026-09-26\ntodo:\ntags:\n  - track9\n---\n\n### TODO\n\n> [!TODO] TODO\n> - [x] Kickoff dengan tim bisnis SBN Valas\n> - [ ] Buat form pemesanan SBN Valas (Angular 20) 📅 2026-09-30\n> - [ ] Integrasi API kurs valas dengan backend\n> - [ ] Siapkan skenario UAT bersama QA\n\n### Summary Activity\n![[Activity Base.base#Specific Activity]]\n"},{"path":"Project/Pembiayaan emas Bsya.md","content":"---\nid: \"202609011000\"\nStatus: Ongoing\nFollowup Date: 2026-09-25\ntodo:\ntags:\n  - sidejob\n---\n\n### TODO\n\n> [!TODO] TODO\n> - [ ] Review flow simulasi cicilan emas\n> - [/] Revisi desain halaman ringkasan pembiayaan\n\n### Summary Activity\n![[Activity Base.base#Specific Activity]]\n"},{"path":"Root-Notes.md","content":"# Root Notes\n\n- [[Dashboard]]\n- [[Daily-Notes]]\n"},{"path":"Task List/Integrasi kurs valas SBN.md","content":"---\nid: \"202609231600\"\nStatus: Todo\nPriority: High\nProject:\n  - \"[[IPO SBN Valas]]\"\nDue: 2026-09-30\nCreated: 2026-09-23\ntags:\n  - task\n  - track9\n---\n\n# Integrasi kurs valas SBN\n\n## Description\nTampilkan kurs USD/IDR terkini di form pemesanan SBN Valas dan hitung estimasi nominal IDR.\n\n## Acceptance Criteria\n- [ ] Kurs diambil dari endpoint BE `/api/fx/usd-idr`\n- [ ] Estimasi IDR ter-update saat nominal berubah\n- [ ] Error state jika endpoint gagal\n\n## Log\n- 2026-09-23: Task dibuat dari kickoff.\n"},{"path":"Template/Activity Template.md","content":"---\nCategory:\n  - Meeting\nProject:\n  - \"[[Replace With Project Name]]\"\nDate: {{date}}\nSummary: |\n  -\n---\n"},{"path":"Template/Daily Template.md","content":"---\nDate: {{date}}\ntags:\n  - daily\n---\n\n## Activity\n\n| Time | Project | Category | Summary |\n| --- | --- | --- | --- |\n| | | | |\n\n## Notes\n\n-\n\n## Tomorrow\n\n- [ ]\n"},{"path":"Template/Project Template.md","content":"---\nStatus: Ongoing\nFollowup Date:\ntodo:\ntags:\n  -\n---\n\n### TODO\n\n> [!TODO] TODO\n> - [ ]\n\n### Summary Activity\n![[Activity Base.base#Specific Activity]]\n"}]</script>
+<script id="demo-vault" type="application/json">[{"path":"Activity/2026-09-22 Kickoff IPO SBN Valas.md","content":"---\nid: \"202609221000\"\nCategory:\n  - Kickoff\nProject:\n  - \"[[IPO SBN Valas]]\"\nDate: 2026-09-22\nSummary: |\n  - Kickoff IPO SBN Valas: scope form pemesanan, integrasi kurs, target UAT akhir Oktober.\n---\n\n## Peserta\n- Tim bisnis Wealth, tim IT FE/BE, QA\n\n## Poin Diskusi\n- Produk SBN Valas dijual dalam USD, minimal pemesanan USD 1.000.\n- Form pemesanan harus menampilkan kurs terkini dan estimasi nominal IDR.\n- Target UAT: minggu terakhir Oktober 2026.\n\n## Action Item\n- FE: buat form pemesanan (Angular 20).\n- BE: sediakan endpoint kurs valas.\n"},{"path":"Activity/2026-09-23 Discussion Avantrade API.md","content":"---\nid: \"202609231030\"\nCategory:\n  - Discussion\nProject:\n  - \"[[Avantrade]]\"\nDate: 2026-09-23\nSummary: |\n  - Diskusi awal API Avantrade; vendor menyarankan OAuth2 client credentials.\n---\n\n- Vendor mengirim sandbox URL minggu depan.\n- Perlu konfirmasi ke security apakah OAuth2 cukup atau butuh mTLS.\n"},{"path":"Activity/2026-09-23 Implementation SBN Valas order form.md","content":"---\nid: \"202609231400\"\nCategory:\n  - Implementation\nProject:\n  - \"[[IPO SBN Valas]]\"\nDate: 2026-09-23\nSummary: |\n  - Mulai implementasi form pemesanan SBN Valas dengan reactive form + signal; validasi minimal USD 1.000 selesai.\n---\n\n- Membuat komponen `sbn-valas-order-form` (standalone).\n- Validasi nominal minimal USD 1.000 dan kelipatan USD 1.000.\n- Belum: tampilan kurs realtime (menunggu endpoint BE).\n"},{"path":"Archive/Track 9/Legacy note.md","content":"# Legacy note\n- [ ] this old task must NOT show in the app (archived)\n"},{"path":"Daily/2026-09-23 Kerjaan.md","content":"---\nid: \"202609230000\"\ntitle: \"2026-09-23 Kerjaan\"\ntype: PERMANENT\nDate: 2026-09-23\ncreated: 2026-09-23\nupdated: 2026-09-23\ntags:\n  - daily\n  - track9\nlinks: []\n---\n[[Daily-Notes]]\n\n## Activity\n\n| Time | Project | Category | Summary |\n| --- | --- | --- | --- |\n| 10:30 | Avantrade | Discussion | Vendor menyarankan OAuth2, sandbox menyusul. |\n| 14:00 | IPO SBN Valas | Implementation | Form pemesanan dibuat, validasi minimal USD 1.000 selesai. |\n\n## Notes\n\n- Endpoint kurs valas masih ditunggu dari BE.\n\n## Tomorrow\n\n- [ ] Follow up endpoint kurs valas ke tim BE\n- [ ] Konfirmasi kebutuhan mTLS Avantrade ke tim security\n"},{"path":"Dashboard.md","content":"# Dashboard\n\n## Ongoing Project (Track 9)\n![[Project Base.base#Ongoing Project]]\n\n## Ongoing Sidejob\n![[Project Base.base#Ongoing Sidejob]]\n\n## Daily Activity\n![[Daily Base.base#Daily Activity]]\n"},{"path":"Knowledge/Angular Signals.md","content":"---\nid: \"202608251500\"\ntitle: \"Angular Signals menggantikan banyak kebutuhan RxJS untuk state lokal\"\ntype: PERMANENT\ncreated: 2026-08-25\nupdated: 2026-08-25\ntags: [knowledge, angular, signals]\nlinks: []\n---\n\n# Angular Signals menggantikan banyak kebutuhan RxJS untuk state lokal\n\nSignal adalah nilai reaktif sinkron; `computed()` menurunkan nilai, `effect()` untuk side effect.\n\n## Mengapa Penting\nState komponen jadi lebih sederhana dan change detection lebih efisien (zoneless-ready).\n\n## Tautan\n- Berkaitan dengan [[Angular 20]] karena Angular 20 menstabilkan API signal.\n"},{"path":"Project/Angular 20.md","content":"---\nid: \"202608200900\"\nStatus: Done\nFollowup Date:\ntodo:\ntags:\n  - track9\n---\n\n### TODO\n\n> [!TODO] TODO\n> - [x] Upgrade workspace ke Angular 20\n> - [x] Migrasi ke control flow @if/@for\n\n### Summary Activity\n![[Activity Base.base#Specific Activity]]\n"},{"path":"Project/Avantrade.md","content":"---\nid: \"202609100830\"\nStatus: Explore\nFollowup Date: 2026-10-02\ntodo:\ntags:\n  - track9\n---\n\n### TODO\n\n> [!TODO] TODO\n> - [ ] Pelajari dokumentasi API Avantrade\n> - [ ] Tentukan kebutuhan autentikasi (OAuth / mTLS)\n\n### Summary Activity\n![[Activity Base.base#Specific Activity]]\n"},{"path":"Project/IPO SBN Valas.md","content":"---\nid: \"202609150900\"\nStatus: Ongoing\nFollowup Date: 2026-09-26\ntodo:\ntags:\n  - track9\n---\n\n### TODO\n\n> [!TODO] TODO\n> - [x] Kickoff dengan tim bisnis SBN Valas\n> \t- 📝 2026-09-22 11:30: Kickoff selesai; scope form pemesanan, integrasi kurs dan target UAT disepakati.\n> - [ ] Buat form pemesanan SBN Valas (Angular 20) 📅 2026-09-30\n> - [ ] Integrasi API kurs valas dengan backend\n> - [ ] Siapkan skenario UAT bersama QA\n\n### Summary Activity\n![[Activity Base.base#Specific Activity]]\n"},{"path":"Project/Pembiayaan emas Bsya.md","content":"---\nid: \"202609011000\"\nStatus: Ongoing\nFollowup Date: 2026-09-25\ntodo:\ntags:\n  - sidejob\n---\n\n### TODO\n\n> [!TODO] TODO\n> - [ ] Review flow simulasi cicilan emas\n> - [/] Revisi desain halaman ringkasan pembiayaan\n\n### Summary Activity\n![[Activity Base.base#Specific Activity]]\n"},{"path":"Root-Notes.md","content":"# Root Notes\n\n- [[Dashboard]]\n- [[Daily-Notes]]\n"},{"path":"Task List/Integrasi kurs valas SBN.md","content":"---\nid: \"202609231600\"\nStatus: Todo\nPriority: High\nProject:\n  - \"[[IPO SBN Valas]]\"\nDue: 2026-09-30\nCreated: 2026-09-23\ntags:\n  - task\n  - track9\n---\n\n# Integrasi kurs valas SBN\n\n## Description\nTampilkan kurs USD/IDR terkini di form pemesanan SBN Valas dan hitung estimasi nominal IDR.\n\n## Acceptance Criteria\n- [ ] Kurs diambil dari endpoint BE `/api/fx/usd-idr`\n- [ ] Estimasi IDR ter-update saat nominal berubah\n- [ ] Error state jika endpoint gagal\n\n## Log\n- 2026-09-23: Task dibuat dari kickoff.\n"},{"path":"Template/Activity Template.md","content":"---\nCategory:\n  - Meeting\nProject:\n  - \"[[Replace With Project Name]]\"\nDate: {{date}}\nSummary: |\n  -\n---\n"},{"path":"Template/Daily Template.md","content":"---\nDate: {{date}}\ntags:\n  - daily\n---\n\n## Activity\n\n| Time | Project | Category | Summary |\n| --- | --- | --- | --- |\n| | | | |\n\n## Notes\n\n-\n\n## Tomorrow\n\n- [ ]\n"},{"path":"Template/Project Template.md","content":"---\nStatus: Ongoing\nFollowup Date:\ntodo:\ntags:\n  -\n---\n\n### TODO\n\n> [!TODO] TODO\n> - [ ]\n\n### Summary Activity\n![[Activity Base.base#Specific Activity]]\n"}]</script>
 
 <script>
 "use strict";
@@ -919,13 +947,14 @@ function scanTasks(f) {
       const h = ln.match(/^\s*(?:>\s*)*#{1,6}\s+(.*)/); if (h) heading = h[1].trim();
       const m = ln.match(CB_RE); if (!m) return;
       const item = { raw: m[3].trim(), text: cleanTask(m[3].trim()), state: stateOf(m[2]), due: dueOf(m[3]), bodyIdx: idx, line: idx + f.bodyLineOffset + 1, heading };
+      if (item.state === "done") item.doneDate = doneDateOf(lines, idx, m[3]);
       if (f.kind === "tasknote") { subs.push(item); return; }
       const project = projectOfFile(f) || (detectProjects(item.text)[0] || {}).project || "";
       V.tasks.push({ ...item, id: f.path + "#" + idx, file: f, kind: KIND[f.folder] ? f.kind : "other", project });
     });
     if (f.kind === "tasknote") {
       const h1 = (f.body.match(/^#\s+(.+)$/m) || [])[1];
-      V.tasks.push({ id: f.path, text: String(f.fm.title || h1 || f.name), raw: f.name, state: TASKNOTE_STATE(scalar(f.fm.Status)), due: scalar(f.fm.Due || f.fm.due), priority: String(f.fm.Priority || ""), bodyIdx: -1, line: 1, heading: "", file: f, kind: "tasknote", project: projectOfFile(f) || (detectProjects(f.name)[0] || {}).project || "", subtasks: subs });
+      V.tasks.push({ id: f.path, text: String(f.fm.title || h1 || f.name), raw: f.name, state: TASKNOTE_STATE(scalar(f.fm.Status)), doneDate: ((f.body.match(/^\s*[-*+]\s+(\d{4}-\d{2}-\d{2})[^\n]*Status\s*→\s*Done/gm) || []).pop() || "").replace(/^\s*[-*+]\s+/, "").slice(0, 10), due: scalar(f.fm.Due || f.fm.due), priority: String(f.fm.Priority || ""), bodyIdx: -1, line: 1, heading: "", file: f, kind: "tasknote", project: projectOfFile(f) || (detectProjects(f.name)[0] || {}).project || "", subtasks: subs });
     }
   }
 }
@@ -1107,7 +1136,7 @@ function finishLoad(entries, label, stats, how) {
   const rootName = S.vaultPath ? S.vaultPath.split(/[\\/]/).pop() : "";
   if (rootName && rootName.toLowerCase() !== vaultLabel.toLowerCase()) {
     const fix = norm.prefix && rootName.toLowerCase() === String(label).toLowerCase() ? joinPath(S.vaultPath, ...norm.prefix.split("/")) : "";
-    msgs.push(`⚠ VAULT_ROOT in Settings is <code>${esc(S.vaultPath)}</code>, but the vault you opened is “${esc(vaultLabel)}”. Mage would write notes into the wrong folder.` +
+    msgs.push(`${ic("alert")} VAULT_ROOT in Settings is <code>${esc(S.vaultPath)}</code>, but the vault you opened is “${esc(vaultLabel)}”. Mage would write notes into the wrong folder.` +
       (fix ? ` <button class="btn small" data-fix-root="${esc(fix)}">Set VAULT_ROOT to ${esc(fix)}</button>` : ` Fix it in ⚙ Settings.`));
   }
   if (stale) msgs.push(`${stale} note(s) could not be re-read in time, so their last cached copy is shown (it may be slightly outdated).`);
@@ -1220,7 +1249,7 @@ window.addEventListener("unhandledrejection", e => showBanner(`Unexpected error:
 /* =========================================================================
    UI state
    ========================================================================= */
-const UI = { tab: store.get("wnh.tab", "tasks"), selTask: null, selProject: null, checked: new Set(), inboxChecked: new Set() };
+const UI = { justPosted: new Set(), tab: store.get("wnh.tab", "tasks"), selTask: null, selProject: null, checked: new Set(), inboxChecked: new Set() };
 const F = Object.assign({ q: "", state: "open", pstatus: "active", project: "", kind: "", tag: "" }, store.get("wnh.filters", {}));
 
 function setTab(name) {
@@ -1276,8 +1305,34 @@ function filteredTasks() {
 function dueChip(due) {
   if (!due) return "";
   const d = daysUntil(due); const cls = d == null ? "" : d < 0 ? "overdue" : d <= 2 ? "soon" : "";
-  const lbl = d == null ? due : d < 0 ? `${due} · ${-d}d late` : d === 0 ? `${due} · today` : `${due} · in ${d}d`;
+  const dd = fmtDMY(due); const lbl = d == null ? dd : d < 0 ? `${dd} · ${-d}d late` : d === 0 ? `${dd} · today` : `${dd} · in ${d}d`;
   return `<span class="chip ${cls}">${ic("cal")}${esc(lbl)}</span>`;
+}
+const MONTHS_ID = ["JAN", "FEB", "MAR", "APR", "MEI", "JUN", "JUL", "AGU", "SEP", "OKT", "NOV", "DES"];
+const fmtDM = d => { const m = String(d).match(/^\d{4}-(\d{2})-(\d{2})/); return m ? `${m[2]}/${m[1]}` : String(d); };
+const fmtDMY = d => { const m = String(d).match(/^\d{2}(\d{2})-(\d{2})-(\d{2})/); return m ? `${m[3]}/${m[2]}/${m[1]}` : String(d); };
+const fmtStamp = d => { const m = String(d).match(/^\d{2}(\d{2})-(\d{2})-(\d{2})/); return m ? `${m[3]} ${MONTHS_ID[+m[2] - 1]} ${m[1]}` : ""; };
+function stampHtml(t, big) {
+  const anim = UI.justPosted && UI.justPosted.has(t.id) ? " in" : "", dd = t.doneDate || t.pendDate;
+  return `<span class="stamp${big ? " big" : ""}${anim}" title="Done${dd ? " on " + esc(dd) : ""}">SELESAI${dd ? `<small>${fmtStamp(dd)}</small>` : ""}</span>`;
+}
+function statusHtml(t) {
+  if (t.state === "done") return stampHtml(t);
+  if (t.state === "cancelled") return `<span class="st cancelled">cancelled</span>`;
+  if (t.state === "blocked") return `<span class="st blocked">blocked</span>`;
+  const d = t.due ? daysUntil(t.due) : null;
+  if (d != null && d < 0) return `<span class="st late">${-d}d late</span>`;
+  if (d === 0) return `<span class="st today">today</span>`;
+  if (d === 1) return `<span class="st soon">tomorrow</span>`;
+  if (t.state === "doing") return `<span class="st doing">in progress</span>`;
+  if (d != null && d <= 7) return `<span class="st ${d <= 2 ? "soon" : "open"}">in ${d}d</span>`;
+  return `<span class="st open">to do</span>`;
+}
+function doneDateOf(lines, idx, raw) {
+  const tick = String(raw).match(/✅\s*(\d{4}-\d{2}-\d{2})/); if (tick) return tick[1];
+  let last = ""; const end = childEnd(lines, idx);
+  for (let i = idx + 1; i < end; i++) { const m = lines[i].match(/📝\s*(\d{4}-\d{2}-\d{2})/); if (m) last = m[1]; }
+  return last;
 }
 const KIND_LABEL = { project: "Project TODO", tasknote: "Task note", activity: "Activity", daily: "Daily", knowledge: "Knowledge", other: "Note", root: "Note" };
 function renderTasks() {
@@ -1291,11 +1346,12 @@ function renderTasks() {
   el.innerHTML = order.map(k => {
     const p = V.projects.get(k); const ts = groups.get(k);
     ts.sort((a, b) => (a.state === "done") - (b.state === "done") || (a.due || "9999").localeCompare(b.due || "9999") || a.file.path.localeCompare(b.file.path) || a.line - b.line);
-    return `<div class="group-h"><span>${esc(k || "No project")}</span>${p && p.status ? `<span class="chip st-${esc(p.status)}">${esc(p.status)}</span>` : ""}${p && p.missing ? `<span class="chip overdue">no Project note</span>` : ""}<span class="n">${ts.length}</span></div>` +
+    return `<div class="group-h">${esc(k || "No project")}<span class="gs">${p && p.status ? "· " + esc(p.status) : ""} · ${ts.length}</span>${p && p.missing ? `<span class="gs warn">· no Project note</span>` : ""}</div>` +
       ts.map(t => `<div class="task ${t.state === "done" ? "done" : ""} ${UI.selTask === t.id ? "sel" : ""}" data-id="${esc(t.id)}">
         ${tickHtml(t)}
         <div class="t"><div class="txt">${t.kind === "tasknote" ? ic("note") : ""}${inlineMd(t.text)}</div>
-        <div class="meta-line">${t.pending ? `<span class="chip soon" title="Changed here but not saved in the vault yet">unsaved</span>` : ""}<span class="chip s-${t.state}">${STATE_LABEL[t.state]}</span><span class="chip">${KIND_LABEL[t.kind] || t.kind}</span>${t.priority ? `<span class="chip">${ic("flag")}${esc(t.priority)}</span>` : ""}${dueChip(t.due)}${t.kind !== "project" && t.kind !== "tasknote" ? `<span class="chip" title="${esc(t.file.path)}">${esc(t.file.name.slice(0, 32))}</span>` : ""}</div></div>
+        <div class="sub">${[t.state === "done" && (t.doneDate || t.pendDate) ? "posted " + fmtDM(t.doneDate || t.pendDate) : t.due ? fmtDM(t.due) : "", (KIND_LABEL[t.kind] || t.kind).toLowerCase(), t.priority ? esc(String(t.priority)).toLowerCase() : "", t.kind !== "project" && t.kind !== "tasknote" ? esc(t.file.name.slice(0, 28)) : "", t.pending ? `<span class="warn" title="Changed here but not saved in the vault yet">unsaved</span>` : ""].filter(Boolean).join(" · ")}</div></div>
+        <div class="st-cell">${statusHtml(t)}</div>
         <input type="checkbox" class="pick" aria-label="Select for a Mage prompt" title="Select for a Mage prompt" ${UI.checked.has(t.id) ? "checked" : ""}></div>`).join("");
   }).join("");
   $$(".task", el).forEach(row => {
@@ -1310,7 +1366,7 @@ function renderTasks() {
   bindTicks(el); bindWikiLinks(el); updateSelBar();
 }
 const statusRank = name => { const s = (V.projects.get(name) || {}).status; return { Ongoing: 0, Explore: 1, "": 2, Done: 3 }[s] ?? 2; };
-function updateSelBar() { $("#sel-info").textContent = `${UI.checked.size} selected`; $("#btn-sel-prompt").disabled = !UI.checked.size; }
+function updateSelBar() { $("#sel-info").textContent = `${UI.checked.size} selected`; $("#btn-sel-prompt").disabled = $("#btn-sel-clear").disabled = !UI.checked.size; }
 for (const [id, key] of [["f-q", "q"], ["f-state", "state"], ["f-pstatus", "pstatus"], ["f-project", "project"], ["f-kind", "kind"], ["f-tag", "tag"]]) {
   const el = $("#" + id); el.value = F[key];
   el.addEventListener(id === "f-q" ? "input" : "change", () => { F[key] = el.value; store.set("wnh.filters", F); renderTasks(); });
@@ -1352,23 +1408,24 @@ function renderDetail() {
   const backlinks = t.project ? V.files.filter(f => f.kind !== "activity" && f.kind !== "archive" && f !== t.file && f.name !== t.project && f.content.includes("[[" + t.project)) : [];
   el.innerHTML = `
   <div class="detail-head">
-    <div class="meta-line"><span class="chip s-${t.state}">${STATE_LABEL[t.state]}</span><span class="chip">${KIND_LABEL[t.kind] || t.kind}</span>${t.priority ? `<span class="chip">${ic("flag")}${esc(t.priority)}</span>` : ""}${dueChip(t.due)}</div>
+    ${t.state === "done" ? stampHtml(t, true) : ""}
     <h2>${inlineMd(t.text)}</h2>
+    <div class="meta-line"><span class="chip s-${t.state}">${STATE_LABEL[t.state]}</span><span class="chip">${KIND_LABEL[t.kind] || t.kind}</span>${t.priority ? `<span class="chip">${ic("flag")}${esc(t.priority)}</span>` : ""}${dueChip(t.due)}</div>
     <div class="seg" role="group" aria-label="Task state">
       ${[["open", "To do"], ["doing", "In progress"], ["done", "Done"]].map(([st, l]) => `<button class="btn small ${t.state === st ? "on" : ""}" data-set-state="${st}" aria-pressed="${t.state === st}">${l}</button>`).join("")}
       ${t.pending ? `<span class="chip soon" title="Changed here but not saved in the vault yet">unsaved</span>` : `<span class="hint">${V.dirHandle ? "Saved straight into the note file" : ""}</span>`}
     </div>
     <div class="row">
-      <button class="btn primary" data-mode="execute">${ic("spark")}Ask Mage to work on it</button>
-      <button class="btn" data-mode="breakdown">Break down</button>
-      <button class="btn" data-mode="tasknote">Create task note</button>
-      <button class="btn" data-mode="review">Review status</button>
-      <button class="btn" data-mode="derive">New task from this</button>
+      <button class="btn small primary" data-mode="execute">${ic("spark")}Ask Mage to work on it</button>
+      <button class="btn small" data-mode="breakdown">Break down</button>
+      <button class="btn small" data-mode="tasknote">Create task note</button>
+      <button class="btn small" data-mode="review">Review status</button>
+      <button class="btn small" data-mode="derive">New task from this</button>
     </div>
     <dl class="meta">
       <dt>Project</dt><dd>${t.project ? `<a href="#" data-proj="${esc(t.project)}">${esc(t.project)}</a>` : "<span class='hint'>none detected</span>"}</dd>
       ${projectMeta(p)}
-      <dt>Source</dt><dd><a href="#" class="wl" data-note="${esc(t.file.name)}">${esc(t.file.path)}</a> · line ${t.line} · <a href="${obsidianUrl(t.file)}">Obsidian ↗</a></dd>
+      <dt>Source</dt><dd><a href="#" class="wl" data-note="${esc(t.file.name)}">${esc(t.file.path)}</a> · line ${t.line} · <a href="${obsidianUrl(t.file)}">Obsidian ${ic("external")}</a></dd>
       ${t.heading ? `<dt>Section</dt><dd>${esc(t.heading)}</dd>` : ""}
     </dl>
   </div>
@@ -1383,7 +1440,7 @@ function renderDetail() {
   $$("[data-mode]", el).forEach(b => b.addEventListener("click", () => openTaskPrompt([t], b.dataset.mode)));
   $$("[data-set-state]", el).forEach(b => b.addEventListener("click", () => {
     const st = b.dataset.setState, txt = ($("#task-note", el) || {}).value?.trim();
-    changeState(t, st, undefined, st === "done" && txt ? { note: txt } : {});
+    changeState(t, st, undefined, st === "done" && txt ? { note: txt } : { anchor: $(".seg", el) });
   }));
   const tn = $("#task-note", el);
   if (tn) {
@@ -1392,7 +1449,7 @@ function renderDetail() {
     const bd = $("#tn-done", el); if (bd) bd.addEventListener("click", () => { const v = need(); if (v) changeState(t, "done", undefined, { note: v }); });
     $("#tn-add", el).addEventListener("click", () => { const v = need(); if (v) addNote(t, v); });
   }
-  $$("[data-sub]", el).forEach(b => b.addEventListener("click", () => { const x = t.subtasks[+b.dataset.sub]; changeState(t, x.state === "done" ? "open" : "done", x); }));
+  $$("[data-sub]", el).forEach(b => b.addEventListener("click", () => { const x = t.subtasks[+b.dataset.sub]; changeState(t, x.state === "done" ? "open" : "done", x, { anchor: b.closest("li") }); }));
   bindTicks(el); bindDetailLinks(el);
 }
 function renderProjectDetail(name) {
@@ -1401,8 +1458,8 @@ function renderProjectDetail(name) {
   const ts = tasksFor(name); const open = ts.filter(t => !["done", "cancelled"].includes(t.state)); const acts = activitiesFor(name);
   el.innerHTML = `
   <div class="detail-head">
-    <div class="meta-line"><span class="chip">Project</span>${p.status ? `<span class="chip st-${esc(p.status)}">${esc(p.status)}</span>` : ""}</div>
     <h2>${esc(name)}</h2>
+    <div class="meta-line"><span class="chip">Project</span>${p.status ? `<span class="chip st-${esc(p.status)}">${esc(p.status)}</span>` : ""}</div>
     <div class="row">
       <button class="btn primary" data-pmode="review">${ic("compass")}Review project prompt</button>
       <button class="btn" data-pmode="execute" ${open.length ? "" : "disabled"}>${ic("spark")}Work on all open tasks</button>
@@ -1451,23 +1508,29 @@ function renderProjects() {
   const overdue = openTasks.filter(t => t.due && daysUntil(t.due) < 0).length + all.filter(p => p.status !== "Done" && p.followup && daysUntil(p.followup) < 0).length;
   const today = ymd(now()); const week = new Date(); week.setDate(week.getDate() - 7);
   $("#kpis").innerHTML = [
-    [all.filter(p => p.status === "Ongoing").length, "Ongoing projects"], [all.filter(p => p.status === "Explore").length, "Exploring"],
-    [openTasks.length, "Open tasks"], [overdue, "Overdue tasks / follow-ups"],
-    [V.activities.filter(a => a.date >= ymd(week)).length, "Activities (last 7 days)"], [V.activities.filter(a => a.date === today).length, "Activities today"]
-  ].map(([v, l]) => `<div class="card kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
+    [all.filter(p => p.status === "Ongoing").length, "ongoing"], [all.filter(p => p.status === "Explore").length, "exploring"],
+    [openTasks.length, "open tasks"], [overdue, "overdue tasks / follow-ups", overdue ? "warn" : ""],
+    [V.activities.filter(a => a.date >= ymd(week)).length, "activities in 7 days"], [V.activities.filter(a => a.date === ymd(now())).length, "today"]
+  ].map(([v, l, c]) => `<span class="${c || ""}"><b>${v}</b> ${l}</span>`).join("");
   const q = $("#p-q").value.trim().toLowerCase();
   const groups = [["Ongoing", "Ongoing"], ["Explore", "Explore"], ["", "No status / missing note"], ["Done", "Done"]];
-  wrap.innerHTML = groups.map(([st, label]) => {
+  const body = groups.map(([st, label]) => {
     const ps = all.filter(p => (p.status || "") === st || (st === "" && !["Ongoing", "Explore", "Done"].includes(p.status))).filter(p => !q || p.name.toLowerCase().includes(q)).sort((a, b) => a.name.localeCompare(b.name));
     if (!ps.length) return "";
-    return `<div class="status-h">${label} · ${ps.length}</div><div class="proj-grid">${ps.map(p => {
+    return `<tr class="grp"><td colspan="8">${label} <span>· ${ps.length}</span></td></tr>` + ps.map(p => {
       const ts = tasksFor(p.name); const o = ts.filter(t => ["open", "doing", "blocked"].includes(t.state)).length; const acts = activitiesFor(p.name);
-      return `<div class="card proj" data-p="${esc(p.name)}" tabindex="0"><h3>${esc(p.name)}</h3>
-        <div class="meta-line">${p.status ? `<span class="chip st-${esc(p.status)}">${esc(p.status)}</span>` : ""}${p.missing ? `<span class="chip overdue">no Project note</span>` : ""}${p.tags.map(t => `<span class="chip tag">#${esc(t)}</span>`).join("")}${p.followup && p.status !== "Done" ? dueChip(p.followup) : ""}</div>
-        <div class="stats"><div><b>${o}</b>open</div><div><b>${ts.length - o}</b>closed</div><div><b>${acts.length}</b>activities</div><div><b>${acts[0] ? esc(acts[0].date.slice(5)) : "—"}</b>last</div></div></div>`;
-    }).join("")}</div>`;
-  }).join("") || `<div class="card empty">No projects match.</div>`;
-  $$(".proj", wrap).forEach(c => { const go = () => showProject(c.dataset.p); c.addEventListener("click", go); c.addEventListener("keydown", e => e.key === "Enter" && go()); });
+      const fd = p.followup && p.status !== "Done" ? daysUntil(p.followup) : null;
+      const fu = p.followup ? `${fmtDMY(p.followup)}${fd != null ? (fd < 0 ? ` · ${-fd}d late` : fd === 0 ? " · today" : ` · in ${fd}d`) : ""}` : "—";
+      return `<tr class="p" data-p="${esc(p.name)}" tabindex="0"><td class="pn">${esc(p.name)}${p.missing ? ` <span class="chip overdue">no Project note</span>` : ""}</td>
+        <td>${p.status ? `<span class="chip st-${esc(p.status)}">${esc(p.status)}</span>` : "—"}</td>
+        <td class="tags hide-m">${p.tags.map(t => "#" + esc(t)).join(" ") || "—"}</td>
+        <td class="n ${o ? "" : "zero"}">${o}</td><td class="n hide-m ${ts.length - o ? "" : "zero"}">${ts.length - o}</td><td class="n hide-m ${acts.length ? "" : "zero"}">${acts.length}</td>
+        <td class="d hide-m">${acts[0] ? fmtDMY(acts[0].date) : "—"}</td>
+        <td class="d ${fd != null && fd < 0 ? "late" : fd != null && fd <= 2 ? "soon" : ""}">${fu}</td></tr>`;
+    }).join("");
+  }).join("");
+  wrap.innerHTML = body ? `<table class="ledger"><thead><tr><th>Project</th><th>Status</th><th class="hide-m">Tags</th><th style="text-align:right">Open</th><th class="hide-m" style="text-align:right">Closed</th><th class="hide-m" style="text-align:right">Activities</th><th class="hide-m">Last activity</th><th>Follow-up</th></tr></thead><tbody>${body}</tbody></table>` : `<div class="card empty">No projects match.</div>`;
+  $$("tr.p", wrap).forEach(c => { const go = () => showProject(c.dataset.p); c.addEventListener("click", go); c.addEventListener("keydown", e => e.key === "Enter" && go()); });
 }
 $("#p-q").addEventListener("input", renderProjects);
 $("#btn-review-all").addEventListener("click", () => {
@@ -1488,19 +1551,37 @@ let PENDING = store.get("wnh.pending", []);
 const savePending = () => store.set("wnh.pending", PENDING);
 const pendingKey = e => `${e.vault}|${e.type}|${e.path}|${e.type === "checkbox" ? e.raw : ""}|${e.type === "note" ? e.at : ""}`;
 const myPending = () => PENDING.filter(p => p.vault === V.label);
+function passbookRows(text) {
+  const rows = [], other = [];
+  const re = /^[-*+]\s+(?:📝\s*)?(\d{4}-\d{2}-\d{2})(?:\s+(\d{2}:\d{2}))?:\s*(.*)$/;
+  for (const l of String(text).split("\n")) {
+    const m = l.match(re);
+    if (m) {
+      const isNote = /📝/.test(l); const tx = m[3].replace(/^📝\s*/, "");
+      rows.push({ d: m[1], tm: m[2] || "", k: isNote ? "CATATAN" : /Status\s*→/.test(tx) ? "STATUS" : "LOG", tx, subs: [] }); continue;
+    }
+    const sub = l.match(/^\s+[-*+]\s+(.*)$/);
+    if (sub && rows.length) { rows[rows.length - 1].subs.push(sub[1]); continue; }
+    if (l.trim()) other.push(l);
+  }
+  return { rows, other: other.join("\n") };
+}
 function notesBoxHtml(t) {
-  const have = existingNotes(t), pend = t.pendingNotes || [];
+  const { rows, other } = passbookRows(existingNotes(t)), pend = t.pendingNotes || [];
   const where = t.kind === "tasknote" ? `the “## Log” of <code>${esc(t.file.path)}</code>` : `an indented 📝 line under the task in <code>${esc(t.file.path)}</code>`;
+  const row = (dt, k, cls, tx, subs = []) => `<div class="pb-row"><span class="dt">${dt}</span><span class="k ${cls}">${k}</span><span class="tx">${inlineMd(tx)}${subs.length ? `<ul>${subs.map(x => `<li>${inlineMd(x)}</li>`).join("")}</ul>` : ""}</span></div>`;
+  const body = rows.map(r => row(`${fmtDMY(r.d)}${r.tm ? " " + r.tm : ""}`, r.k, r.k === "STATUS" ? "status" : "", r.tx, r.subs)).join("")
+    + pend.map(n => { const [first, ...rest] = noteParts(n); return row(`${fmtDMY(n.stamp)} ${n.stamp.slice(11, 16)}`, "UNSAVED", "pending", first || "", rest.map(x => x.replace(/^[-*+]\s+/, ""))); }).join("");
   return `<div class="notes-box">
-    <h4>${ic("note")}Notes &amp; completion ${t.state === "done" ? `<span class="chip s-done">Done</span>` : ""}</h4>
-    ${have ? `<div class="md">${md(have)}</div>` : `<div class="hint">No notes yet. Write what was done and why it can be checked off.</div>`}
-    ${pend.map(n => `<div class="pending-note"><span class="chip soon">unsaved</span> 📝 ${esc(n.stamp)}: ${esc(n.text)}</div>`).join("")}
-    <textarea id="task-note" placeholder="What was done? Result, evidence (link / PR / screenshot name), who confirmed, and why it is complete…">${esc(loadDraft(t.id))}</textarea>
+    <h4>${ic("note")}Notes &amp; completion</h4>
+    ${other ? `<div class="pb-other md">${md(other)}</div>` : ""}
+    ${body ? `<div class="pb">${body}</div>` : other ? "" : `<div class="pb-empty">No entries yet. Write what was done and why it can be checked off.</div>`}
+    <textarea id="task-note" aria-label="Completion note" placeholder="What was done? Result, evidence (link / PR / screenshot name), who confirmed, and why it is complete…">${esc(loadDraft(t.id))}</textarea>
     <div class="row">
-      ${t.state !== "done" ? `<button class="btn primary" id="tn-done">${ic("check")}Mark done with this note</button>` : ""}
+      ${t.state !== "done" ? `<button class="btn primary" id="tn-done">${ic("check")}Post as done with this note</button>` : ""}
       <button class="btn" id="tn-add">${ic("plus")}Add note</button>
     </div>
-    <div class="hint" style="margin-top:6px">Saved as ${where}, with date and time.</div>
+    <div class="hint">Saved as ${where}, with date and time.</div>
   </div>`;
 }
 function tickHtml(t, attr) {
@@ -1510,7 +1591,7 @@ function tickHtml(t, attr) {
 function bindTicks(el) {
   $$("[data-tick-id]", el).forEach(b => b.addEventListener("click", e => {
     e.stopPropagation(); const t = V.tasks.find(x => x.id === b.dataset.tickId);
-    if (t) changeState(t, t.state === "done" ? "open" : "done");
+    if (t) changeState(t, t.state === "done" ? "open" : "done", undefined, { anchor: b.closest(".task") || b.closest("li") });
   }));
 }
 function setLineState(line, to) {
@@ -1591,7 +1672,7 @@ function applyEdit(text, e) {
 /* Remember the state on disk, then show pending changes on top of it. */
 function applyPending() {
   const all = V.tasks.flatMap(t => [t, ...(t.subtasks || []).map(x => Object.assign(x, { file: t.file, parent: t }))]);
-  for (const t of all) { if (t.diskState === undefined) t.diskState = t.state; t.state = t.diskState; t.pending = false; t.pendingNotes = []; }
+  for (const t of all) { if (t.diskState === undefined) t.diskState = t.state; t.state = t.diskState; t.pending = false; t.pendingNotes = []; t.pendDate = ""; }
   let changed = false;
   PENDING = PENDING.filter(p => {
     if (p.vault !== V.label) return true;
@@ -1604,24 +1685,35 @@ function applyPending() {
     const t = p.type === "status" ? V.tasks.find(x => x.kind === "tasknote" && x.file.path === p.path) : all.find(x => x.file && x.file.path === p.path && x.raw === p.raw && x.kind !== "tasknote");
     if (!t) return true;                                  // keep: maybe the note was not loaded
     if (t.diskState === p.to) { changed = true; return false; } // already in the vault (e.g. Mage applied it)
-    t.state = p.to; t.pending = true; return true;
+    t.state = p.to; t.pending = true; if (p.to === "done") t.pendDate = ymd(new Date(p.at)); return true;
   });
   if (changed) savePending();
 }
 function refreshViews() { applyPending(); renderTasks(); renderDetail(); renderProjects(); renderPendingBar(); }
-function askDoneNote(t, sub) {
+function askDoneNote(t, sub, anchor) {
   return new Promise(res => {
-    const d = $("#dlg-done"), ta = $("#dd-text"), req = !!S.requireDoneNote;
-    $("#dd-task").textContent = (sub || t).text; ta.value = loadDraft(t.id);
-    $("#dd-where").textContent = t.kind === "tasknote" && !sub ? `Saved in the “## Log” of ${t.file.path}` : `Saved as an indented 📝 line directly under the task in ${t.file.path}`;
-    $("#dd-skip").classList.toggle("hidden", req);
-    const upd = () => { $("#dd-ok").disabled = req && !ta.value.trim(); }; upd();
-    let settled = false; const finish = v => { if (settled) return; settled = true; d.close(); res(v); };
-    ta.oninput = upd; ta.onkeydown = ev => { if ((ev.ctrlKey || ev.metaKey) && ev.key === "Enter" && !$("#dd-ok").disabled) finish({ note: ta.value.trim() }); };
-    $("#dd-ok").onclick = () => finish({ note: ta.value.trim() });
-    $("#dd-skip").onclick = () => finish({ note: "" });
-    d.onclose = () => finish(null);
-    d.showModal(); ta.focus();
+    $$(".posting").forEach(x => x._cancel && x._cancel());
+    const req = !!S.requireDoneNote;
+    const where = t.kind === "tasknote" && !sub ? `Saved in the “## Log” of ${t.file.path}` : `Saved as an indented 📝 line directly under the task in ${t.file.path}`;
+    const box = document.createElement("div"); box.className = "posting"; box.setAttribute("role", "group"); box.setAttribute("aria-label", "Post task as done");
+    box.innerHTML = `      <label class="f" for="dd-text">Completion note: what was done, the result, and why it can be checked off</label>
+      <textarea id="dd-text" placeholder="e.g. Form deployed to SIT, QA tested min USD 1.000 validation OK. Confirmed by Budi in standup.">${esc(loadDraft(t.id))}</textarea>
+      <div class="row"><button class="btn primary" id="dd-ok">${ic("check")}Post as done</button>${req ? "" : `<button class="btn" id="dd-skip">Done without note</button>`}<button class="btn ghost" id="dd-cancel">Cancel</button></div>
+      <div class="hint">${esc(where)} · Ctrl/⌘ + Enter to post · Esc to cancel</div>`;
+    box.addEventListener("click", e => e.stopPropagation());
+    const host = anchor || $("#detail .seg") || $("#detail .detail-head");
+    if (host && host.classList.contains("task")) host.appendChild(box); else if (host) host.insertAdjacentElement("afterend", box); else document.body.appendChild(box);
+    const ta = box.querySelector("#dd-text"), ok = box.querySelector("#dd-ok");
+    let settled = false; const finish = v => { if (settled) return; settled = true; box.remove(); res(v); };
+    box._cancel = () => finish(null);
+    const upd = () => { ok.disabled = req && !ta.value.trim(); }; upd();
+    ta.addEventListener("input", () => { upd(); saveDraft(t.id, ta.value); });
+    ta.addEventListener("keydown", ev => { if ((ev.ctrlKey || ev.metaKey) && ev.key === "Enter" && !ok.disabled) finish({ note: ta.value.trim() }); if (ev.key === "Escape") finish(null); });
+    ok.addEventListener("click", () => finish({ note: ta.value.trim() }));
+    const sk = box.querySelector("#dd-skip"); if (sk) sk.addEventListener("click", () => finish({ note: "" }));
+    box.querySelector("#dd-cancel").addEventListener("click", () => finish(null));
+    ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+    box.scrollIntoView({ block: "nearest", behavior: "smooth" });
   });
 }
 const DRAFTS_KEY = "wnh.notedrafts";
@@ -1643,7 +1735,8 @@ async function changeState(t, to, sub, opts = {}) {
   const target = sub || t;
   if (target.state === to) return;
   let note = opts.note;
-  if (to === "done" && note === undefined) { const r = await askDoneNote(t, sub); if (!r) return; note = r.note; }
+  if (to === "done" && note === undefined) { const r = await askDoneNote(t, sub, opts.anchor); if (!r) return; note = r.note; }
+  if (to === "done") { UI.justPosted.add(t.id); setTimeout(() => UI.justPosted.delete(t.id), 900); }
   if (note) { queueNote(t, sub, note); saveDraft(t.id, ""); }
   const e = sub ? { type: "checkbox", path: t.file.path, line: sub.line, raw: sub.raw }
     : t.kind === "tasknote" ? { type: "status", path: t.file.path }
@@ -1655,7 +1748,7 @@ async function changeState(t, to, sub, opts = {}) {
   else PENDING.push({ ...e, from });
   savePending();
   const undo = { label: "Undo", run: () => { const nt = V.tasks.find(x => x.id === t.id); if (!nt) return; const ns = sub ? (nt.subtasks || []).find(x => x.line === sub.line) : null; changeState(nt, from, ns || undefined); } };
-  if (V.dirHandle) { await flushPending(to === "done" ? `Done ✓ saved to ${t.file.name}` : `Saved to ${t.file.name}`, undo); return; }
+  if (V.dirHandle) { await flushPending(to === "done" ? `Posted as done in ${t.file.name}` : `Saved to ${t.file.name}`, undo); return; }
   refreshViews();
   toast(V.isDemo ? "Demo vault: the change is only kept in this browser" : "Kept in this browser. Use “Save to vault” in the yellow bar", undo);
 }
@@ -1717,7 +1810,7 @@ function renderPendingBar() {
   if (!mine.length) { bar.classList.add("hidden"); return; }
   bar.classList.remove("hidden");
   const canSave = !V.isDemo && !!window.showDirectoryPicker;
-  bar.innerHTML = `<span class="msg">✎ <b>${mine.length} task change${mine.length > 1 ? "s" : ""} not saved in the vault yet</b>: ${esc(mine.slice(0, 3).map(p => p.type === "note" ? `📝 note on ${p.label}` : `${STATE_LABEL[p.to]}: ${p.label}`).join(" · "))}${mine.length > 3 ? " …" : ""}
+  bar.innerHTML = `<span class="msg">${ic("pen")} <b>${mine.length} task change${mine.length > 1 ? "s" : ""} not saved in the vault yet</b>: ${esc(mine.slice(0, 3).map(p => p.type === "note" ? `note on ${p.label}` : `${STATE_LABEL[p.to]}: ${p.label}`).join(" · "))}${mine.length > 3 ? " …" : ""}
     <span class="acts">${canSave ? `<button class="btn small" id="pb-save">${ic("save")}Save to vault</button>` : ""}<button class="btn small" id="pb-prompt">${ic("spark")}Prompt for Mage</button><button class="btn small" id="pb-discard">Discard</button></span></span>`;
   if (canSave) $("#pb-save").onclick = () => (V.dirHandle ? flushPending() : connectAndSave());
   $("#pb-prompt").onclick = openPendingPrompt;
@@ -1887,7 +1980,7 @@ function renderInbox() {
   if (!list.length) el.innerHTML = `<div class="empty"><h3>Inbox is empty</h3>Notes you save appear here. Select them and create one categorize prompt for Mage.</div>`;
   else el.innerHTML = list.map(n => { const a = analyzeNote(n); return `<div class="inbox-item" data-id="${n.id}">
     <input type="checkbox" ${UI.inboxChecked.has(n.id) ? "checked" : ""} aria-label="Select note">
-    <div class="t"><div class="row" style="gap:6px"><b style="flex:1 1 auto">${esc(n.title || (n.text.split("\n").find(l => l.trim()) || "").slice(0, 70))}</b><span class="pill ${n.status}" style="flex:0 0 auto">${n.status}</span></div>
+    <div class="t"><div class="row" style="gap:6px"><b class="ib-title">${esc(n.title || (n.text.split("\n").find(l => l.trim()) || "").slice(0, 70))}</b><span class="pill ${n.status}" style="flex:0 0 auto">${n.status}</span></div>
       <div class="meta-line"><span class="chip">${esc(n.capturedAt.replace("T", " "))}</span><span class="chip">${esc(a.type)}${a.category ? " · " + esc(a.category) : ""}</span>${a.proj ? `<span class="chip st-Ongoing">${esc(a.proj)}</span>` : ""}</div>
       <div class="prev">${esc(n.text)}</div>
       <div class="acts" style="margin-top:6px"><button class="btn small" data-a="edit">Edit</button><button class="btn small" data-a="prompt">Prompt</button><button class="btn small" data-a="filed">${n.status === "filed" ? "Unfile" : "Mark filed"}</button><button class="btn small danger" data-a="del">Delete</button></div></div></div>`; }).join("");
@@ -2487,7 +2580,7 @@ function regenPrompt() {
     $("#po-mode-desc").textContent = MODES[PD.mode].desc;
   }
   $("#prompt-text").value = r.text;
-  $("#prompt-warn").innerHTML = r.missing.length ? `<div class="warnbox">⚠ ${r.missing.join(" and ")} not set — the prompt contains <code>&lt;&lt;FILL…&gt;&gt;</code> placeholders. <a href="#" id="pw-fix">Set paths in Settings</a></div>` : "";
+  $("#prompt-warn").innerHTML = r.missing.length ? `<div class="warnbox">${ic("alert")} ${r.missing.join(" and ")} not set — the prompt contains <code>&lt;&lt;FILL…&gt;&gt;</code> placeholders. <a href="#" id="pw-fix">Set paths in Settings</a></div>` : "";
   const fx = $("#pw-fix"); if (fx) fx.addEventListener("click", e => { e.preventDefault(); openSettings(S.skillRepo ? "s-vaultPath" : "s-skillRepo"); });
   const stamp = localISO(now()).replace(/[-:]/g, "").replace("T", "-");
   PD.file = `mage-prompt-${stamp}-${PD.kind === "notes" ? "categorize" : PD.kind === "pending" ? "checkboxes" : PD.mode}.md`;
