@@ -1980,7 +1980,7 @@ function renderInbox() {
   if (!list.length) el.innerHTML = `<div class="empty"><h3>Inbox is empty</h3>Notes you save appear here. Select them and create one categorize prompt for Mage.</div>`;
   else el.innerHTML = list.map(n => { const a = analyzeNote(n); return `<div class="inbox-item" data-id="${n.id}">
     <input type="checkbox" ${UI.inboxChecked.has(n.id) ? "checked" : ""} aria-label="Select note">
-    <div class="t"><div class="row" style="gap:6px"><b class="ib-title">${esc(n.title || (n.text.split("\n").find(l => l.trim()) || "").slice(0, 70))}</b><span class="pill ${n.status}" style="flex:0 0 auto">${n.status}</span></div>
+    <div class="t"><div class="row" style="gap:6px"><b class="ib-title" title="${esc(n.title || (n.text.split("\n").find(l => l.trim()) || ""))}">${esc(n.title || (n.text.split("\n").find(l => l.trim()) || ""))}</b><span class="pill ${n.status}" style="flex:0 0 auto">${n.status}</span></div>
       <div class="meta-line"><span class="chip">${esc(n.capturedAt.replace("T", " "))}</span><span class="chip">${esc(a.type)}${a.category ? " · " + esc(a.category) : ""}</span>${a.proj ? `<span class="chip st-Ongoing">${esc(a.proj)}</span>` : ""}</div>
       <div class="prev">${esc(n.text)}</div>
       <div class="acts" style="margin-top:6px"><button class="btn small" data-a="edit">Edit</button><button class="btn small" data-a="prompt">Prompt</button><button class="btn small" data-a="filed">${n.status === "filed" ? "Unfile" : "Mark filed"}</button><button class="btn small danger" data-a="del">Delete</button></div></div></div>`; }).join("");
