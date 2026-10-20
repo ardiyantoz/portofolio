@@ -6,247 +6,371 @@
 <title>WorkingNotes Hub</title>
 <meta name="description" content="Note taking BCA — browse Obsidian WorkingNotes tasks, capture notes, and generate detailed prompts for the local LLM (Mage / opencode / Qwen).">
 <style>
+/* ==========================================================================
+   WorkingNotes Hub: dark-only design system
+   Tinted ink neutrals (hue ~250), one cool accent, semantic status hues.
+   Metadata in mono, content in a humanist sans; surfaces separate by
+   lightness steps rather than shadows.
+   ========================================================================== */
 :root{
-  --bg:#f4f6fa; --panel:#ffffff; --panel-2:#f8f9fc; --ink:#152033; --muted:#5c6a80; --line:#dde3ec;
-  --accent:#0a5cad; --accent-2:#e7f0fb; --accent-ink:#ffffff;
-  --ok:#1f8a4c; --ok-bg:#e5f5ec; --warn:#a86400; --warn-bg:#fff3dc; --danger:#c0362c; --danger-bg:#fdeceb;
-  --doing:#6a4bc4; --doing-bg:#efeafd; --chip:#eef1f6; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 16px rgba(16,24,40,.06);
-  --mono:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
-  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#0f141c; --panel:#171d27; --panel-2:#1c2430; --ink:#e6ebf2; --muted:#9aa7ba; --line:#2a3342;
-    --accent:#5aa2ef; --accent-2:#1b2d44; --accent-ink:#0b1320;
-    --ok:#56c98a; --ok-bg:#15301f; --warn:#f0b35a; --warn-bg:#35280f; --danger:#f07b72; --danger-bg:#3a1a18;
-    --doing:#b3a0f5; --doing-bg:#2a2340; --chip:#232c3a; --shadow:0 1px 2px rgba(0,0,0,.4);
-  }
-}
-:root[data-theme="dark"]{
-  --bg:#0f141c; --panel:#171d27; --panel-2:#1c2430; --ink:#e6ebf2; --muted:#9aa7ba; --line:#2a3342;
-  --accent:#5aa2ef; --accent-2:#1b2d44; --accent-ink:#0b1320;
-  --ok:#56c98a; --ok-bg:#15301f; --warn:#f0b35a; --warn-bg:#35280f; --danger:#f07b72; --danger-bg:#3a1a18;
-  --doing:#b3a0f5; --doing-bg:#2a2340; --chip:#232c3a; --shadow:0 1px 2px rgba(0,0,0,.4);
+  color-scheme: dark;
+  /* surfaces: each step is a little lighter */
+  --bg:#0c0f14; --bg-2:#10141b; --panel:#141922; --panel-2:#19202b; --panel-3:#1f2733;
+  --line:#232b38; --line-2:#2d3747;
+  /* ink */
+  --ink:#e4e9f1; --ink-2:#b7c0cf; --muted:#7f8a9c; --faint:#5a6476;
+  /* accent: a calm cyan-blue */
+  --accent:#6cb6ff; --accent-strong:#8cc8ff; --accent-2:rgba(108,182,255,.12); --accent-3:rgba(108,182,255,.22); --accent-ink:#06121f;
+  /* semantic */
+  --ok:#5fd394; --ok-bg:rgba(95,211,148,.12);
+  --warn:#f2b866; --warn-bg:rgba(242,184,102,.12);
+  --danger:#ff8a80; --danger-bg:rgba(255,138,128,.12);
+  --doing:#b49cff; --doing-bg:rgba(180,156,255,.13);
+  --chip:#1c2330;
+  --shadow:0 18px 50px rgba(0,0,0,.45);
+  --radius:12px; --radius-s:8px;
+  --sans:"Segoe UI Variable Text","Segoe UI Variable","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  --display:"Segoe UI Variable Display","Segoe UI Variable","Segoe UI",system-ui,sans-serif;
+  --mono:"Cascadia Code","Cascadia Mono",ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans)}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.55 var(--sans);-webkit-font-smoothing:antialiased;font-feature-settings:"tnum" 1}
+::selection{background:var(--accent-3)}
 button,input,select,textarea{font:inherit;color:inherit}
-a{color:var(--accent)}
-header.top{position:sticky;top:0;z-index:20;background:var(--panel);border-bottom:1px solid var(--line)}
-.bar{display:flex;align-items:center;gap:12px;padding:10px 16px;flex-wrap:wrap}
-.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;margin-right:auto}
-.logo{width:28px;height:28px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:14px}
-.brand small{display:block;font-weight:500;color:var(--muted);font-size:12px}
-.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel);padding:6px 12px;border-radius:8px;cursor:pointer;text-decoration:none;color:var(--ink);white-space:nowrap}
-.btn:hover{border-color:var(--accent)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.btn.ghost{border-color:transparent;background:transparent}
-.btn.small{padding:3px 8px;font-size:12px}
+a{color:var(--accent);text-decoration-color:rgba(108,182,255,.35);text-underline-offset:3px}
+a:hover{color:var(--accent-strong);text-decoration-color:currentColor}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.ic{width:16px;height:16px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:10px;border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- app bar ---------- */
+header.top{position:sticky;top:0;z-index:20;background:rgba(12,15,20,.86);backdrop-filter:saturate(140%) blur(12px);border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;gap:8px;padding:12px 20px 10px;flex-wrap:wrap;max-width:1560px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:12px;margin-right:auto;min-width:0}
+.logo{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:linear-gradient(160deg,#1d3550,#12202f);border:1px solid #2a4664;color:var(--accent);font:700 12px/1 var(--mono);letter-spacing:.02em}
+.brand>div{font:600 15px/1.2 var(--display);letter-spacing:-.01em;min-width:0}
+.brand small{display:block;font:500 11.5px/1.4 var(--mono);color:var(--muted);letter-spacing:0;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46vw}
+.bar .sep{width:1px;height:22px;background:var(--line-2);margin:0 4px}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:32px;padding:0 12px;border-radius:var(--radius-s);border:1px solid var(--line-2);background:var(--panel-2);color:var(--ink-2);font-weight:550;font-size:13px;cursor:pointer;text-decoration:none;white-space:nowrap;transition:background .15s,border-color .15s,color .15s}
+.btn:hover{background:var(--panel-3);border-color:#3a4659;color:var(--ink)}
+.btn:active{transform:translateY(.5px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:650}
+.btn.primary:hover{background:var(--accent-strong);border-color:var(--accent-strong);color:var(--accent-ink)}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.ghost:hover{background:var(--panel-2);color:var(--ink)}
+.btn.small{height:26px;padding:0 9px;font-size:12px;gap:5px}
+.btn.small .ic{width:14px;height:14px}
 .btn.danger{color:var(--danger)}
-.btn:disabled{opacity:.5;cursor:not-allowed}
-.paths{display:flex;gap:8px;flex-wrap:wrap;padding:0 16px 10px;font-size:12px}
-.path{display:flex;gap:6px;align-items:center;background:var(--chip);border-radius:6px;padding:3px 8px;max-width:100%;cursor:pointer;border:1px solid transparent}
-.path b{color:var(--muted);font-weight:600}
-.path code{font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:360px}
-.path.missing{background:var(--danger-bg);border-color:var(--danger)}
+.btn.danger:hover{border-color:rgba(255,138,128,.45)}
+.btn:disabled,label.btn.disabled{opacity:.42;cursor:not-allowed;pointer-events:none}
+
+/* ---------- context strip (paths) ---------- */
+.paths{display:flex;gap:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:0 20px 10px;font-size:11.5px;max-width:1560px;margin:0 auto;mask-image:linear-gradient(90deg,#000 92%,transparent)}
+.paths::-webkit-scrollbar{display:none}
+.path{flex:0 0 auto}
+.path{display:flex;gap:7px;align-items:center;padding:3px 12px 3px 0;margin-right:12px;border-right:1px solid var(--line);cursor:pointer;max-width:100%;min-width:0;background:none}
+.path:last-child{border-right:0}
+.path b{font:600 10.5px/1 var(--mono);color:var(--faint);letter-spacing:.06em}
+.path code{font-family:var(--mono);color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:300px}
+.path:hover code{color:var(--accent)}
 .path.missing code{color:var(--danger)}
-nav.tabs{display:flex;gap:4px;padding:0 16px;overflow-x:auto}
-nav.tabs button{border:0;background:none;padding:10px 14px;border-bottom:2px solid transparent;cursor:pointer;color:var(--muted);font-weight:600;white-space:nowrap}
-nav.tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
-nav.tabs .count{background:var(--chip);border-radius:10px;padding:0 7px;font-size:11px;margin-left:4px}
-main{padding:16px;max-width:1500px;margin:0 auto}
-.tab{display:none}.tab.active{display:block}
-.grid-2{display:grid;grid-template-columns:minmax(320px,420px) 1fr;gap:16px;align-items:start}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
-.card-h{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-.card-h h2{font-size:15px;margin:0;margin-right:auto}
-.card-b{padding:14px}
-.filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.path.missing b{color:var(--danger)}
+.path.missing b::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--danger);margin-right:6px;vertical-align:1px}
+
+/* ---------- tabs ---------- */
+nav.tabs{display:flex;gap:2px;padding:0 14px;overflow-x:auto;max-width:1560px;margin:0 auto;scrollbar-width:none}
+nav.tabs button{position:relative;border:0;background:none;padding:10px 12px 11px;cursor:pointer;color:var(--muted);font-weight:600;font-size:13.5px;white-space:nowrap;display:flex;gap:8px;align-items:center;border-radius:8px 8px 0 0}
+nav.tabs button:hover{color:var(--ink)}
+nav.tabs button[aria-selected="true"]{color:var(--ink)}
+nav.tabs button[aria-selected="true"]::after{content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:2px;border-radius:2px;background:var(--accent)}
+nav.tabs .count{font:600 11px/1 var(--mono);color:var(--muted);background:var(--panel-2);border:1px solid var(--line);padding:3px 6px;border-radius:6px}
+nav.tabs button[aria-selected="true"] .count{color:var(--accent);border-color:rgba(108,182,255,.3);background:var(--accent-2)}
+
+/* ---------- layout ---------- */
+main{padding:20px;max-width:1560px;margin:0 auto}
+.tab{display:none}.tab.active{display:block;animation:rise .18s ease-out}
+@keyframes rise{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+.grid-2{display:grid;grid-template-columns:minmax(330px,440px) 1fr;gap:18px;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius)}
+.card-h{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.card-h h2{font:650 14px/1.3 var(--display);margin:0;margin-right:auto;letter-spacing:-.005em}
+.card-b{padding:16px}
+
+/* ---------- form controls ---------- */
+.filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--bg-2)}
 .filters .full{grid-column:1/-1}
-input[type=text],input[type=search],input[type=datetime-local],input[type=url],input[type=password],select,textarea{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
-textarea{resize:vertical;min-height:80px;font-family:var(--sans)}
-textarea.mono{font-family:var(--mono);font-size:12.5px;line-height:1.45}
-input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
-label.f{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:10px 0 4px}
+input[type=text],input[type=search],input[type=datetime-local],input[type=url],input[type=password],select,textarea{width:100%;background:var(--bg-2);border:1px solid var(--line-2);border-radius:var(--radius-s);padding:7px 10px;min-height:34px;color:var(--ink);transition:border-color .15s,box-shadow .15s}
+select{appearance:none;padding-right:28px;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 15px) 52%,calc(100% - 10px) 52%;background-size:5px 5px;background-repeat:no-repeat}
+input::placeholder,textarea::placeholder{color:var(--faint)}
+input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(.75)}
+textarea{resize:vertical;min-height:84px;line-height:1.55}
+textarea.mono{font-family:var(--mono);font-size:12.5px;line-height:1.5}
+input:hover,select:hover,textarea:hover{border-color:#3a4659}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-2)}
+input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px}
+label.f{display:block;font:600 11px/1.3 var(--sans);color:var(--muted);margin:14px 0 6px;letter-spacing:.04em;text-transform:uppercase}
 label.f:first-child{margin-top:0}
+.row>div>label.f:first-child{margin-top:14px}
 .hint{font-size:12px;color:var(--muted)}
+.hint code,.hint b{color:var(--ink-2)}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .row>*{flex:1 1 140px}
 .row>.btn{flex:0 0 auto}
-.row>div>label.f:first-child{margin-top:10px}
-.task-list{max-height:calc(100vh - 330px);min-height:240px;overflow:auto}
-.group-h{position:sticky;top:0;background:var(--panel-2);border-bottom:1px solid var(--line);padding:6px 14px;font-size:12px;font-weight:700;display:flex;gap:6px;align-items:center;z-index:1}
-.group-h .n{margin-left:auto;color:var(--muted);font-weight:500}
-.task{display:flex;gap:10px;padding:9px 14px;border-bottom:1px solid var(--line);cursor:pointer;align-items:flex-start}
-.task:hover{background:var(--panel-2)}
-.task.sel{background:var(--accent-2);box-shadow:inset 3px 0 0 var(--accent)}
+
+/* ---------- task list ---------- */
+.task-list{max-height:calc(100vh - 340px);min-height:260px;overflow:auto}
+.group-h{position:sticky;top:0;z-index:1;display:flex;gap:8px;align-items:center;padding:9px 16px 7px;background:var(--panel);border-bottom:1px solid var(--line);font:650 11px/1.3 var(--sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.group-h .n{margin-left:auto;font:600 11px/1 var(--mono);color:var(--faint);letter-spacing:0}
+.group-h .chip{text-transform:none;letter-spacing:0}
+.task{display:flex;gap:11px;padding:10px 14px 10px 16px;border-bottom:1px solid var(--line);cursor:pointer;align-items:flex-start;position:relative;transition:background .12s}
+.task:hover{background:var(--bg-2)}
+.task.sel{background:var(--accent-2)}
+.task.sel::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--accent)}
 .task input{margin-top:3px;flex:0 0 auto}
 .task .t{flex:1;min-width:0}
-.task .t .txt{overflow-wrap:anywhere}
-.task.done .txt{text-decoration:line-through;color:var(--muted)}
-.meta-line{display:flex;gap:6px;flex-wrap:wrap;margin-top:3px}
-.chip{display:inline-flex;align-items:center;gap:4px;background:var(--chip);border-radius:6px;padding:0 7px;font-size:11.5px;line-height:20px;color:var(--muted);white-space:nowrap}
+.task .t .txt{overflow-wrap:anywhere;color:var(--ink);line-height:1.45}
+.task .t .txt .ic{color:var(--muted);margin-right:3px}
+.task.done .txt{text-decoration:line-through;text-decoration-color:var(--faint);color:var(--muted)}
+.meta-line{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+.chip{display:inline-flex;align-items:center;gap:5px;background:var(--chip);border:1px solid transparent;border-radius:6px;padding:0 7px;font-size:11.5px;line-height:20px;color:var(--muted);white-space:nowrap}
+.chip .ic{width:12px;height:12px;vertical-align:-1px}
 .chip.st-Ongoing,.chip.s-open{background:var(--accent-2);color:var(--accent)}
 .chip.st-Explore,.chip.s-doing{background:var(--doing-bg);color:var(--doing)}
 .chip.st-Done,.chip.s-done{background:var(--ok-bg);color:var(--ok)}
 .chip.s-cancelled{text-decoration:line-through}
 .chip.s-blocked,.chip.overdue{background:var(--danger-bg);color:var(--danger)}
 .chip.soon{background:var(--warn-bg);color:var(--warn)}
-.chip.tag{background:transparent;border:1px solid var(--line)}
-.selbar{display:flex;gap:8px;align-items:center;padding:10px 14px;border-top:1px solid var(--line);flex-wrap:wrap}
-.selbar span{margin-right:auto;color:var(--muted);font-size:12px}
-.empty{padding:40px 20px;text-align:center;color:var(--muted)}
-.empty h3{color:var(--ink);margin:0 0 6px}
-.detail{min-height:300px}
-.detail-head{padding:16px 18px;border-bottom:1px solid var(--line)}
-.detail-head h2{margin:6px 0 10px;font-size:19px;line-height:1.3;overflow-wrap:anywhere}
-.detail-body{padding:6px 18px 18px}
-dl.meta{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px;margin:14px 0 0;font-size:13px}
-dl.meta dt{color:var(--muted)}
-dl.meta dd{margin:0;overflow-wrap:anywhere}
-.sec{margin-top:18px}
-.sec>h3{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:0 0 8px;display:flex;align-items:center;gap:8px}
-details.note{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--panel)}
-details.note>summary{cursor:pointer;padding:9px 12px;list-style:none;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.chip.tag{background:transparent;border-color:var(--line-2);font-family:var(--mono);font-size:11px}
+.selbar{display:flex;gap:8px;align-items:center;padding:10px 16px;border-top:1px solid var(--line);flex-wrap:wrap;background:var(--bg-2);border-radius:0 0 var(--radius) var(--radius)}
+.selbar span{margin-right:auto;color:var(--muted);font:500 12px/1 var(--mono)}
+.empty{padding:56px 28px;text-align:center;color:var(--muted);max-width:520px;margin:0 auto;line-height:1.6}
+.empty h3{color:var(--ink);margin:0 0 8px;font:650 16px/1.3 var(--display)}
+
+/* ---------- task detail ---------- */
+.detail{min-height:320px}
+.detail-head{padding:20px 22px 18px;border-bottom:1px solid var(--line)}
+.detail-head h2{margin:8px 0 14px;font:650 21px/1.3 var(--display);letter-spacing:-.015em;overflow-wrap:anywhere;text-wrap:balance}
+.detail-body{padding:4px 22px 22px}
+dl.meta{display:grid;grid-template-columns:max-content 1fr;gap:7px 18px;margin:18px 0 0;font-size:13px}
+dl.meta dt{color:var(--faint);font:600 11px/20px var(--sans);letter-spacing:.05em;text-transform:uppercase}
+dl.meta dd{margin:0;overflow-wrap:anywhere;color:var(--ink-2)}
+.sec{margin-top:24px}
+.sec>h3{font:650 11px/1.3 var(--sans);text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin:0 0 10px;display:flex;align-items:center;gap:8px}
+.sec>h3::after{content:"";flex:1;height:1px;background:var(--line)}
+details.note{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--bg-2);transition:border-color .15s}
+details.note:hover{border-color:var(--line-2)}
+details.note>summary{cursor:pointer;padding:10px 14px;list-style:none;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
 details.note>summary::-webkit-details-marker{display:none}
-details.note>summary::before{content:"▸";color:var(--muted);transition:transform .15s}
-details.note[open]>summary::before{transform:rotate(90deg)}
-details.note>summary .ttl{font-weight:600}
-details.note>summary .sub{color:var(--muted);font-size:12px;flex-basis:100%;padding-left:16px}
-details.note .inner{padding:0 14px 12px;border-top:1px dashed var(--line)}
-.md{overflow-wrap:anywhere}
-.md h1,.md h2,.md h3,.md h4,.md h5,.md h6{margin:14px 0 6px;line-height:1.3}
-.md h3{font-size:17px}.md h4{font-size:15px}.md h5,.md h6{font-size:14px}
+details.note>summary::before{content:"";width:6px;height:6px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(-45deg);transition:transform .15s;align-self:center}
+details.note[open]>summary::before{transform:rotate(45deg)}
+details.note>summary .ttl{font-weight:600;color:var(--ink)}
+details.note>summary .sub{color:var(--muted);font-size:12px;flex-basis:100%;padding-left:14px}
+details.note .inner{padding:2px 16px 14px;border-top:1px solid var(--line)}
+
+/* ---------- rendered markdown ---------- */
+.md{overflow-wrap:anywhere;color:var(--ink-2);line-height:1.6}
+.md h1,.md h2,.md h3,.md h4,.md h5,.md h6{margin:16px 0 6px;line-height:1.3;color:var(--ink);font-family:var(--display)}
+.md h3{font-size:16px}.md h4{font-size:14.5px}.md h5,.md h6{font-size:13.5px}
 .md p{margin:6px 0}
 .md ul{margin:6px 0;padding-left:20px}
+.md li::marker{color:var(--faint)}
 .md li.task-li{list-style:none;margin-left:-18px}
-.md pre{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px;overflow:auto;font-size:12.5px}
-.md code{font-family:var(--mono);background:var(--chip);border-radius:4px;padding:0 4px;font-size:12.5px}
+.md pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;overflow:auto;font-size:12.5px}
+.md code{font-family:var(--mono);background:var(--panel-3);border-radius:5px;padding:1px 5px;font-size:12.5px;color:var(--ink)}
 .md pre code{background:none;padding:0}
-.md table{border-collapse:collapse;width:100%;margin:8px 0;font-size:13px;display:block;overflow-x:auto}
-.md th,.md td{border:1px solid var(--line);padding:4px 8px;text-align:left}
-.md th{background:var(--panel-2)}
-.md blockquote{margin:6px 0;padding:2px 12px;border-left:3px solid var(--line);color:var(--muted)}
-.callout{border-left:3px solid var(--accent);background:var(--accent-2);border-radius:6px;padding:6px 12px;margin:8px 0}
-.callout-title{font-weight:700;color:var(--accent)}
-.embed{display:inline-block;background:var(--chip);border-radius:6px;padding:0 6px;font-size:12px;color:var(--muted)}
-.cb{display:inline-block;width:14px;height:14px;border:1.5px solid var(--muted);border-radius:4px;margin-right:6px;vertical-align:-2px;position:relative}
+.md table{border-collapse:collapse;width:100%;margin:10px 0;font-size:13px;display:block;overflow-x:auto}
+.md th,.md td{border:1px solid var(--line);padding:6px 10px;text-align:left}
+.md th{background:var(--panel-2);color:var(--ink);font-weight:600}
+.md blockquote{margin:8px 0;padding:2px 14px;border-left:2px solid var(--line-2);color:var(--muted)}
+.md mark{background:var(--warn-bg);color:var(--warn);border-radius:3px;padding:0 3px}
+.callout{border:1px solid rgba(108,182,255,.22);border-left:3px solid var(--accent);background:rgba(108,182,255,.06);border-radius:8px;padding:8px 14px;margin:10px 0}
+.callout-title{font-weight:650;color:var(--accent);font-size:13px;letter-spacing:.02em}
+.embed{display:inline-block;background:var(--chip);border-radius:6px;padding:0 7px;font:12px/20px var(--mono);color:var(--muted)}
+.cb{display:inline-block;width:14px;height:14px;border:1.5px solid var(--faint);border-radius:4px;margin-right:7px;vertical-align:-2px;position:relative}
 .cb-done{background:var(--ok);border-color:var(--ok)}
-.cb-done::after{content:"";position:absolute;left:3.5px;top:0.5px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.cb-done::after{content:"";position:absolute;left:3.5px;top:.5px;width:4px;height:8px;border:solid var(--bg);border-width:0 2px 2px 0;transform:rotate(45deg)}
 .cb-doing{background:linear-gradient(135deg,var(--doing) 50%,transparent 50%);border-color:var(--doing)}
-.cb-cancelled{border-color:var(--line);background:var(--chip)}
-.hl-line{background:var(--warn-bg);border-radius:4px;outline:1px solid var(--warn)}
-.fm{font-family:var(--mono);font-size:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;white-space:pre-wrap;margin:8px 0}
-.proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
-.proj{padding:14px;cursor:pointer;display:flex;flex-direction:column;gap:8px}
-.proj:hover{border-color:var(--accent)}
-.proj h3{margin:0;font-size:15px}
-.proj .stats{display:flex;gap:14px;font-size:12px;color:var(--muted)}
-.proj .stats b{display:block;font-size:18px;color:var(--ink)}
-.status-h{font-size:13px;font-weight:700;margin:18px 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.cb-cancelled{border-color:var(--line-2);background:var(--chip)}
+.hl-line{background:var(--warn-bg);border-radius:4px;box-shadow:0 0 0 1px rgba(242,184,102,.4)}
+.fm{font-family:var(--mono);font-size:12px;color:var(--muted);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;white-space:pre-wrap;margin:8px 0}
+
+/* ---------- projects ---------- */
+.proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.proj{padding:16px;cursor:pointer;display:flex;flex-direction:column;gap:10px;transition:border-color .15s,background .15s}
+.proj:hover{border-color:var(--line-2);background:var(--panel-2)}
+.proj h3{margin:0;font:650 15px/1.3 var(--display);letter-spacing:-.01em}
+.proj .stats{display:flex;gap:18px;font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;padding-top:10px;border-top:1px solid var(--line)}
+.proj .stats b{display:block;font:650 18px/1.2 var(--mono);color:var(--ink);letter-spacing:0;text-transform:none}
+.status-h{font:650 11px/1.3 var(--sans);margin:28px 0 10px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;display:flex;gap:10px;align-items:center}
+.status-h::after{content:"";flex:1;height:1px;background:var(--line)}
 .status-h:first-child{margin-top:0}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px}
-.kpi{padding:12px 14px}
-.kpi .v{font-size:24px;font-weight:700}
-.kpi .l{font-size:12px;color:var(--muted)}
-.detect{background:var(--panel-2);border:1px dashed var(--line);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:13px}
-.detect dl{display:grid;grid-template-columns:max-content 1fr;gap:3px 12px;margin:0}
-.detect dt{color:var(--muted)}.detect dd{margin:0;overflow-wrap:anywhere}
-.inbox-item{display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);align-items:flex-start}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0;margin-bottom:20px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);overflow:hidden}
+.kpi{padding:14px 18px;border:0;border-radius:0;border-right:1px solid var(--line);background:none}
+.kpi:last-child{border-right:0}
+.kpi .v{font:650 26px/1.15 var(--mono);color:var(--ink);letter-spacing:-.02em}
+.kpi .l{font-size:11.5px;color:var(--muted);margin-top:4px}
+
+/* ---------- capture + inbox ---------- */
+.detect{background:var(--bg-2);border:1px dashed var(--line-2);border-radius:10px;padding:12px 14px;margin-top:12px;font-size:13px}
+.detect dl{display:grid;grid-template-columns:max-content 1fr;gap:5px 14px;margin:0}
+.detect dt{color:var(--faint);font:600 11px/20px var(--sans);text-transform:uppercase;letter-spacing:.05em}
+.detect dd{margin:0;overflow-wrap:anywhere}
+.detect code{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+.inbox-item{display:flex;gap:11px;padding:12px 16px;border-bottom:1px solid var(--line);align-items:flex-start}
+.inbox-item:hover{background:var(--bg-2)}
 .inbox-item .t{flex:1;min-width:0}
-.inbox-item .prev{color:var(--muted);font-size:12.5px;white-space:pre-wrap;max-height:3.9em;overflow:hidden;overflow-wrap:anywhere}
+.inbox-item .prev{color:var(--muted);font-size:12.5px;white-space:pre-wrap;max-height:3.9em;overflow:hidden;overflow-wrap:anywhere;margin-top:4px}
 .inbox-item .acts{display:flex;gap:4px;flex-wrap:wrap}
-.pill{font-size:11px;font-weight:700;border-radius:10px;padding:1px 8px}
+.pill{font:650 10.5px/1 var(--mono);border-radius:6px;padding:4px 7px;text-transform:uppercase;letter-spacing:.04em}
 .pill.draft{background:var(--chip);color:var(--muted)}
 .pill.prompted{background:var(--warn-bg);color:var(--warn)}
 .pill.sent{background:var(--doing-bg);color:var(--doing)}
 .pill.filed{background:var(--ok-bg);color:var(--ok)}
-dialog{border:1px solid var(--line);border-radius:14px;padding:0;background:var(--panel);color:var(--ink);width:min(1100px,calc(100vw - 24px));max-height:calc(100vh - 24px);box-shadow:0 20px 60px rgba(0,0,0,.3)}
-dialog::backdrop{background:rgba(10,15,25,.55)}
+
+/* ---------- dialogs ---------- */
+dialog{border:1px solid var(--line-2);border-radius:16px;padding:0;background:var(--panel);color:var(--ink);width:min(1100px,calc(100vw - 24px));max-height:calc(100vh - 24px);box-shadow:var(--shadow)}
+dialog[open]{animation:pop .16s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(6px) scale(.99)}to{opacity:1;transform:none}}
+dialog::backdrop{background:rgba(4,6,10,.7);backdrop-filter:blur(3px)}
 .dlg{display:flex;flex-direction:column;max-height:calc(100vh - 26px)}
-.dlg-h{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
-.dlg-h h2{margin:0;font-size:16px;margin-right:auto}
-.dlg-b{padding:14px 16px;overflow:auto}
-.dlg-f{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line);flex-wrap:wrap;align-items:center}
-.dlg-f .grow{margin-right:auto;color:var(--muted);font-size:12px}
-#prompt-text{min-height:46vh}
+.dlg-h{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.dlg-h h2{margin:0;font:650 16px/1.3 var(--display);margin-right:auto;letter-spacing:-.01em}
+.dlg-b{padding:18px 20px;overflow:auto}
+.dlg-f{display:flex;gap:8px;padding:14px 20px;border-top:1px solid var(--line);flex-wrap:wrap;align-items:center;background:var(--bg-2);border-radius:0 0 16px 16px}
+.dlg-f .grow{margin-right:auto;color:var(--muted);font:500 12px/1.3 var(--mono)}
+#prompt-text{min-height:46vh;background:var(--bg)}
 .cmd{display:flex;gap:8px;align-items:center;margin-top:10px}
-.cmd code{flex:1;font-family:var(--mono);font-size:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 10px;overflow-x:auto;white-space:nowrap}
-.warnbox{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:10px}
-.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px}
+.cmd code{flex:1;font-family:var(--mono);font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;overflow-x:auto;white-space:nowrap;color:var(--ink-2)}
+.warnbox{background:var(--warn-bg);color:var(--warn);border:1px solid rgba(242,184,102,.25);border-radius:8px;padding:9px 13px;font-size:13px;margin-bottom:12px}
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 18px}
 .settings-grid .full{grid-column:1/-1}
-fieldset{border:1px solid var(--line);border-radius:10px;padding:10px 14px 14px;margin:0 0 12px}
-legend{font-weight:700;padding:0 6px}
-.check{display:flex;gap:8px;align-items:flex-start;margin:6px 0;font-size:13px}
+fieldset{border:1px solid var(--line);border-radius:var(--radius);padding:12px 16px 16px;margin:0 0 14px;background:var(--bg-2)}
+legend{font:650 12px/1 var(--sans);padding:0 8px;color:var(--ink);letter-spacing:.02em}
+.check{display:flex;gap:10px;align-items:flex-start;margin:8px 0;font-size:13px;color:var(--ink-2)}
 .check input{margin-top:3px}
-.banner{margin:0 16px 10px;padding:8px 12px;border-radius:8px;font-size:13px;display:flex;gap:8px;align-items:flex-start;justify-content:space-between}
-.banner.warn{background:var(--warn-bg);color:var(--warn)}
-.banner.error{background:var(--danger-bg);color:var(--danger)}
-.banner.info{background:var(--accent-2);color:var(--accent)}
-.banner .msg{flex:1;min-width:0}
-#load-progress .msg{display:flex;flex-direction:column;gap:4px}
+.mode-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.mode-row label{display:flex;gap:7px;align-items:center;border:1px solid var(--line-2);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;color:var(--ink-2);background:var(--bg-2)}
+.mode-row label:hover{border-color:#3a4659}
+.mode-row label:has(input:checked){border-color:var(--accent);background:var(--accent-2);color:var(--accent);font-weight:600}
+#llm-response{white-space:pre-wrap;font-family:var(--mono);font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;max-height:40vh;overflow:auto;margin-top:12px}
+
+/* ---------- banners & loading ---------- */
+.banner{max-width:1520px;margin:0 auto 10px;padding:9px 14px;border-radius:10px;font-size:13px;display:flex;gap:10px;align-items:flex-start;justify-content:space-between;border:1px solid transparent;width:calc(100% - 40px)}
+.banner.warn{background:var(--warn-bg);color:var(--warn);border-color:rgba(242,184,102,.22)}
+.banner.error{background:var(--danger-bg);color:var(--danger);border-color:rgba(255,138,128,.25)}
+.banner.info{background:var(--accent-2);color:var(--accent);border-color:rgba(108,182,255,.22)}
+.banner .msg{flex:1;min-width:0;line-height:1.55}
+.banner code{background:transparent;font-family:var(--mono);overflow-wrap:anywhere}
+.banner .btn{flex:0 0 auto}
+.banner .btn:not(.ghost){color:var(--ink)}
+#load-progress .msg{display:flex;flex-direction:column;gap:6px}
 .lp-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-#lp-bar{width:100%;height:8px;accent-color:var(--accent)}
+#lp-bar{width:100%;height:4px;appearance:none;border:0;border-radius:4px;background:var(--line);overflow:hidden}
+#lp-bar::-webkit-progress-bar{background:var(--line);border-radius:4px}
+#lp-bar::-webkit-progress-value{background:var(--accent);border-radius:4px}
+#lp-bar::-moz-progress-bar{background:var(--accent)}
 .lp-current{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lp-slow{color:var(--warn)}
 .spinner{width:13px;height:13px;border:2px solid var(--accent);border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite;display:inline-block}
 @keyframes spin{to{transform:rotate(360deg)}}
-label.btn.disabled{opacity:.5;pointer-events:none}
-.banner code{background:transparent;font-family:var(--mono);overflow-wrap:anywhere}
-.banner .btn{color:inherit;flex:0 0 auto}
-.tick{width:18px;height:18px;flex:0 0 auto;margin-top:2px;border:2px solid var(--muted);border-radius:5px;background:transparent;cursor:pointer;position:relative;padding:0}
-.tick:hover{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-2)}
+#pending-bar .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+
+/* ---------- ticks, state switch, checklists ---------- */
+.tick{width:18px;height:18px;flex:0 0 auto;margin-top:1px;border:1.5px solid #4a5568;border-radius:6px;background:transparent;cursor:pointer;position:relative;padding:0;transition:border-color .12s,background .12s,box-shadow .12s}
+.tick:hover{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-2)}
 .tick-done{background:var(--ok);border-color:var(--ok)}
-.tick-done::after{content:"";position:absolute;left:4px;top:0;width:5px;height:10px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
-.tick-doing{background:linear-gradient(135deg,var(--doing) 50%,transparent 50%);border-color:var(--doing)}
-.tick-cancelled{background:var(--chip);border-color:var(--line)}
+.tick-done::after{content:"";position:absolute;left:5px;top:1.5px;width:4.5px;height:9px;border:solid var(--bg);border-width:0 2px 2px 0;transform:rotate(45deg)}
+.tick-done:hover{border-color:var(--ok);box-shadow:0 0 0 4px var(--ok-bg)}
+.tick-doing{border-color:var(--doing);background:linear-gradient(90deg,var(--doing) 50%,transparent 50%)}
+.tick-cancelled{background:var(--chip);border-color:var(--line-2)}
 .tick-blocked{border-color:var(--danger)}
-.task .pick{margin-left:auto;opacity:.5}
+.task .pick{margin-left:auto;opacity:.35;transition:opacity .12s}
 .task .pick:checked,.task:hover .pick{opacity:1}
-.seg{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px;align-items:center}
-.seg .on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.seg{display:inline-flex;gap:0;margin:0 0 14px;align-items:center;flex-wrap:wrap;border:1px solid var(--line-2);border-radius:10px;padding:3px;background:var(--bg-2)}
+.seg .btn{border-color:transparent;background:transparent;height:28px;color:var(--muted)}
+.seg .btn:hover{color:var(--ink);background:var(--panel-2)}
+.seg .btn::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.6}
+.seg .on{background:var(--panel-3);border-color:var(--line-2);color:var(--ink)}
+.seg .on[data-set-state=done]{color:var(--ok)}
+.seg .on[data-set-state=doing]{color:var(--doing)}
+.seg .on[data-set-state=open]{color:var(--accent)}
+.seg .on::before{opacity:1}
+.seg>.chip,.seg>.hint{margin:0 8px}
 ul.checklist{list-style:none;padding:0;margin:0}
-ul.checklist li{display:flex;gap:8px;align-items:flex-start;padding:4px 0}
-.strike{text-decoration:line-through;color:var(--muted)}
-.notes-box{margin-top:14px;border:1px solid var(--line);border-left:3px solid var(--ok);border-radius:10px;padding:10px 12px;background:var(--panel-2)}
-.notes-box h4{margin:0 0 6px;font-size:13px;display:flex;gap:8px;align-items:center}
+ul.checklist li{display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--line)}
+ul.checklist li:last-child{border-bottom:0}
+.strike{text-decoration:line-through;text-decoration-color:var(--faint);color:var(--muted)}
+
+/* ---------- completion notes ---------- */
+.notes-box{margin-top:16px;border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--bg-2);position:relative}
+.notes-box::before{content:"";position:absolute;left:-1px;top:14px;bottom:14px;width:2px;border-radius:2px;background:var(--ok)}
+.notes-box h4{margin:0 0 8px;font:650 13px/1.3 var(--display);display:flex;gap:8px;align-items:center;color:var(--ink)}
+.notes-box h4 .ic{color:var(--ok)}
 .notes-box .md{font-size:13px}
-.notes-box textarea{margin-top:8px;min-height:70px;background:var(--panel)}
-.notes-box .row{margin-top:8px}
-.pending-note{font-size:13px;margin:4px 0;padding:4px 8px;border:1px dashed var(--warn);border-radius:6px}
-#pending-bar .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
-#toast .btn{margin-left:10px;color:var(--ink)}
-#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:100;max-width:calc(100vw - 32px)}
-#toast.show{opacity:1}
-.mode-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
-.mode-row label{display:flex;gap:6px;align-items:center;border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px}
-.mode-row label:has(input:checked){border-color:var(--accent);background:var(--accent-2);color:var(--accent);font-weight:600}
-#llm-response{white-space:pre-wrap;font-family:var(--mono);font-size:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px;max-height:40vh;overflow:auto;margin-top:10px}
+.notes-box textarea{margin-top:10px;min-height:76px;background:var(--bg)}
+.notes-box .row{margin-top:10px}
+.pending-note{font-size:13px;margin:6px 0;padding:6px 10px;border:1px dashed rgba(242,184,102,.45);border-radius:8px;color:var(--ink-2)}
+
+/* ---------- toast ---------- */
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--panel-3);color:var(--ink);border:1px solid var(--line-2);padding:10px 14px 10px 16px;border-radius:12px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;z-index:100;max-width:calc(100vw - 32px);box-shadow:var(--shadow);display:flex;align-items:center;gap:6px}
+#toast.show{opacity:1;transform:translateX(-50%)}
+#toast .btn{margin-left:10px}
 .hidden{display:none!important}
-@media (max-width: 900px){
-  .grid-2{grid-template-columns:1fr}
+
+@media (max-width: 1000px){
+  .grid-2{grid-template-columns:1fr!important}
   .task-list{max-height:none}
   .settings-grid{grid-template-columns:1fr}
-  .path code{max-width:200px}
+  .path code{max-width:220px}
+  .bar .sep{display:none}
 }
-@media (max-width: 520px){
+@media (max-width: 560px){
+  header.top{position:static}
+  .brand small{max-width:60vw}
   main{padding:12px}
-  .filters{grid-template-columns:1fr}
   .bar{padding:10px 12px}
+  .paths{padding:0 12px 8px}
+  .filters{grid-template-columns:1fr}
+  .btn .lbl{display:none}
+  .kpi{border-right:0;border-bottom:1px solid var(--line)}
+  .banner{width:calc(100% - 24px)}
+  .detail-head,.detail-body{padding-left:16px;padding-right:16px}
 }
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 15V4M7 9l5-5 5 5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></symbol>
+  <symbol id="i-archive" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9M10 13h4"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 5v14l11-7z"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.7 1.8 1.8.7-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"/></symbol>
+  <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5z"/><path d="M14 4v5h5M8 13h8M8 17h5"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></symbol>
+  <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7M8 20v-6h8v6"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+</svg>
 <header class="top">
   <div class="bar">
     <div class="brand"><div class="logo" aria-hidden="true">WN</div><div>WorkingNotes Hub<small id="vault-status">No vault loaded</small></div></div>
-    <button class="btn primary" id="btn-open" title="Chrome / Edge: pick the vault folder (remembered for Reload)">📂 Open vault folder</button>
-    <label class="btn" for="dir-input" id="btn-open-compat" title="Works in every browser, including company-managed ones. Chrome asks “Upload N files?” — the files still stay on your computer.">📁 Select folder (compatible)</label>
-    <button class="btn" id="btn-snapshot" title="Load the whole vault from ONE file made by a PowerShell command (instant, even on slow / locked-down PCs)">🗂 Snapshot</button>
-    <button class="btn" id="btn-reload" title="Re-read the vault from disk" disabled>↻ Reload</button>
-    <button class="btn" id="btn-demo" title="Load a small sample vault to try the app">Demo vault</button>
-    <button class="btn" id="btn-settings">⚙ Settings</button>
-    <button class="btn ghost" id="btn-theme" title="Toggle light/dark">◐</button>
+    <button class="btn primary" id="btn-open" title="Chrome / Edge: pick the vault folder (remembered for Reload, allows ticking tasks)"><svg class="ic" aria-hidden="true"><use href="#i-folder"/></svg><span class="lbl">Open vault</span></button>
+    <label class="btn" for="dir-input" id="btn-open-compat" title="Select folder (compatible): works in every browser, including company-managed ones. Chrome asks “Upload N files?”; the files still stay on your computer."><svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg><span class="lbl">Compatible</span></label>
+    <button class="btn" id="btn-snapshot" title="Load the whole vault from ONE file made by a PowerShell command (instant, even on slow / locked-down PCs)"><svg class="ic" aria-hidden="true"><use href="#i-archive"/></svg><span class="lbl">Snapshot</span></button>
+    <button class="btn" id="btn-reload" title="Re-read the vault from disk" disabled><svg class="ic" aria-hidden="true"><use href="#i-refresh"/></svg><span class="lbl">Reload</span></button>
+    <span class="sep" aria-hidden="true"></span>
+    <button class="btn ghost" id="btn-demo" title="Load a small sample vault to try the app"><svg class="ic" aria-hidden="true"><use href="#i-play"/></svg><span class="lbl">Demo</span></button>
+    <button class="btn ghost" id="btn-settings" title="Settings"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg><span class="lbl">Settings</span></button>
   </div>
   <div class="paths" id="paths"></div>
   <div id="load-banner" class="banner hidden" role="alert"></div>
@@ -273,7 +397,7 @@ ul.checklist li{display:flex;gap:8px;align-items:flex-start;padding:4px 0}
   <section class="tab active" id="tab-tasks">
     <div class="grid-2">
       <div class="card">
-        <div class="card-h"><h2>Task list</h2><button class="btn small" id="btn-new-task" title="Capture a brand-new task">＋ New task</button></div>
+        <div class="card-h"><h2>Task list</h2><button class="btn small" id="btn-new-task" title="Capture a brand-new task"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>New task</button></div>
         <div class="filters">
           <input type="search" id="f-q" class="full" placeholder="Search task, project, file…">
           <select id="f-state" aria-label="Task state">
@@ -319,7 +443,7 @@ ul.checklist li{display:flex;gap:8px;align-items:flex-start;padding:4px 0}
     <div class="kpis" id="kpis"></div>
     <div class="row" style="margin-bottom:12px">
       <input type="search" id="p-q" placeholder="Filter projects…">
-      <button class="btn" id="btn-review-all">🧭 Review prompt: all Ongoing projects</button>
+      <button class="btn" id="btn-review-all" style="flex:0 0 auto"><svg class="ic" aria-hidden="true"><use href="#i-compass"/></svg>Review all Ongoing projects</button>
     </div>
     <div id="proj-wrap"></div>
   </section>
@@ -430,7 +554,7 @@ ul.checklist li{display:flex;gap:8px;align-items:flex-start;padding:4px 0}
     <div class="dlg-f"><span class="grow">Ctrl/⌘ + Enter to confirm</span>
       <button class="btn" data-close>Cancel</button>
       <button class="btn" id="dd-skip">Done without note</button>
-      <button class="btn primary" id="dd-ok">☑ Mark done</button>
+      <button class="btn primary" id="dd-ok"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>Mark done</button>
     </div>
   </div>
 </dialog>
@@ -440,7 +564,7 @@ ul.checklist li{display:flex;gap:8px;align-items:flex-start;padding:4px 0}
   <div class="dlg">
     <div class="dlg-h"><h2>Load the vault from a snapshot file</h2><button class="btn ghost" data-close>✕</button></div>
     <div class="dlg-b md">
-      <p>Use this when <b>Open vault folder</b> is slow. On company laptops, security software often scans every file the browser opens. A snapshot packs all notes into <b>one</b> file, which loads in about a second.</p>
+      <p>Use this when <b>Open vault</b> is slow. On company laptops, security software often scans every file the browser opens. A snapshot packs all notes into <b>one</b> file, which loads in about a second.</p>
       <p><b>1.</b> Open <b>PowerShell</b> (Start → type <i>PowerShell</i>), paste this command, and press Enter. Paths come from Settings (VAULT_ROOT and the prompts folder).</p>
       <div class="cmd"><code id="snap-cmd" style="white-space:pre-wrap"></code><button class="btn small" id="btn-copy-snap">Copy</button></div>
       <div id="snap-warn"></div>
@@ -526,6 +650,7 @@ ul.checklist li{display:flex;gap:8px;align-items:flex-start;padding:4px 0}
    ========================================================================= */
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const ic = n => `<svg class="ic" aria-hidden="true"><use href="#i-${n}"/></svg>`;
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const escRe = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const pad = n => String(n).padStart(2, "0");
@@ -857,7 +982,7 @@ const VAULT_DIRS = ["Project", "Activity", "Daily", "Knowledge", "Task List"];
 const setStatus = t => { $("#vault-status").textContent = t; };
 function showBanner(html, kind = "warn") { const b = $("#load-banner"); b.className = "banner " + kind; b.innerHTML = `<span class="msg">${html}</span><button class="btn small ghost" onclick="this.parentElement.classList.add('hidden')" aria-label="Dismiss">✕</button>`; }
 const hideBanner = () => $("#load-banner").classList.add("hidden");
-const COMPAT_HINT = `Click <b>📁 Select folder (compatible)</b> next to it instead: it works in every browser, including company-managed ones.`;
+const COMPAT_HINT = `Click <b>Compatible</b> next to it instead: it works in every browser, including company-managed ones.`;
 
 /* ---------- Loading with live progress, parallel reads and time limits ----------
    OneDrive "online-only" files and network drives can make a single read hang for minutes,
@@ -894,7 +1019,7 @@ function drawProgress(force) {
   const bar = $("#lp-bar"); if (reading && LOAD.total) { bar.max = LOAD.total; bar.value = LOAD.done; } else bar.removeAttribute("value");
   $("#lp-current").textContent = LOAD.current ? "… " + LOAD.current : "";
   $("#lp-slow").classList.toggle("hidden", idle < 8);
-  $("#lp-slow").innerHTML = `No progress for ${idle}s. Something on this PC reads files slowly: security software scanning each file, OneDrive, or a network drive. Loading continues, and after this first load only changed notes are re-read. <b>Stop</b> uses what has been read so far. For an instant load, use <b>🗂 Snapshot</b>.`;
+  $("#lp-slow").innerHTML = `No progress for ${idle}s. Something on this PC reads files slowly: security software scanning each file, OneDrive, or a network drive. Loading continues, and after this first load only changed notes are re-read. <b>Stop</b> uses what has been read so far. For an instant load, use <b>Snapshot</b>.`;
 }
 function loadEnd() { LOAD.active = false; if (LOAD.cancelResolve) LOAD.cancelResolve(); clearInterval(LOAD.timer); $("#load-progress").classList.add("hidden"); $("#btn-open").disabled = false; $("#btn-reload").disabled = !(V.dirHandle || V.loaded); $("#btn-open-compat").classList.remove("disabled"); }
 async function listDir(dir) {
@@ -987,7 +1112,7 @@ function finishLoad(entries, label, stats, how) {
   }
   if (stale) msgs.push(`${stale} note(s) could not be re-read in time, so their last cached copy is shown (it may be slightly outdated).`);
   if (!V.projects.size && !V.activities.length) msgs.push(`No <code>Project/</code> or <code>Activity/</code> notes found. Is this the right vault folder?`);
-  if (skipped.length) msgs.push(`${skipped.length} file(s) could not be read and were skipped: <code>${esc(skipped.slice(0, 5).join(", "))}${skipped.length > 5 ? " …" : ""}</code>. If this keeps happening, use <b>🗂 Snapshot</b> (one file, loads instantly).`);
+  if (skipped.length) msgs.push(`${skipped.length} file(s) could not be read and were skipped: <code>${esc(skipped.slice(0, 5).join(", "))}${skipped.length > 5 ? " …" : ""}</code>. If this keeps happening, use <b>Snapshot</b> (one file, loads instantly).`);
   if (msgs.length) showBanner(msgs.join("<br>"), skipped.length || rootName && rootName.toLowerCase() !== vaultLabel.toLowerCase() || (!V.projects.size && !V.activities.length) ? "warn" : "info"); else hideBanner();
   toast(`Loaded ${norm.entries.length} notes from “${vaultLabel}”${how ? " " + how : ""}`);
   return true;
@@ -1010,7 +1135,7 @@ async function loadFromHandle(h) {
   }
   const stopped = LOAD.cancel; loadEnd();
   const ok = finishLoad(out, h.name, stats, stopped ? "(stopped early)" : "");
-  if (ok) { V.dirHandle = h; idb.set("vault", h); $("#btn-reload").disabled = false; $("#btn-reload").textContent = "↻ Reload"; cacheWrite(h.name, out, !stopped && !stats.skipped.length); }
+  if (ok) { V.dirHandle = h; idb.set("vault", h); $("#btn-reload").disabled = false; $("#btn-reload").innerHTML = `<svg class="ic" aria-hidden="true"><use href="#i-refresh"/></svg><span class="lbl">Reload</span>`; cacheWrite(h.name, out, !stopped && !stats.skipped.length); }
   return ok;
 }
 async function openVault() {
@@ -1033,10 +1158,10 @@ async function reloadVault() {
   if (!h) { if (V.loaded && !V.dirHandle) return showBanner(`This vault was loaded with the compatible folder selector, which cannot re-read by itself. Select the folder again to refresh.`, "info"); return openVault(); }
   try {
     if (h.queryPermission && (await h.queryPermission({ mode: "read" })) !== "granted") {
-      if ((await h.requestPermission({ mode: "read" })) !== "granted") return showBanner(`Permission to read “${esc(h.name)}” was not granted. Click <b>Reload</b> again and choose <i>Allow</i>, or use <b>📂 Open vault folder</b>.`, "warn");
+      if ((await h.requestPermission({ mode: "read" })) !== "granted") return showBanner(`Permission to read “${esc(h.name)}” was not granted. Click <b>Reload</b> again and choose <i>Allow</i>, or use <b>Open vault</b>.`, "warn");
     }
     await loadFromHandle(h);
-  } catch (e) { console.warn(e); showBanner(`Could not reconnect to “${esc(h.name)}” (<code>${esc(e.name)}</code>). Click <b>📂 Open vault folder</b> and choose it again.`, "warn"); }
+  } catch (e) { console.warn(e); showBanner(`Could not reconnect to “${esc(h.name)}” (<code>${esc(e.name)}</code>). Click <b>Open vault</b> and choose it again.`, "warn"); }
 }
 $("#dir-input").addEventListener("change", async e => {
   const all = [...e.target.files]; e.target.value = "";
@@ -1152,12 +1277,12 @@ function dueChip(due) {
   if (!due) return "";
   const d = daysUntil(due); const cls = d == null ? "" : d < 0 ? "overdue" : d <= 2 ? "soon" : "";
   const lbl = d == null ? due : d < 0 ? `${due} · ${-d}d late` : d === 0 ? `${due} · today` : `${due} · in ${d}d`;
-  return `<span class="chip ${cls}">📅 ${esc(lbl)}</span>`;
+  return `<span class="chip ${cls}">${ic("cal")}${esc(lbl)}</span>`;
 }
 const KIND_LABEL = { project: "Project TODO", tasknote: "Task note", activity: "Activity", daily: "Daily", knowledge: "Knowledge", other: "Note", root: "Note" };
 function renderTasks() {
   const el = $("#task-list"); const keepScroll = el.scrollTop; requestAnimationFrame(() => { el.scrollTop = keepScroll; }); $("#c-tasks").textContent = V.tasks.filter(t => ["open", "doing", "blocked"].includes(t.state)).length;
-  if (!V.loaded) { el.innerHTML = `<div class="empty"><h3>No vault loaded</h3>Click <b>📂 Open vault folder</b> and choose your <code>WorkingNotes</code> folder. If nothing happens, use <b>📁 Select folder (compatible)</b>. Or try the <b>Demo vault</b>.<br><br><span class="hint">The VAULT_ROOT path in Settings is only written into the prompts. A web page is not allowed to read a typed path, so you have to pick the folder once here.<br>Nothing is uploaded: the files are only read inside this browser tab.</span></div>`; updateSelBar(); return; }
+  if (!V.loaded) { el.innerHTML = `<div class="empty"><h3>No vault loaded</h3>Click <b>Open vault</b> and choose your <code>WorkingNotes</code> folder. If nothing happens, use <b>Compatible</b>. Or try the <b>Demo vault</b>.<br><br><span class="hint">The VAULT_ROOT path in Settings is only written into the prompts. A web page is not allowed to read a typed path, so you have to pick the folder once here.<br>Nothing is uploaded: the files are only read inside this browser tab.</span></div>`; updateSelBar(); return; }
   const list = filteredTasks();
   if (!list.length) { el.innerHTML = `<div class="empty"><h3>No tasks match</h3>Try “All states” or clear the filters.</div>`; updateSelBar(); return; }
   const groups = new Map();
@@ -1169,8 +1294,8 @@ function renderTasks() {
     return `<div class="group-h"><span>${esc(k || "No project")}</span>${p && p.status ? `<span class="chip st-${esc(p.status)}">${esc(p.status)}</span>` : ""}${p && p.missing ? `<span class="chip overdue">no Project note</span>` : ""}<span class="n">${ts.length}</span></div>` +
       ts.map(t => `<div class="task ${t.state === "done" ? "done" : ""} ${UI.selTask === t.id ? "sel" : ""}" data-id="${esc(t.id)}">
         ${tickHtml(t)}
-        <div class="t"><div class="txt">${t.kind === "tasknote" ? "📄 " : ""}${inlineMd(t.text)}</div>
-        <div class="meta-line">${t.pending ? `<span class="chip soon" title="Changed here but not saved in the vault yet">✎ unsaved</span>` : ""}<span class="chip s-${t.state}">${STATE_LABEL[t.state]}</span><span class="chip">${KIND_LABEL[t.kind] || t.kind}</span>${t.priority ? `<span class="chip">⚑ ${esc(t.priority)}</span>` : ""}${dueChip(t.due)}${t.kind !== "project" && t.kind !== "tasknote" ? `<span class="chip" title="${esc(t.file.path)}">${esc(t.file.name.slice(0, 32))}</span>` : ""}</div></div>
+        <div class="t"><div class="txt">${t.kind === "tasknote" ? ic("note") : ""}${inlineMd(t.text)}</div>
+        <div class="meta-line">${t.pending ? `<span class="chip soon" title="Changed here but not saved in the vault yet">unsaved</span>` : ""}<span class="chip s-${t.state}">${STATE_LABEL[t.state]}</span><span class="chip">${KIND_LABEL[t.kind] || t.kind}</span>${t.priority ? `<span class="chip">${ic("flag")}${esc(t.priority)}</span>` : ""}${dueChip(t.due)}${t.kind !== "project" && t.kind !== "tasknote" ? `<span class="chip" title="${esc(t.file.path)}">${esc(t.file.name.slice(0, 32))}</span>` : ""}</div></div>
         <input type="checkbox" class="pick" aria-label="Select for a Mage prompt" title="Select for a Mage prompt" ${UI.checked.has(t.id) ? "checked" : ""}></div>`).join("");
   }).join("");
   $$(".task", el).forEach(row => {
@@ -1227,14 +1352,14 @@ function renderDetail() {
   const backlinks = t.project ? V.files.filter(f => f.kind !== "activity" && f.kind !== "archive" && f !== t.file && f.name !== t.project && f.content.includes("[[" + t.project)) : [];
   el.innerHTML = `
   <div class="detail-head">
-    <div class="meta-line"><span class="chip s-${t.state}">${STATE_LABEL[t.state]}</span><span class="chip">${KIND_LABEL[t.kind] || t.kind}</span>${t.priority ? `<span class="chip">⚑ ${esc(t.priority)}</span>` : ""}${dueChip(t.due)}</div>
+    <div class="meta-line"><span class="chip s-${t.state}">${STATE_LABEL[t.state]}</span><span class="chip">${KIND_LABEL[t.kind] || t.kind}</span>${t.priority ? `<span class="chip">${ic("flag")}${esc(t.priority)}</span>` : ""}${dueChip(t.due)}</div>
     <h2>${inlineMd(t.text)}</h2>
     <div class="seg" role="group" aria-label="Task state">
-      ${[["open", "☐ To do"], ["doing", "◐ In progress"], ["done", "☑ Done"]].map(([st, l]) => `<button class="btn small ${t.state === st ? "on" : ""}" data-set-state="${st}" aria-pressed="${t.state === st}">${l}</button>`).join("")}
-      ${t.pending ? `<span class="chip soon" title="Changed here but not saved in the vault yet">✎ unsaved</span>` : `<span class="hint">${V.dirHandle ? "Saved straight into the note file" : ""}</span>`}
+      ${[["open", "To do"], ["doing", "In progress"], ["done", "Done"]].map(([st, l]) => `<button class="btn small ${t.state === st ? "on" : ""}" data-set-state="${st}" aria-pressed="${t.state === st}">${l}</button>`).join("")}
+      ${t.pending ? `<span class="chip soon" title="Changed here but not saved in the vault yet">unsaved</span>` : `<span class="hint">${V.dirHandle ? "Saved straight into the note file" : ""}</span>`}
     </div>
     <div class="row">
-      <button class="btn primary" data-mode="execute">🤖 Ask Mage to work on it</button>
+      <button class="btn primary" data-mode="execute">${ic("spark")}Ask Mage to work on it</button>
       <button class="btn" data-mode="breakdown">Break down</button>
       <button class="btn" data-mode="tasknote">Create task note</button>
       <button class="btn" data-mode="review">Review status</button>
@@ -1248,7 +1373,7 @@ function renderDetail() {
     </dl>
   </div>
   <div class="detail-body">
-    ${t.kind === "tasknote" && t.subtasks && t.subtasks.length ? `<div class="sec"><h3>Checklist (${t.subtasks.filter(x => x.state === "done").length}/${t.subtasks.length})</h3><ul class="checklist">${t.subtasks.map((x, i) => `<li>${tickHtml(x, `data-sub="${i}"`)}<span class="${x.state === "done" ? "strike" : ""}">${inlineMd(x.text)}</span>${x.pending ? ` <span class="chip soon">✎ unsaved</span>` : ""}</li>`).join("")}</ul></div>` : ""}
+    ${t.kind === "tasknote" && t.subtasks && t.subtasks.length ? `<div class="sec"><h3>Checklist (${t.subtasks.filter(x => x.state === "done").length}/${t.subtasks.length})</h3><ul class="checklist">${t.subtasks.map((x, i) => `<li>${tickHtml(x, `data-sub="${i}"`)}<span class="${x.state === "done" ? "strike" : ""}">${inlineMd(x.text)}</span>${x.pending ? ` <span class="chip soon">unsaved</span>` : ""}</li>`).join("")}</ul></div>` : ""}
     <div class="sec"><h3>${t.kind === "tasknote" ? "Task note" : "Source context"}</h3>${t.kind === "tasknote" && t.file.fmRaw ? `<div class="fm">${esc(t.file.fmRaw)}</div>` : ""}<div class="md">${md(ctx.text, ctx.hl)}</div>${notesBoxHtml(t)}</div>
     ${p && p.file ? `<div class="sec"><h3>Project note</h3><details class="note"><summary><span class="ttl">${esc(p.name)}</span><span class="sub">${esc(p.file.path)}</span></summary><div class="inner"><div class="fm">${esc(p.file.fmRaw)}</div><div class="md">${md(p.file.body)}</div></div></details></div>` : ""}
     ${t.project ? `<div class="sec"><h3>Related activity (${acts.length})</h3>${activityHtml(acts, 1)}</div>` : ""}
@@ -1279,8 +1404,8 @@ function renderProjectDetail(name) {
     <div class="meta-line"><span class="chip">Project</span>${p.status ? `<span class="chip st-${esc(p.status)}">${esc(p.status)}</span>` : ""}</div>
     <h2>${esc(name)}</h2>
     <div class="row">
-      <button class="btn primary" data-pmode="review">🧭 Review project prompt</button>
-      <button class="btn" data-pmode="execute" ${open.length ? "" : "disabled"}>🤖 Work on all open tasks</button>
+      <button class="btn primary" data-pmode="review">${ic("compass")}Review project prompt</button>
+      <button class="btn" data-pmode="execute" ${open.length ? "" : "disabled"}>${ic("spark")}Work on all open tasks</button>
       <button class="btn" data-pmode="breakdown" ${open.length ? "" : "disabled"}>Break down open tasks</button>
       ${p.file ? `<a class="btn" href="${obsidianUrl(p.file)}">Open in Obsidian</a>` : ""}
     </div>
@@ -1288,7 +1413,7 @@ function renderProjectDetail(name) {
     <dt>Tasks</dt><dd>${open.length} open · ${ts.length - open.length} done/cancelled</dd><dt>Activities</dt><dd>${acts.length}${acts[0] ? ` · last ${esc(acts[0].date)}` : ""}</dd></dl>
   </div>
   <div class="detail-body">
-    <div class="sec"><h3>Tasks</h3>${ts.length ? `<ul class="checklist">${ts.map(o => `<li>${tickHtml(o)}<span class="${o.state === "done" ? "strike" : ""}"><a href="#" data-task="${esc(o.id)}">${inlineMd(o.text)}</a> <span class="hint">· ${esc(KIND_LABEL[o.kind] || o.kind)}</span> ${dueChip(o.due)}${o.pending ? ` <span class="chip soon">✎ unsaved</span>` : ""}</span></li>`).join("")}</ul>` : `<div class="hint">No checkbox tasks found.</div>`}</div>
+    <div class="sec"><h3>Tasks</h3>${ts.length ? `<ul class="checklist">${ts.map(o => `<li>${tickHtml(o)}<span class="${o.state === "done" ? "strike" : ""}"><a href="#" data-task="${esc(o.id)}">${inlineMd(o.text)}</a> <span class="hint">· ${esc(KIND_LABEL[o.kind] || o.kind)}</span> ${dueChip(o.due)}${o.pending ? ` <span class="chip soon">unsaved</span>` : ""}</span></li>`).join("")}</ul>` : `<div class="hint">No checkbox tasks found.</div>`}</div>
     ${p.file ? `<div class="sec"><h3>Project note</h3><div class="fm">${esc(p.file.fmRaw)}</div><div class="md">${md(p.file.body)}</div></div>` : ""}
     <div class="sec"><h3>Activity timeline (${acts.length})</h3>${activityHtml(acts, 2)}</div>
   </div>`;
@@ -1367,13 +1492,13 @@ function notesBoxHtml(t) {
   const have = existingNotes(t), pend = t.pendingNotes || [];
   const where = t.kind === "tasknote" ? `the “## Log” of <code>${esc(t.file.path)}</code>` : `an indented 📝 line under the task in <code>${esc(t.file.path)}</code>`;
   return `<div class="notes-box">
-    <h4>📝 Notes &amp; completion ${t.state === "done" ? `<span class="chip s-done">Done</span>` : ""}</h4>
+    <h4>${ic("note")}Notes &amp; completion ${t.state === "done" ? `<span class="chip s-done">Done</span>` : ""}</h4>
     ${have ? `<div class="md">${md(have)}</div>` : `<div class="hint">No notes yet. Write what was done and why it can be checked off.</div>`}
-    ${pend.map(n => `<div class="pending-note"><span class="chip soon">✎ unsaved</span> 📝 ${esc(n.stamp)}: ${esc(n.text)}</div>`).join("")}
+    ${pend.map(n => `<div class="pending-note"><span class="chip soon">unsaved</span> 📝 ${esc(n.stamp)}: ${esc(n.text)}</div>`).join("")}
     <textarea id="task-note" placeholder="What was done? Result, evidence (link / PR / screenshot name), who confirmed, and why it is complete…">${esc(loadDraft(t.id))}</textarea>
     <div class="row">
-      ${t.state !== "done" ? `<button class="btn primary" id="tn-done">☑ Mark done with this note</button>` : ""}
-      <button class="btn" id="tn-add">＋ Add note</button>
+      ${t.state !== "done" ? `<button class="btn primary" id="tn-done">${ic("check")}Mark done with this note</button>` : ""}
+      <button class="btn" id="tn-add">${ic("plus")}Add note</button>
     </div>
     <div class="hint" style="margin-top:6px">Saved as ${where}, with date and time.</div>
   </div>`;
@@ -1593,7 +1718,7 @@ function renderPendingBar() {
   bar.classList.remove("hidden");
   const canSave = !V.isDemo && !!window.showDirectoryPicker;
   bar.innerHTML = `<span class="msg">✎ <b>${mine.length} task change${mine.length > 1 ? "s" : ""} not saved in the vault yet</b>: ${esc(mine.slice(0, 3).map(p => p.type === "note" ? `📝 note on ${p.label}` : `${STATE_LABEL[p.to]}: ${p.label}`).join(" · "))}${mine.length > 3 ? " …" : ""}
-    <span class="acts">${canSave ? `<button class="btn small" id="pb-save">💾 Save to vault</button>` : ""}<button class="btn small" id="pb-prompt">🤖 Prompt for Mage</button><button class="btn small" id="pb-discard">Discard</button></span></span>`;
+    <span class="acts">${canSave ? `<button class="btn small" id="pb-save">${ic("save")}Save to vault</button>` : ""}<button class="btn small" id="pb-prompt">${ic("spark")}Prompt for Mage</button><button class="btn small" id="pb-discard">Discard</button></span></span>`;
   if (canSave) $("#pb-save").onclick = () => (V.dirHandle ? flushPending() : connectAndSave());
   $("#pb-prompt").onclick = openPendingPrompt;
   $("#pb-discard").onclick = () => { if (!confirm(`Discard ${mine.length} unsaved task change(s)?`)) return; PENDING = PENDING.filter(p => p.vault !== V.label); savePending(); refreshViews(); };
@@ -2448,12 +2573,7 @@ $("#btn-open").addEventListener("click", openVault);
 $("#btn-load-stop").addEventListener("click", () => { LOAD.cancel = true; $("#lp-text").textContent = "Stopping…"; });
 $("#btn-reload").addEventListener("click", reloadVault);
 $("#btn-demo").addEventListener("click", () => { if (!DEMO_VAULT.length) return toast("Demo vault not embedded"); V.dirHandle = null; V.isDemo = true; V.rootPrefix = ""; V.cacheLabel = ""; indexVault(DEMO_VAULT, "Demo WorkingNotes"); toast("Demo vault loaded — nothing on disk is touched"); });
-function applyTheme(t) { if (t) document.documentElement.setAttribute("data-theme", t); else document.documentElement.removeAttribute("data-theme"); }
-applyTheme(store.get("wnh.theme", null));
-$("#btn-theme").addEventListener("click", () => {
-  const cur = document.documentElement.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-  const next = cur === "dark" ? "light" : "dark"; applyTheme(next); store.set("wnh.theme", next);
-});
+
 $("#help").innerHTML = md(`# How it works
 
 **1. Fill the two repositories** (top bar → click a red chip, or ⚙ Settings):
@@ -2465,14 +2585,14 @@ Both are written at the very top of every generated prompt so Qwen / Mage knows 
 - Pick the folder that contains \`.obsidian\`, \`Activity\`, \`Project\`… (e.g. \`…\\catatan-yanto\\WorkingNotes\`) and use the same folder as VAULT_ROOT.
 - Every \`.md\` note in every subfolder is read. Dot-folders and the “Folders to skip” from Settings (default Archive, Attachment) are left out.
 - Notes are cached in this browser, so after the first load only changed notes are re-read.
-- On a slow or locked-down laptop, use **🗂 Snapshot**: one PowerShell command packs the whole vault into one file that loads in about a second.
-- If *Open vault folder* does nothing, use **📁 Select folder (compatible)**.
+- On a slow or locked-down laptop, use **Snapshot**: one PowerShell command packs the whole vault into one file that loads in about a second.
+- If *Open vault* does nothing, use **Compatible**.
 
 **Ticking tasks**
-- Click the box in front of a task, or use ☐ To do / ◐ In progress / ☑ Done in the detail view. Task List notes also get a clickable checklist.
-- If you opened the vault with **📂 Open vault folder**, Chrome asks once to allow editing. After that, every tick is written straight into the note file: \`- [ ]\` becomes \`- [x]\`, and a Task List note gets \`Status: Done\` plus a Log line. Obsidian picks up the change immediately. **Undo** appears for a few seconds.
+- Click the box in front of a task, or use To do / In progress / Done in the detail view. Task List notes also get a clickable checklist.
+- If you opened the vault with **Open vault**, Chrome asks once to allow editing. After that, every tick is written straight into the note file: \`- [ ]\` becomes \`- [x]\`, and a Task List note gets \`Status: Done\` plus a Log line. Obsidian picks up the change immediately. **Undo** appears for a few seconds.
 - **Completion notes:** at the bottom of *Source context*, write what was done and why it can be checked off. Press **Mark done with this note** or **Add note**. Ticking a task done anywhere asks for this note first (required by default; change it in Settings). The note is saved directly under the task as \`📝 2026-09-24 14:05: …\` (in a Task List note: in \`## Log\`), so Obsidian and Mage's review prompts can see it.
-- Opened with a snapshot, the compatible selector, or the demo? Ticks are kept in this browser (✎ unsaved) and a yellow bar offers **Save to vault** (pick the folder once) or **Prompt for Mage** (Mage ticks them for you).
+- Opened with a snapshot, the compatible selector, or the demo? Ticks are kept in this browser (unsaved) and a yellow bar offers **Save to vault** (pick the folder once) or **Prompt for Mage** (Mage ticks them for you).
 
 **3. Tasks tab** — every checkbox in Project TODO callouts, Activity action items, Daily “Tomorrow” lists, plus every note in \`Task List/\`. Filter by state, project status, project, source, tag. Click a task to review it with its source context, Project note and all related Activity notes.
 - **Ask Mage to work on it / Break down / Create task note / Review status / New task from this** → builds a very detailed prompt with all that context.
@@ -2493,7 +2613,7 @@ Your inbox, settings and filters live in this browser's localStorage — use **E
   const draft = store.get("wnh.draft", null);
   if (draft && draft.text) loadNoteToForm(draft); else resetNoteForm();
   setTab(UI.tab);
-  idb.get("vault").then(h => { if (h && !V.loaded) { $("#btn-reload").disabled = false; $("#btn-reload").textContent = `↻ Reconnect “${h.name}”`; } });
+  idb.get("vault").then(h => { if (h && !V.loaded) { $("#btn-reload").disabled = false; $("#btn-reload").innerHTML = `<svg class="ic" aria-hidden="true"><use href="#i-refresh"/></svg><span class="lbl">Reconnect “${esc(h.name)}”</span>`; } });
 })();
 </script>
 </body>
