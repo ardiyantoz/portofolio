@@ -1,0 +1,639 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-20T04:33:24+00:00",
+  "title": "Design System: WorkingNotes Hub",
+  "extensions": {
+    "colorMeta": {
+      "counter-black": {
+        "role": "neutral",
+        "displayName": "Counter Black",
+        "cssVar": "--bg",
+        "canonical": "oklch(17.7% 0.014 169.6)",
+        "tonalRamp": [
+          "oklch(15% 0.014 169.6)",
+          "oklch(25% 0.014 169.6)",
+          "oklch(36% 0.014 169.6)",
+          "oklch(47% 0.014 169.6)",
+          "oklch(58% 0.014 169.6)",
+          "oklch(69% 0.014 169.6)",
+          "oklch(81% 0.014 169.6)",
+          "oklch(95% 0.014 169.6)"
+        ]
+      },
+      "counter-black-raised": {
+        "role": "neutral",
+        "displayName": "Counter Black Raised",
+        "cssVar": "--bg-2",
+        "canonical": "oklch(19.8% 0.017 167.9)",
+        "tonalRamp": [
+          "oklch(15% 0.017 167.9)",
+          "oklch(25% 0.017 167.9)",
+          "oklch(36% 0.017 167.9)",
+          "oklch(47% 0.017 167.9)",
+          "oklch(58% 0.017 167.9)",
+          "oklch(69% 0.017 167.9)",
+          "oklch(81% 0.017 167.9)",
+          "oklch(95% 0.017 167.9)"
+        ]
+      },
+      "app-rail": {
+        "role": "neutral",
+        "displayName": "App Rail",
+        "cssVar": "--rail",
+        "canonical": "oklch(20.2% 0.017 168.0)",
+        "tonalRamp": [
+          "oklch(15% 0.017 168.0)",
+          "oklch(25% 0.017 168.0)",
+          "oklch(36% 0.017 168.0)",
+          "oklch(47% 0.017 168.0)",
+          "oklch(58% 0.017 168.0)",
+          "oklch(69% 0.017 168.0)",
+          "oklch(81% 0.017 168.0)",
+          "oklch(95% 0.017 168.0)"
+        ]
+      },
+      "ledger-panel": {
+        "role": "neutral",
+        "displayName": "Ledger Panel",
+        "cssVar": "--panel",
+        "canonical": "oklch(21.4% 0.018 170.1)",
+        "tonalRamp": [
+          "oklch(15% 0.018 170.1)",
+          "oklch(25% 0.018 170.1)",
+          "oklch(36% 0.018 170.1)",
+          "oklch(47% 0.018 170.1)",
+          "oklch(58% 0.018 170.1)",
+          "oklch(69% 0.018 170.1)",
+          "oklch(81% 0.018 170.1)",
+          "oklch(95% 0.018 170.1)"
+        ]
+      },
+      "ledger-panel-2": {
+        "role": "neutral",
+        "displayName": "Ledger Panel 2",
+        "cssVar": "--panel-2",
+        "canonical": "oklch(24.1% 0.022 170.2)",
+        "tonalRamp": [
+          "oklch(15% 0.022 170.2)",
+          "oklch(25% 0.022 170.2)",
+          "oklch(36% 0.022 170.2)",
+          "oklch(47% 0.022 170.2)",
+          "oklch(58% 0.022 170.2)",
+          "oklch(69% 0.022 170.2)",
+          "oklch(81% 0.022 170.2)",
+          "oklch(95% 0.022 170.2)"
+        ]
+      },
+      "ledger-panel-3": {
+        "role": "neutral",
+        "displayName": "Ledger Panel 3",
+        "cssVar": "--panel-3",
+        "canonical": "oklch(27.2% 0.025 170.3)",
+        "tonalRamp": [
+          "oklch(15% 0.025 170.3)",
+          "oklch(25% 0.025 170.3)",
+          "oklch(36% 0.025 170.3)",
+          "oklch(47% 0.025 170.3)",
+          "oklch(58% 0.025 170.3)",
+          "oklch(69% 0.025 170.3)",
+          "oklch(81% 0.025 170.3)",
+          "oklch(95% 0.025 170.3)"
+        ]
+      },
+      "passbook-rule": {
+        "role": "neutral",
+        "displayName": "Passbook Rule",
+        "cssVar": "--line",
+        "canonical": "oklch(28.5% 0.023 168.1)",
+        "tonalRamp": [
+          "oklch(15% 0.023 168.1)",
+          "oklch(25% 0.023 168.1)",
+          "oklch(36% 0.023 168.1)",
+          "oklch(47% 0.023 168.1)",
+          "oklch(58% 0.023 168.1)",
+          "oklch(69% 0.023 168.1)",
+          "oklch(81% 0.023 168.1)",
+          "oklch(95% 0.023 168.1)"
+        ]
+      },
+      "passbook-rule-2": {
+        "role": "neutral",
+        "displayName": "Passbook Rule 2",
+        "cssVar": "--line-2",
+        "canonical": "oklch(33.8% 0.026 168.8)",
+        "tonalRamp": [
+          "oklch(15% 0.026 168.8)",
+          "oklch(25% 0.026 168.8)",
+          "oklch(36% 0.026 168.8)",
+          "oklch(47% 0.026 168.8)",
+          "oklch(58% 0.026 168.8)",
+          "oklch(69% 0.026 168.8)",
+          "oklch(81% 0.026 168.8)",
+          "oklch(95% 0.026 168.8)"
+        ]
+      },
+      "passbook-rule-3": {
+        "role": "neutral",
+        "displayName": "Passbook Rule 3",
+        "cssVar": "--line-3",
+        "canonical": "oklch(39.3% 0.030 169.3)",
+        "tonalRamp": [
+          "oklch(15% 0.030 169.3)",
+          "oklch(25% 0.030 169.3)",
+          "oklch(36% 0.030 169.3)",
+          "oklch(47% 0.030 169.3)",
+          "oklch(58% 0.030 169.3)",
+          "oklch(69% 0.030 169.3)",
+          "oklch(81% 0.030 169.3)",
+          "oklch(95% 0.030 169.3)"
+        ]
+      },
+      "ledger-ink": {
+        "role": "neutral",
+        "displayName": "Ledger Ink",
+        "cssVar": "--ink",
+        "canonical": "oklch(93.7% 0.009 150.7)",
+        "tonalRamp": [
+          "oklch(15% 0.009 150.7)",
+          "oklch(25% 0.009 150.7)",
+          "oklch(36% 0.009 150.7)",
+          "oklch(47% 0.009 150.7)",
+          "oklch(58% 0.009 150.7)",
+          "oklch(69% 0.009 150.7)",
+          "oklch(81% 0.009 150.7)",
+          "oklch(95% 0.009 150.7)"
+        ]
+      },
+      "ledger-ink-2": {
+        "role": "neutral",
+        "displayName": "Ledger Ink 2",
+        "cssVar": "--ink-2",
+        "canonical": "oklch(82.6% 0.018 164.6)",
+        "tonalRamp": [
+          "oklch(15% 0.018 164.6)",
+          "oklch(25% 0.018 164.6)",
+          "oklch(36% 0.018 164.6)",
+          "oklch(47% 0.018 164.6)",
+          "oklch(58% 0.018 164.6)",
+          "oklch(69% 0.018 164.6)",
+          "oklch(81% 0.018 164.6)",
+          "oklch(95% 0.018 164.6)"
+        ]
+      },
+      "ledger-muted": {
+        "role": "neutral",
+        "displayName": "Ledger Muted",
+        "cssVar": "--muted",
+        "canonical": "oklch(69.8% 0.025 165.5)",
+        "tonalRamp": [
+          "oklch(15% 0.025 165.5)",
+          "oklch(25% 0.025 165.5)",
+          "oklch(36% 0.025 165.5)",
+          "oklch(47% 0.025 165.5)",
+          "oklch(58% 0.025 165.5)",
+          "oklch(69% 0.025 165.5)",
+          "oklch(81% 0.025 165.5)",
+          "oklch(95% 0.025 165.5)"
+        ]
+      },
+      "ledger-faint": {
+        "role": "neutral",
+        "displayName": "Ledger Faint",
+        "cssVar": "--faint",
+        "canonical": "oklch(63.8% 0.027 166.6)",
+        "tonalRamp": [
+          "oklch(15% 0.027 166.6)",
+          "oklch(25% 0.027 166.6)",
+          "oklch(36% 0.027 166.6)",
+          "oklch(47% 0.027 166.6)",
+          "oklch(58% 0.027 166.6)",
+          "oklch(69% 0.027 166.6)",
+          "oklch(81% 0.027 166.6)",
+          "oklch(95% 0.027 166.6)"
+        ]
+      },
+      "ink-blue": {
+        "role": "primary",
+        "displayName": "Ink Blue",
+        "cssVar": "--blue",
+        "canonical": "oklch(73.8% 0.134 264.2)",
+        "tonalRamp": [
+          "oklch(15% 0.134 264.2)",
+          "oklch(25% 0.134 264.2)",
+          "oklch(36% 0.134 264.2)",
+          "oklch(47% 0.134 264.2)",
+          "oklch(58% 0.134 264.2)",
+          "oklch(69% 0.134 264.2)",
+          "oklch(81% 0.134 264.2)",
+          "oklch(95% 0.134 264.2)"
+        ]
+      },
+      "ink-blue-hi": {
+        "role": "primary",
+        "displayName": "Ink Blue High",
+        "cssVar": "--blue-hi",
+        "canonical": "oklch(80.9% 0.095 265.2)",
+        "tonalRamp": [
+          "oklch(15% 0.095 265.2)",
+          "oklch(25% 0.095 265.2)",
+          "oklch(36% 0.095 265.2)",
+          "oklch(47% 0.095 265.2)",
+          "oklch(58% 0.095 265.2)",
+          "oklch(69% 0.095 265.2)",
+          "oklch(81% 0.095 265.2)",
+          "oklch(95% 0.095 265.2)"
+        ]
+      },
+      "ink-blue-ink": {
+        "role": "primary",
+        "displayName": "Ink Blue Ink",
+        "cssVar": "--blue-ink",
+        "canonical": "oklch(18.9% 0.039 263.1)",
+        "tonalRamp": [
+          "oklch(15% 0.039 263.1)",
+          "oklch(25% 0.039 263.1)",
+          "oklch(36% 0.039 263.1)",
+          "oklch(47% 0.039 263.1)",
+          "oklch(58% 0.039 263.1)",
+          "oklch(69% 0.039 263.1)",
+          "oklch(81% 0.039 263.1)",
+          "oklch(95% 0.039 263.1)"
+        ]
+      },
+      "ink-blue-wash": {
+        "role": "primary",
+        "displayName": "Ink Blue Wash",
+        "cssVar": "--blue-bg",
+        "canonical": "rgba(127,168,255,.11)",
+        "tonalRamp": [
+          "oklch(15% 0.134 264.2)",
+          "oklch(25% 0.134 264.2)",
+          "oklch(36% 0.134 264.2)",
+          "oklch(47% 0.134 264.2)",
+          "oklch(58% 0.134 264.2)",
+          "oklch(69% 0.134 264.2)",
+          "oklch(81% 0.134 264.2)",
+          "oklch(95% 0.134 264.2)"
+        ]
+      },
+      "ink-blue-line": {
+        "role": "primary",
+        "displayName": "Ink Blue Line",
+        "cssVar": "--blue-line",
+        "canonical": "rgba(127,168,255,.38)",
+        "tonalRamp": [
+          "oklch(15% 0.134 264.2)",
+          "oklch(25% 0.134 264.2)",
+          "oklch(36% 0.134 264.2)",
+          "oklch(47% 0.134 264.2)",
+          "oklch(58% 0.134 264.2)",
+          "oklch(69% 0.134 264.2)",
+          "oklch(81% 0.134 264.2)",
+          "oklch(95% 0.134 264.2)"
+        ]
+      },
+      "stamp-red": {
+        "role": "secondary",
+        "displayName": "Stamp Red",
+        "cssVar": "--stamp",
+        "canonical": "oklch(68.5% 0.164 27.1)",
+        "tonalRamp": [
+          "oklch(15% 0.150 27.1)",
+          "oklch(25% 0.150 27.1)",
+          "oklch(36% 0.150 27.1)",
+          "oklch(47% 0.150 27.1)",
+          "oklch(58% 0.150 27.1)",
+          "oklch(69% 0.150 27.1)",
+          "oklch(81% 0.150 27.1)",
+          "oklch(95% 0.150 27.1)"
+        ]
+      },
+      "stamp-red-wash": {
+        "role": "secondary",
+        "displayName": "Stamp Red Wash",
+        "cssVar": "--stamp-bg",
+        "canonical": "rgba(238,107,96,.11)",
+        "tonalRamp": [
+          "oklch(15% 0.150 27.1)",
+          "oklch(25% 0.150 27.1)",
+          "oklch(36% 0.150 27.1)",
+          "oklch(47% 0.150 27.1)",
+          "oklch(58% 0.150 27.1)",
+          "oklch(69% 0.150 27.1)",
+          "oklch(81% 0.150 27.1)",
+          "oklch(95% 0.150 27.1)"
+        ]
+      },
+      "posted-green": {
+        "role": "secondary",
+        "displayName": "Posted Green",
+        "cssVar": "--green",
+        "canonical": "oklch(78.5% 0.135 159.5)",
+        "tonalRamp": [
+          "oklch(15% 0.135 159.5)",
+          "oklch(25% 0.135 159.5)",
+          "oklch(36% 0.135 159.5)",
+          "oklch(47% 0.135 159.5)",
+          "oklch(58% 0.135 159.5)",
+          "oklch(69% 0.135 159.5)",
+          "oklch(81% 0.135 159.5)",
+          "oklch(95% 0.135 159.5)"
+        ]
+      },
+      "posted-green-wash": {
+        "role": "secondary",
+        "displayName": "Posted Green Wash",
+        "cssVar": "--green-bg",
+        "canonical": "rgba(95,211,154,.11)",
+        "tonalRamp": [
+          "oklch(15% 0.135 159.5)",
+          "oklch(25% 0.135 159.5)",
+          "oklch(36% 0.135 159.5)",
+          "oklch(47% 0.135 159.5)",
+          "oklch(58% 0.135 159.5)",
+          "oklch(69% 0.135 159.5)",
+          "oklch(81% 0.135 159.5)",
+          "oklch(95% 0.135 159.5)"
+        ]
+      },
+      "pending-amber": {
+        "role": "tertiary",
+        "displayName": "Pending Amber",
+        "cssVar": "--amber",
+        "canonical": "oklch(80.9% 0.124 74.3)",
+        "tonalRamp": [
+          "oklch(15% 0.124 74.3)",
+          "oklch(25% 0.124 74.3)",
+          "oklch(36% 0.124 74.3)",
+          "oklch(47% 0.124 74.3)",
+          "oklch(58% 0.124 74.3)",
+          "oklch(69% 0.124 74.3)",
+          "oklch(81% 0.124 74.3)",
+          "oklch(95% 0.124 74.3)"
+        ]
+      },
+      "pending-amber-wash": {
+        "role": "tertiary",
+        "displayName": "Pending Amber Wash",
+        "cssVar": "--amber-bg",
+        "canonical": "rgba(240,180,94,.11)",
+        "tonalRamp": [
+          "oklch(15% 0.124 74.3)",
+          "oklch(25% 0.124 74.3)",
+          "oklch(36% 0.124 74.3)",
+          "oklch(47% 0.124 74.3)",
+          "oklch(58% 0.124 74.3)",
+          "oklch(69% 0.124 74.3)",
+          "oklch(81% 0.124 74.3)",
+          "oklch(95% 0.124 74.3)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Selected task title in the detail pane."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Dialog titles, empty-state headings, brand name."
+      },
+      "title-sm": {
+        "displayName": "Title Small",
+        "purpose": "Card headers such as Task list."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Base text, task text, rendered markdown."
+      },
+      "control": {
+        "displayName": "Control",
+        "purpose": "Buttons and tabs."
+      },
+      "print": {
+        "displayName": "Passbook Print",
+        "purpose": "Every date, time, path, ID, count and status word; tabular numbers."
+      },
+      "rubric": {
+        "displayName": "Rubric",
+        "purpose": "Uppercase mono group headers, ledger column heads, detail section headings."
+      },
+      "stamp": {
+        "displayName": "Stamp",
+        "purpose": "SELESAI teller stamp only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "toast-lift",
+        "value": "0 12px 30px rgba(0,0,0,.4)",
+        "purpose": "The floating toast only; every other surface is flat."
+      },
+      {
+        "name": "selection-ring",
+        "value": "inset 0 0 0 1px rgba(127,168,255,.38)",
+        "purpose": "Selected task row."
+      },
+      {
+        "name": "focus-ring-field",
+        "value": "0 0 0 3px rgba(127,168,255,.11)",
+        "purpose": "Focused input, select or textarea."
+      },
+      {
+        "name": "tick-halo",
+        "value": "0 0 0 4px rgba(127,168,255,.11)",
+        "purpose": "Tick hover (green wash when done)."
+      },
+      {
+        "name": "dialog-backdrop",
+        "value": "rgba(3,8,6,.72)",
+        "purpose": "Dialog ::backdrop dim; dialogs carry a border, not a shadow."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(.16,1,.3,1)",
+        "purpose": "Stamp, dialog entry and toast."
+      },
+      {
+        "name": "stamp-down",
+        "value": "0.32s ease-out-expo: rotate(-14deg) scale(1.7) blur(1.5px) -> rotate(-6deg) scale(1)",
+        "purpose": "SELESAI stamp landing on a task posted this session."
+      },
+      {
+        "name": "dialog-in",
+        "value": "0.18s ease-out-expo: translateY(8px), opacity 0 -> rest",
+        "purpose": "Dialog open."
+      },
+      {
+        "name": "state-transition",
+        "value": "0.12s to 0.15s on background, border-color, color",
+        "purpose": "Hover and state changes on buttons, rows, fields."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion: reduce disables all animation and transition",
+        "purpose": "Accessibility."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "single-column",
+        "value": "1000px"
+      },
+      {
+        "name": "compact",
+        "value": "560px"
+      }
+    ],
+    "icons": {
+      "style": "Inline SVG sprite of <symbol>s, 24 viewBox, stroke currentColor, 1.8 stroke width, round caps and joins, no fill; 16px default, 14px in small buttons, 12px in chips."
+    },
+    "customProperties": "Tokens are live as CSS custom properties on :root in note-taking-bca/app/index.html (see colorMeta.*.cssVar; fonts --sans and --mono, radii --radius 10px and --radius-s 6px, easing --ease)."
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one solid action per area: Open vault, Ask Mage, Post as done.",
+      "html": "<button class=\"ds-btn ds-btn-primary\"><svg class=\"ds-ic\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"m5 12 5 5 9-10\"/></svg>Post as done</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:6px;border:1px solid var(--line-2,#2a3c35);background:var(--panel-2,#15231e);color:var(--ink-2,#bccac3);font:560 13px/1 var(--sans,'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif);cursor:pointer;transition:background .15s,border-color .15s,color .15s}.ds-ic{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.ds-btn:focus-visible{outline:2px solid var(--blue,#7fa8ff);outline-offset:2px}.ds-btn-primary{background:var(--blue,#7fa8ff);border-color:var(--blue,#7fa8ff);color:var(--blue-ink,#0a1325);font-weight:620}.ds-btn-primary:hover{background:var(--blue-hi,#a3c0ff);border-color:var(--blue-hi,#a3c0ff)}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Default counter-key button for every other action.",
+      "html": "<button class=\"ds-btn2\">Break down</button>",
+      "css": ".ds-btn2{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:6px;border:1px solid var(--line-2,#2a3c35);background:var(--panel-2,#15231e);color:var(--ink-2,#bccac3);font:560 13px/1 var(--sans,'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif);cursor:pointer;transition:background .15s,border-color .15s,color .15s}.ds-btn2:hover{background:var(--panel-3,#1a2b25);border-color:var(--line-3,#364b43);color:var(--ink,#e6ece7)}.ds-btn2:active{background:var(--line-2,#2a3c35)}.ds-btn2:focus-visible{outline:2px solid var(--blue,#7fa8ff);outline-offset:2px}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Low-priority bar actions and Cancel.",
+      "html": "<button class=\"ds-btn-ghost\">Cancel</button>",
+      "css": ".ds-btn-ghost{display:inline-flex;align-items:center;height:32px;padding:0 12px;border-radius:6px;border:1px solid transparent;background:transparent;color:var(--muted,#90a39a);font:560 13px/1 var(--sans,'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif);cursor:pointer;transition:background .15s,color .15s}.ds-btn-ghost:hover{background:var(--panel-2,#15231e);color:var(--ink,#e6ece7)}.ds-btn-ghost:focus-visible{outline:2px solid var(--blue,#7fa8ff);outline-offset:2px}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Search, filters and note fields on the raised counter fill.",
+      "html": "<input class=\"ds-input\" type=\"search\" placeholder=\"Search task, project, file…\">",
+      "css": ".ds-input{width:100%;min-height:34px;padding:7px 10px;background:var(--bg-2,#0e1814);border:1px solid var(--line-2,#2a3c35);border-radius:6px;color:var(--ink,#e6ece7);caret-color:var(--blue,#7fa8ff);font:14px/1.55 var(--sans,'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif);transition:border-color .15s,box-shadow .15s}.ds-input::placeholder{color:var(--muted,#90a39a)}.ds-input:hover{border-color:var(--line-3,#364b43)}.ds-input:focus{outline:none;border-color:var(--blue,#7fa8ff);box-shadow:0 0 0 3px var(--blue-bg,rgba(127,168,255,.11))}"
+    },
+    {
+      "name": "Tabs",
+      "kind": "nav",
+      "refersTo": "tabs",
+      "description": "Top tab row with mono counts and an ink-blue underline on the selected tab.",
+      "html": "<nav class=\"ds-tabs\"><button aria-selected=\"true\">Tasks <span>9</span></button><button aria-selected=\"false\">Projects <span>4</span></button><button aria-selected=\"false\">Capture notes <span>0</span></button></nav>",
+      "css": ".ds-tabs{display:flex;gap:2px;background:var(--rail,#0f1915);border-bottom:1px solid var(--line,#1f2e28);padding:0 4px}.ds-tabs button{position:relative;border:0;background:none;padding:10px 12px 11px;color:var(--muted,#90a39a);font:600 13.5px/1.3 var(--sans,'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif);cursor:pointer;display:flex;gap:8px;align-items:baseline}.ds-tabs button:hover,.ds-tabs button[aria-selected=true]{color:var(--ink,#e6ece7)}.ds-tabs button[aria-selected=true]::after{content:'';position:absolute;left:12px;right:12px;bottom:-1px;height:2px;background:var(--blue,#7fa8ff)}.ds-tabs span{font:400 11.5px/1.3 var(--mono,'Cascadia Mono',Consolas,monospace);color:var(--faint,#7d9188)}.ds-tabs button[aria-selected=true] span{color:var(--blue,#7fa8ff)}.ds-tabs button:focus-visible{outline:2px solid var(--blue,#7fa8ff);outline-offset:-2px}"
+    },
+    {
+      "name": "Status Chips",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Small mono facts; washes carry meaning (blue active, green done, red overdue, amber soon/unsaved).",
+      "html": "<div class=\"ds-chips\"><span class=\"ds-chip ds-on\">Ongoing</span><span class=\"ds-chip ds-done\">Done</span><span class=\"ds-chip ds-late\">26/09/26 · 24d late</span><span class=\"ds-chip ds-soon\">unsaved</span><span class=\"ds-chip\">Project TODO</span></div>",
+      "css": ".ds-chips{display:flex;gap:6px;flex-wrap:wrap}.ds-chip{display:inline-flex;align-items:center;gap:5px;background:var(--panel-2,#15231e);border:1px solid var(--line,#1f2e28);border-radius:5px;padding:0 7px;font:12px/21px var(--mono,'Cascadia Mono',Consolas,monospace);color:var(--ink-2,#bccac3);white-space:nowrap}.ds-on{color:var(--blue,#7fa8ff);border-color:rgba(127,168,255,.25);background:var(--blue-bg,rgba(127,168,255,.11))}.ds-done{color:var(--green,#5fd39a);border-color:rgba(95,211,154,.25);background:var(--green-bg,rgba(95,211,154,.11))}.ds-late{color:var(--stamp,#ee6b60);border-color:rgba(238,107,96,.3);background:var(--stamp-bg,rgba(238,107,96,.11))}.ds-soon{color:var(--amber,#f0b45e);border-color:rgba(240,180,94,.3);background:var(--amber-bg,rgba(240,180,94,.11))}"
+    },
+    {
+      "name": "SELESAI Stamp",
+      "kind": "custom",
+      "refersTo": "stamp",
+      "description": "Signature: dated red teller stamp on a posted task; lands with the stamp-down motion.",
+      "html": "<span class=\"ds-stamp\">SELESAI<small>20 OKT 26</small></span>",
+      "css": ".ds-stamp{display:inline-block;transform:rotate(-6deg);border:2px solid var(--stamp,#ee6b60);color:var(--stamp,#ee6b60);font:700 13px/1.15 var(--mono,'Cascadia Mono',Consolas,monospace);letter-spacing:.09em;padding:5px 10px 4px;border-radius:4px;text-align:center;white-space:nowrap;opacity:.92;animation:ds-stampdown .32s cubic-bezier(.16,1,.3,1) both}.ds-stamp small{display:block;font:600 11px/1.2 var(--mono,'Cascadia Mono',Consolas,monospace);letter-spacing:.06em}@keyframes ds-stampdown{0%{transform:rotate(-14deg) scale(1.7);opacity:0;filter:blur(1.5px)}70%{opacity:1;filter:none}100%{transform:rotate(-6deg) scale(1);opacity:.92}}@media (prefers-reduced-motion:reduce){.ds-stamp{animation:none}}"
+    },
+    {
+      "name": "Task Row",
+      "kind": "custom",
+      "refersTo": "task-row-selected",
+      "description": "Passbook entry: tick, text with mono sub-line, right-aligned mono status.",
+      "html": "<div class=\"ds-rows\"><div class=\"ds-task\"><button class=\"ds-tick\" aria-label=\"Mark as done\"></button><div><div class=\"ds-txt\">Buat form pemesanan SBN Valas (Angular 20)</div><div class=\"ds-sub\">30/09 · project todo</div></div><span class=\"ds-st ds-late\">20d late</span></div><div class=\"ds-task ds-sel\"><button class=\"ds-tick ds-tick-doing\" aria-label=\"Mark as done\"></button><div><div class=\"ds-txt\">Revisi desain halaman ringkasan pembiayaan</div><div class=\"ds-sub\">project todo</div></div><span class=\"ds-st ds-doing\">in progress</span></div></div>",
+      "css": ".ds-rows{background:var(--panel,#111c18);border:1px solid var(--line,#1f2e28);border-radius:10px;overflow:hidden}.ds-task{display:grid;grid-template-columns:20px minmax(0,1fr) auto;gap:4px 11px;padding:10px 14px 10px 16px;border-bottom:1px solid var(--line,#1f2e28);align-items:start;cursor:pointer;transition:background .12s}.ds-task:last-child{border-bottom:0}.ds-task:hover{background:var(--bg-2,#0e1814)}.ds-sel,.ds-sel:hover{background:var(--blue-bg,rgba(127,168,255,.11));box-shadow:inset 0 0 0 1px var(--blue-line,rgba(127,168,255,.38))}.ds-txt{color:var(--ink,#e6ece7);font:14px/1.45 var(--sans,'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif)}.ds-sub{font:12px/1.4 var(--mono,'Cascadia Mono',Consolas,monospace);color:var(--muted,#90a39a);margin-top:3px}.ds-st{font:12px/1.45 var(--mono,'Cascadia Mono',Consolas,monospace);white-space:nowrap;padding-top:1px}.ds-late{color:var(--stamp,#ee6b60)}.ds-doing{color:var(--blue,#7fa8ff)}.ds-tick{width:18px;height:18px;margin-top:1px;border:1.5px solid #557067;border-radius:5px;background:transparent;cursor:pointer;padding:0;transition:border-color .12s,box-shadow .12s}.ds-tick:hover{border-color:var(--blue,#7fa8ff);box-shadow:0 0 0 4px var(--blue-bg,rgba(127,168,255,.11))}.ds-tick:focus-visible{outline:2px solid var(--blue,#7fa8ff);outline-offset:2px}.ds-tick-doing{border-color:var(--blue,#7fa8ff);background:linear-gradient(90deg,var(--blue,#7fa8ff) 50%,transparent 50%)}"
+    },
+    {
+      "name": "Passbook Lines",
+      "kind": "custom",
+      "refersTo": "passbook-lines",
+      "description": "Completion notes as printed passbook lines: mono date, kind word, sans text.",
+      "html": "<div class=\"ds-pb\"><div class=\"ds-pb-row\"><span class=\"ds-dt\">22/09/26 11:30</span><span class=\"ds-k\">CATATAN</span><span class=\"ds-tx\">Kickoff selesai; scope dan target UAT disepakati.</span></div><div class=\"ds-pb-row\"><span class=\"ds-dt\">20/10/26 04:29</span><span class=\"ds-k ds-pend\">UNSAVED</span><span class=\"ds-tx\">Skenario UAT dikirim ke QA.</span></div></div>",
+      "css": ".ds-pb{border-top:1px solid var(--line-2,#2a3c35);border-bottom:1px solid var(--line,#1f2e28)}.ds-pb-row{display:grid;grid-template-columns:max-content max-content 1fr;gap:0 14px;font:12.5px/1.75 var(--mono,'Cascadia Mono',Consolas,monospace);color:var(--ink-2,#bccac3);border-bottom:1px solid var(--line,#1f2e28);padding:5px 0}.ds-pb-row:last-child{border-bottom:0}.ds-dt{color:var(--muted,#90a39a)}.ds-k{color:var(--green,#5fd39a);letter-spacing:.04em}.ds-pend{color:var(--amber,#f0b45e)}.ds-tx{font:13.5px/1.55 var(--sans,'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif);color:var(--ink,#e6ece7);padding-top:1px}"
+    },
+    {
+      "name": "State Switch",
+      "kind": "custom",
+      "refersTo": "state-switch",
+      "description": "To do / In progress / Done segmented control in the task detail.",
+      "html": "<div class=\"ds-seg\" role=\"group\" aria-label=\"Task state\"><button aria-pressed=\"false\">To do</button><button aria-pressed=\"false\">In progress</button><button class=\"ds-seg-on\" aria-pressed=\"true\">Done</button></div>",
+      "css": ".ds-seg{display:inline-flex;gap:2px;border:1px solid var(--line-2,#2a3c35);border-radius:8px;padding:3px}.ds-seg button{height:28px;padding:0 9px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--muted,#90a39a);font:560 12px/1 var(--sans,'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif);cursor:pointer;transition:background .15s,color .15s}.ds-seg button:hover{color:var(--ink,#e6ece7);background:var(--panel-2,#15231e)}.ds-seg button:focus-visible{outline:2px solid var(--blue,#7fa8ff);outline-offset:2px}.ds-seg .ds-seg-on{background:var(--panel-3,#1a2b25);color:var(--green,#5fd39a)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Passbook at the Teller Counter",
+    "overview": "WorkingNotes Hub is a bank engineer's work instrument laid out like a savings passbook on a teller counter. The ground is a green-black counter, every surface is a printed page separated by hairline rules, and every fact that a passbook would print (dates, times, IDs, paths, counts, statuses) is set in a monospaced print face. Task text and controls stay in a quiet humanist sans so the page reads as handwriting-free and calm. A task is not merely ticked: it is posted, gets a dated red SELESAI teller stamp, and its completion notes appear as printed passbook lines (date, kind, text).\n\nThe world is dark only, flat, and dense in the way a ledger is dense: rows are tight, aligned, and scannable from across a desk, never cramped. Colour is functional and rare. Ink-blue is the only action and selection colour, stamp red is reserved for stamps and lateness, posted green means done, and amber means \"not yet in the vault\". It explicitly refuses the generic dark dashboard of grey cards with one neon accent: no glow, no gradients, no decorative blur, no resting drop shadows.\n\nThe type faces are system faces on purpose: the app runs offline from `file://` on a Windows company laptop, so Segoe UI Variable and Cascadia Mono are the real faces and nothing is fetched.",
+    "keyCharacteristics": [
+      "Teller-counter green-black ground in stepped tonal layers, no shadows for depth.",
+      "Monospaced \"passbook print\" for every date, time, path, ID, count and status word.",
+      "Hairline passbook rules (1px) divide rows; dashed rules mark group breaks.",
+      "One action colour (ink-blue); stamp red only for stamps and lateness.",
+      "The SELESAI stamp: a rotated, outlined, dated mono stamp that lands with a short stamp-down motion.",
+      "Completion notes render as passbook lines in a three-column date / kind / text grid."
+    ],
+    "rules": [
+      {
+        "name": "The One Meaning Per Hue Rule",
+        "body": "Blue acts, red stamps or warns of lateness, green is done, amber is unsaved or due soon. A hue never borrows another's job; decoration gets no hue at all.",
+        "section": "colors"
+      },
+      {
+        "name": "The Red Is Earned Rule",
+        "body": "Stamp red appears only on a stamp, a late date, a blocked task, a missing note or an error. If nothing is late or posted, the screen has no red.",
+        "section": "colors"
+      },
+      {
+        "name": "The Wash, Not Fill Rule",
+        "body": "Status chips and banners use an 11% wash of their hue with a 25 to 30% hue border and full-strength hue text. Only primary buttons and the done tick use a solid fill.",
+        "section": "colors"
+      },
+      {
+        "name": "The Printed Facts Rule",
+        "body": "Every date, time, path, file name, ID, count and status word is set in the mono print face with tabular numbers. Prose and controls never are.",
+        "section": "typography"
+      },
+      {
+        "name": "The Dates Read Like a Passbook Rule",
+        "body": "Dates print as DD/MM/YY or DD/MM in rows, and the stamp prints DD MON YY with Indonesian month abbreviations (JAN, FEB, ..., MEI, AGU, OKT, DES).",
+        "section": "typography"
+      },
+      {
+        "name": "The Hairline Not Shadow Rule",
+        "body": "Surfaces separate with 1px rules and tonal steps. A resting drop shadow, glow or blur on a card, row, chip or button is out of world; only the floating toast casts one.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do set every date, time, path, file name, ID, count and status word in Cascadia Mono with tabular numbers, and everything the owner wrote or clicks in Segoe UI Variable.",
+      "Do separate surfaces with 1px passbook rules and tonal steps of the green-black family; reserve the one shadow for the floating toast.",
+      "Do keep ink-blue as the only action and selection colour, with one solid primary button per area.",
+      "Do reserve stamp red for the SELESAI stamp, lateness, blocked, missing notes and errors.",
+      "Do show unsaved, not-yet-in-the-vault state in pending amber wherever it appears (row sub-line, switch, passbook line, banner).",
+      "Do mark a finished task with the dated SELESAI stamp and show its completion notes as passbook lines (date, kind, text).",
+      "Do use 6px radii on controls, 10px on cards and 14px on dialogs; keep focus visible as a 2px ink-blue outline or a 3px ink-blue wash ring on fields.",
+      "Do honour reduced motion: all animation and transition switches off."
+    ],
+    "donts": [
+      "Don't build the generic dark dashboard: grey cards with one neon accent, glows, gradients or decorative blur.",
+      "Don't give cards, rows, chips or buttons a resting drop shadow.",
+      "Don't use stamp red, posted green or amber decoratively, or let one hue stand in for another's meaning.",
+      "Don't add a light theme; the owner pinned dark only.",
+      "Don't load web fonts, icon fonts or CDN assets; the app runs offline from `file://`, so faces are system faces and icons are the inline stroked SVG sprite (16px, 1.8 stroke, round caps).",
+      "Don't set prose, task text or button labels in mono, or dates and counts in the sans."
+    ]
+  }
+}
