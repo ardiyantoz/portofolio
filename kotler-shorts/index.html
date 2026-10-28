@@ -1,0 +1,958 @@
+<title>Kotler Shorts</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: episode list | 9:16 short player (a dark "phone screen" in both themes) | lesson notes. Stacks to one column on phones. */
+:root{
+  --bg:#ECEEF3; --surface:#FFFFFF; --ink:#141725; --muted:#565D76; --line:#D5D9E4;
+  --accent:#2F4BD8; --accent-soft:#E2E7FF; --ok:#16866F;
+  --screen:#0F121B; --screen-2:#1B2132; --s-ink:#F3F4F8; --s-muted:#A2A9BE;
+  --sun:#FFB627; --teal:#38C9B5; --rose:#FF6F7D; --violet:#9C8CFF;
+  --f-display:"Bricolage Grotesque","Avenir Next","Segoe UI",system-ui,sans-serif;
+  --f-body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0A0C12; --surface:#141823; --ink:#ECEEF5; --muted:#9BA2B7; --line:#272D3D;
+    --accent:#93A5FF; --accent-soft:#1D2547; --ok:#4FD1B0; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0A0C12; --surface:#141823; --ink:#ECEEF5; --muted:#9BA2B7; --line:#272D3D;
+  --accent:#93A5FF; --accent-soft:#1D2547; --ok:#4FD1B0; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.app{
+  max-width:1340px;margin:0 auto;display:grid;gap:22px 28px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:22px 56px;
+  grid-template-columns:minmax(0,1fr);
+  grid-template-areas:"head" "player" "eps" "notes" "book";
+}
+@media (min-width:880px){
+  .app{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"head head" "player notes" "eps notes" "book book"}
+}
+@media (min-width:1200px){
+  .app{grid-template-columns:250px auto minmax(0,1fr);grid-template-areas:"head head head" "eps player notes" "book book book"}
+}
+
+/* header */
+.head{grid-area:head;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
+.kicker{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.head h1{font-family:var(--f-display);font-weight:800;font-size:clamp(34px,5vw,52px);line-height:1;margin:6px 0 8px;letter-spacing:-.02em}
+.head h1 span{color:var(--accent)}
+.head p{margin:0;max-width:60ch;color:var(--muted)}
+.meter{min-width:200px;flex:0 1 260px}
+.meter-row{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.meter-bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:6px}
+.meter-bar i{display:block;height:100%;background:var(--ok);width:0;transition:width .5s}
+
+/* player */
+.player-wrap{grid-area:player;display:flex;flex-direction:column;align-items:center;gap:12px}
+@media (min-width:880px){.player-wrap{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px);align-self:start}}
+.screen{
+  position:relative;container-type:inline-size;overflow:hidden;border-radius:22px;
+  width:min(100%,400px,calc((100svh - 150px) * 9 / 16));min-width:min(100%,280px);aspect-ratio:9/16;
+  background:var(--screen);color:var(--s-ink);box-shadow:0 18px 50px -20px rgba(10,14,30,.55);
+  user-select:none;-webkit-user-select:none;touch-action:pan-y;
+}
+.glow{position:absolute;inset:-20%;pointer-events:none;opacity:.55;
+  background:radial-gradient(40% 30% at 20% 20%,color-mix(in srgb,var(--violet) 45%,transparent),transparent 70%),
+             radial-gradient(35% 28% at 85% 75%,color-mix(in srgb,var(--teal) 35%,transparent),transparent 70%);
+  animation:drift 14s ease-in-out infinite alternate}
+@keyframes drift{to{transform:translate(6%,-5%) rotate(8deg)}}
+.screen.paused .glow{animation-play-state:paused}
+
+.bars{position:absolute;top:2.6%;left:4%;right:4%;display:flex;gap:1.2cqw;z-index:4}
+.bars span{flex:1;height:.9cqw;min-height:3px;border-radius:2px;background:rgba(255,255,255,.22);overflow:hidden}
+.bars i{display:block;height:100%;width:0;background:var(--s-ink)}
+.meta{position:absolute;top:5%;left:6%;right:6%;display:flex;justify-content:space-between;gap:8px;z-index:4;
+  font-family:var(--f-mono);font-size:3.1cqw;letter-spacing:.04em;color:var(--s-muted);text-transform:uppercase}
+.meta b{color:var(--sun);font-weight:600}
+
+.hook{position:absolute;z-index:3;left:6%;right:6%;top:10%;margin:0;
+  font-family:var(--f-display);font-weight:800;font-size:6.4cqw;line-height:1.08;letter-spacing:-.01em;text-wrap:balance;
+  transition:top .7s cubic-bezier(.2,.8,.2,1),font-size .7s cubic-bezier(.2,.8,.2,1)}
+.at-hook .hook{top:36%;font-size:10.5cqw;text-align:left}
+.at-hook .hook::after{content:"";display:block;width:16cqw;height:1.4cqw;margin-top:4cqw;background:var(--sun);border-radius:1cqw;animation:grow 2.4s linear both}
+@keyframes grow{from{width:0}to{width:30cqw}}
+
+.vis{position:absolute;z-index:1;left:6%;right:17%;top:25%;bottom:27%;display:flex;align-items:center;justify-content:center;
+  transition:opacity .6s,filter .6s;font-size:3.6cqw}
+.at-hook .vis{opacity:.16;filter:blur(2px)}
+
+.cap{position:absolute;z-index:3;left:6%;right:17%;bottom:7.5%;margin:0;min-height:20%;display:flex;align-items:flex-end;
+  font-family:var(--f-body);font-weight:700;font-size:5.3cqw;line-height:1.28;text-wrap:balance}
+.cap span.w{display:inline-block;animation:wordIn .45s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i)*55ms);white-space:pre}
+.cap .hl{color:var(--sun)}
+@keyframes wordIn{from{opacity:0;transform:translateY(40%)}to{opacity:1;transform:none}}
+
+.rail{position:absolute;z-index:5;right:3%;bottom:8%;display:flex;flex-direction:column;gap:4.2cqw;align-items:center}
+.rail button{all:unset;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1cqw;font-size:2.7cqw;color:var(--s-ink)}
+.rail .ic{width:11cqw;height:11cqw;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.12);transition:background .2s,transform .2s}
+.rail button:hover .ic{background:rgba(255,255,255,.22)}
+.rail button:focus-visible .ic{outline:2px solid var(--sun);outline-offset:2px}
+.rail svg{width:5.4cqw;height:5.4cqw;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.rail .saved .ic{background:var(--sun);color:#1A1406}
+.rail .saved svg{fill:currentColor}
+
+.tap{position:absolute;inset:0;z-index:2;display:grid;grid-template-columns:1fr 1.4fr 1fr}
+.tap button{all:unset;cursor:pointer}
+.pause-badge{position:absolute;z-index:4;left:50%;top:50%;width:18cqw;height:18cqw;margin:-9cqw 0 0 -9cqw;border-radius:50%;
+  background:rgba(0,0,0,.45);display:grid;place-items:center;opacity:0;transform:scale(.8);transition:.25s;pointer-events:none}
+.pause-badge svg{width:7cqw;height:7cqw;fill:var(--s-ink)}
+.paused .pause-badge{opacity:1;transform:none}
+
+.endcard{position:absolute;inset:0;z-index:6;background:rgba(8,10,16,.82);backdrop-filter:blur(6px);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4cqw;padding:8cqw;text-align:center}
+.endcard p{margin:0;font-family:var(--f-display);font-weight:700;font-size:6cqw}
+.endcard div{display:flex;gap:3cqw;flex-wrap:wrap;justify-content:center}
+.endcard button{border:0;border-radius:99px;padding:2.6cqw 5cqw;font-weight:700;font-size:3.8cqw;cursor:pointer;background:rgba(255,255,255,.14);color:var(--s-ink)}
+.endcard button.primary{background:var(--sun);color:#1A1406}
+
+.controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;width:min(100%,400px)}
+.controls button{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:7px 14px;cursor:pointer;font-weight:600;font-size:13.5px}
+.controls button:hover{border-color:var(--accent);color:var(--accent)}
+.controls label{display:flex;align-items:center;gap:6px;font-size:13.5px;color:var(--muted);cursor:pointer}
+.hint{font-size:12px;color:var(--muted);text-align:center;margin:0;max-width:400px}
+
+/* ---- visuals ---- */
+.vis [data-s]{opacity:.13;transform:translateY(1.6cqw) scale(.97);transition:opacity .55s ease,transform .65s cubic-bezier(.2,.8,.2,1),background .4s,border-color .4s,box-shadow .4s;transition-delay:calc(var(--i,0) * 110ms)}
+.vis [data-s].on{opacity:1;transform:none}
+@keyframes nowPulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--sun) 55%,transparent)}50%{box-shadow:0 0 0 1.6cqw color-mix(in srgb,var(--sun) 0%,transparent)}}
+
+/* versus */
+.vs{display:grid;grid-template-columns:1fr auto 1fr;gap:2cqw;align-items:stretch;width:100%}
+.vs-col{border-radius:3cqw;padding:3cqw;background:var(--screen-2);display:flex;flex-direction:column;gap:2cqw}
+.vs-h{font-family:var(--f-mono);font-size:2.8cqw;text-transform:uppercase;letter-spacing:.06em;color:var(--s-muted)}
+.vs-i{font-size:3.5cqw;line-height:1.25;font-weight:600}
+.vs-col.bad .vs-i{color:var(--s-muted);text-decoration:line-through;text-decoration-color:var(--rose)}
+.vs-mid{align-self:center;font-size:6cqw;color:var(--sun)}
+.vs-col.hot{background:color-mix(in srgb,var(--sun) 18%,var(--screen-2));box-shadow:0 0 0 .5cqw var(--sun)}
+
+/* chain */
+.chain{display:flex;flex-direction:column;align-items:stretch;gap:1.1cqw;width:100%;position:relative}
+.node{display:flex;align-items:center;gap:3cqw;padding:2.2cqw 3cqw;border-radius:3cqw;background:var(--screen-2);border:.4cqw solid transparent}
+.node b{flex:none;min-width:12cqw;height:9cqw;padding:0 1.6cqw;border-radius:2.2cqw;display:grid;place-items:center;background:rgba(255,255,255,.08);font-family:var(--f-display);font-weight:800;font-size:4cqw;color:var(--sun)}
+.node span{font-size:3.4cqw;line-height:1.25;font-weight:600}
+.node.now{border-color:var(--sun);animation:nowPulse 1.8s ease-in-out infinite}
+.node.hot{background:color-mix(in srgb,var(--teal) 22%,var(--screen-2))}
+.arrow{height:3cqw;width:.5cqw;margin-left:8cqw;background:var(--s-muted);position:relative;border-radius:1cqw}
+.arrow::after{content:"";position:absolute;left:50%;bottom:-.4cqw;width:1.8cqw;height:1.8cqw;border-right:.5cqw solid var(--s-muted);border-bottom:.5cqw solid var(--s-muted);transform:translateX(-50%) rotate(45deg)}
+.chain.tight .node{padding:1.6cqw 2.6cqw}
+.chain.tight .node b{height:8cqw}
+.chain.tight .arrow{height:2cqw}
+.loop{position:absolute;right:-1cqw;top:4%;bottom:4%;width:4cqw;border:.5cqw dashed var(--teal);border-left:0;border-radius:0 4cqw 4cqw 0}
+.loop em{position:absolute;right:-1cqw;top:50%;transform:translate(100%,-50%) rotate(90deg);transform-origin:left center;font-style:normal;font-family:var(--f-mono);font-size:2.5cqw;color:var(--teal);white-space:nowrap}
+
+/* dots (segmentation) */
+.seg{width:100%;display:flex;flex-direction:column;gap:3cqw;align-items:center}
+.dots{position:relative;width:min(100%,66cqw);aspect-ratio:1}
+.dot{position:absolute;width:5cqw;height:5cqw;margin:-2.5cqw 0 0 -2.5cqw;border-radius:50%;background:var(--s-muted);left:var(--x1);top:var(--y1);
+  transition:left .9s cubic-bezier(.2,.8,.2,1),top .9s cubic-bezier(.2,.8,.2,1),background .5s,transform .5s,opacity .5s;transition-delay:var(--d)}
+.vis.b2 .dot{left:var(--x2);top:var(--y2)}
+.vis.b2 .dot[data-g="0"]{background:var(--sun)}
+.vis.b2 .dot[data-g="1"]{background:var(--teal)}
+.vis.b2 .dot[data-g="2"]{background:var(--rose)}
+.vis.b2 .dot[data-g="3"]{background:var(--violet)}
+.vis.b3 .dot.big{transform:scale(1.45)}
+.vis.b4 .dot:not([data-g="0"]){opacity:.18}
+.vis.b4 .dot[data-g="0"]{animation:bob 1.4s ease-in-out infinite alternate}
+@keyframes bob{to{transform:scale(1.25)}}
+.legend{display:grid;grid-template-columns:1fr 1fr;gap:1.4cqw 4cqw;font-size:3cqw;width:100%}
+.legend span{display:flex;align-items:center;gap:1.6cqw}
+.legend i{width:2.6cqw;height:2.6cqw;border-radius:50%;flex:none}
+
+/* positioning map */
+.map{position:relative;width:100%;aspect-ratio:1;max-height:100%}
+.ax{position:absolute;background:var(--s-muted)}
+.ax.x{left:0;right:0;bottom:0;height:.4cqw}
+.ax.y{left:0;top:0;bottom:0;width:.4cqw}
+.ax span{position:absolute;font-family:var(--f-mono);font-size:2.6cqw;color:var(--s-muted);white-space:nowrap}
+.ax.x span{right:0;top:1.4cqw}
+.ax.y span{left:1.8cqw;top:0}
+.pt-pos{position:absolute;transform:translate(-50%,-50%)}
+.pt{display:flex;flex-direction:column;align-items:center;gap:1cqw;font-size:2.9cqw;font-weight:600;text-align:center;white-space:nowrap}
+.pt i{width:5cqw;height:5cqw;border-radius:50%;background:var(--s-muted)}
+.pt.you i{width:7cqw;height:7cqw;background:var(--sun)}
+.pt.you.on i{animation:nowPulse 1.6s infinite}
+.pt.you{color:var(--sun)}
+.word{position:absolute;left:4%;right:4%;bottom:6%;text-align:center;font-family:var(--f-display);font-weight:800;font-size:7cqw;color:var(--sun)}
+
+/* tiles (value props) */
+.tiles{display:flex;flex-direction:column;gap:1.6cqw;width:100%}
+.tile{display:grid;grid-template-columns:1fr auto auto;gap:2cqw;align-items:center;padding:2cqw 3cqw;border-radius:2.6cqw;background:var(--screen-2);border:.4cqw solid transparent}
+.tile b{font-family:var(--f-display);font-size:3.9cqw}
+.tile small{display:block;font-size:2.7cqw;color:var(--s-muted);font-weight:500;margin-top:.3cqw}
+.pill{font-family:var(--f-mono);font-size:2.4cqw;padding:.8cqw 1.8cqw;border-radius:99px;background:rgba(255,255,255,.08);white-space:nowrap}
+.pill.up{color:var(--teal)} .pill.dn{color:var(--rose)} .pill.eq{color:var(--s-muted)}
+.tile.now{border-color:var(--sun);animation:nowPulse 1.8s infinite}
+
+/* flip cards */
+.flips{display:grid;grid-template-columns:1fr 1fr;gap:2.6cqw;width:100%}
+.vis .flip[data-s]{opacity:1;transform:none;perspective:80cqw;aspect-ratio:1/1.05}
+.flip-in{position:relative;width:100%;height:100%;transition:transform .8s cubic-bezier(.3,.7,.2,1);transform-style:preserve-3d}
+.flip.on .flip-in{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;border-radius:3cqw;padding:3cqw;display:flex;flex-direction:column;justify-content:space-between;backface-visibility:hidden;-webkit-backface-visibility:hidden;background:var(--screen-2)}
+.face.back{transform:rotateY(180deg);background:color-mix(in srgb,var(--teal) 24%,var(--screen-2))}
+.face em{font-style:normal;font-family:var(--f-mono);font-size:2.5cqw;color:var(--s-muted);text-transform:uppercase;letter-spacing:.06em}
+.face b{font-family:var(--f-display);font-size:5cqw;line-height:1.05}
+.face span{font-size:2.8cqw;color:var(--s-muted);line-height:1.3}
+.face.back span{color:var(--s-ink)}
+
+/* rings */
+.rings{position:relative;width:min(100%,74cqw);aspect-ratio:1}
+.ring{position:absolute;border-radius:50%;border:.5cqw solid var(--c);background:color-mix(in srgb,var(--c) 12%,transparent);display:flex;justify-content:center}
+.ring span{margin-top:1.4cqw;font-size:2.8cqw;font-weight:700;color:var(--c);white-space:nowrap}
+.ring.core{display:grid;place-items:center;background:var(--c)}
+.ring.core span{margin:0;color:#14110A;font-size:3cqw}
+
+/* bars (lifetime value) */
+.clv{width:100%;display:flex;flex-direction:column;gap:4cqw}
+.cmp{display:flex;flex-direction:column;gap:1.6cqw}
+.cmp div{display:flex;align-items:center;gap:2cqw;font-size:3cqw;font-weight:600}
+.cmp i{height:4cqw;border-radius:1cqw;display:block}
+.months{position:relative;display:flex;align-items:flex-end;gap:.7cqw;height:36cqw;border-bottom:.4cqw solid var(--s-muted)}
+.months i{flex:1;background:var(--teal);border-radius:.6cqw .6cqw 0 0;height:calc(var(--h) * 1%);transform-origin:bottom;transform:scaleY(.06);opacity:.4;transition:transform .5s cubic-bezier(.2,.8,.2,1),opacity .4s;transition-delay:calc(var(--k) * 45ms)}
+.vis.b2 .months i{transform:none;opacity:1}
+.vis.b4 .months i:first-child{background:var(--sun);animation:nowPulse 1.6s infinite}
+.months-l{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:2.4cqw;color:var(--s-muted);margin-top:1cqw}
+.total{font-family:var(--f-display);font-weight:800;font-size:6.4cqw;color:var(--sun);text-align:right}
+.total small{display:block;font-family:var(--f-mono);font-weight:500;font-size:2.5cqw;color:var(--s-muted)}
+
+/* orbit */
+.orbit{position:relative;width:min(100%,74cqw);aspect-ratio:1}
+.orbit::before{content:"";position:absolute;inset:14%;border-radius:50%;border:.4cqw dashed rgba(255,255,255,.18);animation:spin 40s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.center{position:absolute;left:50%;top:50%;width:24cqw;height:24cqw;margin:-12cqw 0 0 -12cqw;border-radius:50%;display:grid;place-items:center;text-align:center;
+  background:var(--screen-2);font-family:var(--f-display);font-weight:800;font-size:3.8cqw;line-height:1.1;border:.5cqw solid var(--s-muted);transition:.5s}
+.center.hot{background:var(--sun);color:#14110A;border-color:var(--sun);animation:nowPulse 1.6s infinite}
+.role-pos{position:absolute;transform:translate(-50%,-50%)}
+.role{display:flex;flex-direction:column;align-items:center;text-align:center;gap:.4cqw;padding:1.4cqw 2.2cqw;border-radius:2.4cqw;background:var(--screen-2);border:.4cqw solid transparent;white-space:nowrap}
+.role b{font-size:3.1cqw}
+.role small{font-size:2.3cqw;color:var(--s-muted)}
+.role.now{border-color:var(--sun);animation:nowPulse 1.8s infinite}
+
+/* curve */
+.curve{width:100%}
+.curve svg{width:100%;height:auto;overflow:visible}
+.curve .ghost{fill:none;stroke:rgba(255,255,255,.12);stroke-width:3}
+.curve .div{stroke:rgba(255,255,255,.18);stroke-dasharray:3 4;stroke-width:1}
+.curve .base{stroke:var(--s-muted);stroke-width:1.2}
+.vis .curve path[data-s]{opacity:1;transform:none;fill:none;stroke:var(--sun);stroke-width:4;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset 1.6s ease}
+.vis .curve path[data-s].on{stroke-dashoffset:0}
+.curve text{fill:var(--s-ink);font-family:var(--f-body);font-size:11px;font-weight:700}
+.curve text.sub{fill:var(--s-muted);font-size:9px;font-weight:500}
+.vis .curve g[data-s]{transform:none}
+
+/* quote */
+.quote{display:flex;flex-direction:column;gap:3cqw;width:100%}
+.q-big{font-family:var(--f-display);font-weight:800;font-size:7.4cqw;line-height:1.08;color:var(--sun)}
+.q-by{font-family:var(--f-mono);font-size:2.8cqw;color:var(--s-muted)}
+.q-item{display:flex;gap:2.4cqw;align-items:flex-start;font-size:3.5cqw;font-weight:600;line-height:1.3;padding:2cqw 2.6cqw;background:var(--screen-2);border-radius:2.4cqw}
+.q-item b{font-family:var(--f-mono);color:var(--teal);font-size:3cqw;padding-top:.3cqw}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition-duration:.01ms!important;transition-delay:0s!important}
+}
+
+/* episodes */
+.eps{grid-area:eps;min-width:0}
+.eps h2,.notes h3,.book h2{font-family:var(--f-mono);font-size:11.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.ep-list{list-style:none;margin:0;padding:0;display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;scroll-snap-type:x proximity}
+@media (min-width:1200px){.ep-list{flex-direction:column;overflow:visible}}
+.ep-list li{flex:none;scroll-snap-align:start}
+.ep{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;text-align:left;cursor:pointer;
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:9px 12px;min-width:220px}
+@media (min-width:1200px){.ep{min-width:0}}
+.ep:hover{border-color:var(--accent)}
+.ep[aria-current="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.ep .n{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ep .t{font-weight:600;font-size:14px;line-height:1.25}
+.ep .t small{display:block;font-weight:400;font-size:12px;color:var(--muted)}
+.ep .st{font-size:12px;color:var(--ok);font-weight:700;min-width:1.2em;text-align:right}
+
+/* notes */
+.notes{grid-area:notes;min-width:0;display:flex;flex-direction:column;gap:18px}
+.n-head h2{font-family:var(--f-display);font-weight:800;font-size:clamp(26px,3.2vw,36px);line-height:1.08;margin:6px 0 0;letter-spacing:-.01em;text-wrap:balance}
+.n-src{font-size:13px;color:var(--muted);margin:8px 0 0}
+.notes section p{margin:0;max-width:66ch}
+.n-idea p{font-size:16px}
+.apply{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.apply article{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;min-width:0}
+.apply h3{display:flex;align-items:center;gap:8px}
+.apply h3 i{width:8px;height:8px;border-radius:2px;background:var(--accent)}
+.apply article:last-child h3 i{background:var(--ok)}
+.apply p{margin:0;font-size:14.5px}
+.n-act{border-left:3px solid var(--accent);padding:4px 0 4px 16px}
+.n-act p{font-weight:600}
+
+/* book */
+.book{grid-area:book;border-top:1px solid var(--line);padding-top:24px;display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.book h2{grid-column:1/-1;margin:0}
+.book div{min-width:0}
+.book h3{font-family:var(--f-display);font-size:19px;margin:0 0 6px;font-weight:700}
+.book p,.book li{font-size:14px;color:var(--muted);margin:0}
+.book ul{margin:6px 0 0;padding-left:18px;display:grid;gap:4px}
+.book b{color:var(--ink)}
+</style>
+
+<div class="app">
+  <header class="head">
+    <div>
+      <div class="kicker">Philip Kotler · marketing in short videos</div>
+      <h1>Kotler <span>Shorts</span></h1>
+      <p>14 short animated lessons from Philip Kotler’s books. Each one ends with what it means in your daily life, for your marketplace analyzer, and for your procurement tracker.</p>
+    </div>
+    <div class="meter" aria-live="polite">
+      <div class="meter-row"><span>Your progress</span><span id="mText">0 / 14 watched</span></div>
+      <div class="meter-bar"><i id="mBar"></i></div>
+    </div>
+  </header>
+
+  <div class="player-wrap">
+    <div class="screen" id="screen" tabindex="0" aria-label="Short video player. Space to pause, arrow keys to move.">
+      <div class="glow"></div>
+      <div class="bars" id="bars"></div>
+      <div class="meta"><span id="epNo"></span><b id="epSrc"></b></div>
+      <h2 class="hook" id="hook"></h2>
+      <div class="vis" id="vis"></div>
+      <p class="cap" id="cap" aria-live="polite"></p>
+      <div class="tap">
+        <button id="tapPrev" aria-label="Previous scene"></button>
+        <button id="tapMid" aria-label="Pause or play"></button>
+        <button id="tapNext" aria-label="Next scene"></button>
+      </div>
+      <div class="pause-badge"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+      <div class="rail">
+        <button id="bPlay" aria-label="Pause"><span class="ic"><svg id="playIc" viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></svg></span><span id="playTx">Pause</span></button>
+        <button id="bSave" aria-label="Save this short"><span class="ic"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg></span><span>Save</span></button>
+        <button id="bInfo" aria-label="Read the notes"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg></span><span>Notes</span></button>
+        <button id="bNext" aria-label="Next short"><span class="ic"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span><span>Next</span></button>
+      </div>
+      <div class="endcard" id="end" hidden>
+        <p id="endTx">That’s the last short.</p>
+        <div><button id="eReplay">Replay</button><button class="primary" id="eNext">Next short</button></div>
+      </div>
+    </div>
+    <div class="controls">
+      <button id="cPrev">↑ Previous</button>
+      <label><input type="checkbox" id="autoNext" checked> Auto-play next</label>
+      <button id="cNext">Next ↓</button>
+    </div>
+    <p class="hint">Tap the right side for the next scene, left side to go back, middle to pause. Swipe left for the next short.</p>
+  </div>
+
+  <nav class="eps" aria-label="All shorts">
+    <h2>All shorts</h2>
+    <ol class="ep-list" id="epList"></ol>
+  </nav>
+
+  <main class="notes" id="notes">
+    <div class="n-head">
+      <div class="kicker" id="nKick"></div>
+      <h2 id="nTitle"></h2>
+      <p class="n-src" id="nSrc"></p>
+    </div>
+    <section class="n-idea"><h3>The idea</h3><p id="nIdea"></p></section>
+    <section><h3>In your daily life</h3><p id="nLife"></p></section>
+    <div class="apply">
+      <article><h3><i></i>Your marketplace analyzer</h3><p id="nAna"></p></article>
+      <article><h3><i></i>Your procurement tracker</h3><p id="nPro"></p></article>
+    </div>
+    <section class="n-act"><h3>Try this today</h3><p id="nAct"></p></section>
+  </main>
+
+  <footer class="book">
+    <h2>About the books behind these shorts</h2>
+    <div>
+      <h3>Kotler on Marketing (1999)</h3>
+      <p><b>Full title:</b> Kotler on Marketing: How to Create, Win, and Dominate Markets. Free Press. Kotler’s own short version of his thinking for business owners and managers, not students. It covers strategic marketing (finding opportunities, value propositions), the tactical tools, how to plan and control marketing, and how the internet was changing it.</p>
+    </div>
+    <div>
+      <h3>The textbooks</h3>
+      <p><b>Marketing Management</b> (with Kevin Lane Keller, first edition 1967) and <b>Principles of Marketing</b> (with Gary Armstrong). Segmentation, product levels, lifetime value, the buying center and the product life cycle come from here.</p>
+    </div>
+    <div>
+      <h3>Marketing 4.0 (2016)</h3>
+      <p>Written with Hermawan Kartajaya and Iwan Setiawan of MarkPlus, Indonesia. It explains how connected customers buy, using the 5A path. Useful if your customers are Shopee and Tokopedia sellers.</p>
+    </div>
+    <div>
+      <h3>How to use this</h3>
+      <ul>
+        <li>Watch one short a day, then do its “Try this today” step.</li>
+        <li>Write your answers for both products in one notebook.</li>
+        <li>After 14 days you will have a full marketing plan: R → STP → MM → I → C.</li>
+      </ul>
+    </div>
+  </footer>
+</div>
+
+<script>
+const SHORTS = [
+{
+  title:"Marketing is not selling", src:"Kotler on Marketing",
+  hook:"Marketing is NOT selling.",
+  beats:[
+    "Most people think marketing means *pushing* your product at people.",
+    "Kotler: it’s the art of creating *genuine customer value.*",
+    "Selling starts with *your product.* Marketing starts with *the customer’s problem.*",
+    "Get marketing right and selling becomes *almost unnecessary.*"
+  ],
+  vis:{type:"versus", l:"Selling", li:["I made this","Now convince people","Discount until it moves"], ls:1,
+       r:"Marketing", ri:["What hurts the customer?","Build value for that","Customers ask to buy"], rs:2, hot:4},
+  d:{
+    idea:"Kotler separates selling from marketing. Selling focuses on the seller’s need to turn products into cash. Marketing focuses on the buyer’s need, and profit is the reward for meeting it better than competitors. His line: “Marketing is not the art of finding clever ways to dispose of what you make. It is the art of creating genuine customer value.”",
+    life:"The nasi goreng seller near your house who remembers you want it extra spicy with no onion is not selling harder than the others. He created value for you, so you return without being persuaded.",
+    ana:"Don’t lead with features like “we track 12 metrics”. Lead with the seller’s pain: “I don’t know what to restock, or why my sales dropped this week.” Your analyzer is the answer to that question.",
+    pro:"Procurement teams don’t want “a tracking app”. They want to stop chasing approvals over WhatsApp and stop being blamed for late purchases. Sell the end of that pain.",
+    act:"Write one sentence for each product: “My customer struggles with ___, so I help them ___.” Make it the first line of your landing page."
+  }
+},
+{
+  title:"Needs, wants and demands", src:"Principles of Marketing",
+  hook:"Thirsty? That’s not a sale yet.",
+  beats:[
+    "A *need* is a basic lack. You’re thirsty.",
+    "A *want* is that need shaped by your world: es teh, boba, coffee.",
+    "A *demand* is a want with money behind it. The one you will actually pay for.",
+    "You can’t create needs. You *shape wants* and turn them into demand."
+  ],
+  vis:{type:"chain", nodes:[
+    {k:"Need",t:"I’m thirsty",s:1},
+    {k:"Want",t:"Es teh, boba, or iced coffee",s:2,hot:4},
+    {k:"Demand",t:"Es teh for Rp 5.000, right now",s:3,hot:4}]},
+  d:{
+    idea:"Needs are states of felt deprivation: food, safety, belonging, respect. Wants are the specific forms those needs take, shaped by culture and personality. Wants become demand when people have the buying power and the willingness to pay. Marketers don’t create needs. They influence wants, and make products available and affordable enough to turn wants into demand.",
+    life:"Need: you want to look presentable at a wedding. Want: a batik shirt. Demand: the Rp 250.000 one at the mall that you will actually buy, not the Rp 3 juta designer piece you only looked at.",
+    ana:"Need: a seller needs more income. Want: “know what is trending on Shopee and Tokopedia.” Demand only appears if your price fits a small seller’s budget and the value is obvious during the free trial.",
+    pro:"Need: the company needs control over spending. Want: visibility of every purchase request and PO. Demand: a budget owner who signs. If nobody owns the budget, there is no demand, even if everyone wants it.",
+    act:"For each product write three lines: the need, the want, and who holds the money. If you can’t name the budget owner, you haven’t found demand yet."
+  }
+},
+{
+  title:"The R-STP-MM-I-C formula", src:"Kotler on Marketing",
+  hook:"Kotler’s whole playbook fits in one line.",
+  beats:[
+    "*R*: research. Study the market before you build or shout.",
+    "*STP*: segment, target, position. Choose who you serve and how they see you.",
+    "*MM*: the marketing mix. Product, price, place, promotion.",
+    "*I*: implement. *C*: control. Measure, learn, adjust, and go again."
+  ],
+  vis:{type:"chain", cls:"tight", loop:4, loopT:"repeat", nodes:[
+    {k:"R",t:"Research the market",s:1},
+    {k:"STP",t:"Segment · Target · Position",s:2},
+    {k:"MM",t:"Marketing mix (4Ps)",s:3},
+    {k:"I",t:"Implement",s:4},
+    {k:"C",t:"Control: measure and fix",s:4}]},
+  d:{
+    idea:"Kotler summarizes the marketing process as R → STP → MM → I → C. Research reveals different groups of buyers. STP chooses which groups to serve and what position to take. The marketing mix turns that position into concrete decisions. Implementation executes them, and control measures results and feeds back into new research.",
+    life:"Opening a coffee cart. R: watch who walks past at 7am. STP: office workers who need coffee fast; position it as “ready in 60 seconds”. MM: Rp 12.000 iced coffee, cart at the bus stop, a sign saying “60 detik”. I: open on Monday. C: count cups per hour and adjust.",
+    ana:"R: interview 10 marketplace sellers. STP: for example small fashion sellers on Shopee doing 50 to 500 orders a month. MM: pricing tiers, a landing page, TikTok demos. I: launch. C: track trial-to-paid conversion every week.",
+    pro:"R: talk to procurement staff and finance managers. STP: companies with 50 to 500 employees still using Excel and WhatsApp for approvals. MM: setup help, per-user pricing, LinkedIn and referrals. C: track demo → pilot → contract.",
+    act:"Draw the five boxes on paper for each product and write one line in each. The box you can’t fill is your next task."
+  }
+},
+{
+  title:"Segmentation", src:"Marketing Management",
+  hook:"“Everyone” is not a market.",
+  beats:[
+    "This is your market. It looks like *one crowd.*",
+    "Split it by *who they are*: size, location, industry.",
+    "Then by *how they behave*: how much they buy, what they value.",
+    "Each group needs a different message. *Pick yours.*"
+  ],
+  vis:{type:"dots", labels:["Beginner sellers","Growing sellers","Big brands","Resellers"]},
+  d:{
+    idea:"A market is made of buyers who differ in wants, money, location and buying habits. Kotler’s main ways to split it are geographic, demographic, psychographic (lifestyle, personality) and behavioral (occasion, benefit sought, usage rate, loyalty). For business buyers: industry, company size, location and how they purchase. A useful segment is measurable, big enough, reachable, different from the others, and something you can act on.",
+    life:"A bakery sells bread three ways: cheap sliced loaves for students, sourdough for the weekend brunch crowd, and bulk orders for offices. Same oven, three segments, three prices and three messages.",
+    ana:"Split marketplace sellers by order volume (beginner, growing, big), category (fashion, beauty, electronics) and behavior (loves data vs. “just tell me what to do”). Each group wants a different dashboard and a different headline.",
+    pro:"Split companies by size, industry (construction, manufacturing, hospitals) and buying style (central procurement vs. every department buys for itself). Construction cares about project-based POs. Hospitals care about compliance and audit trails.",
+    act:"Write three segments for each product, with one sentence on what each segment values most."
+  }
+},
+{
+  title:"Targeting and positioning", src:"Kotler on Marketing",
+  hook:"Pick a spot. Own one word.",
+  beats:[
+    "Draw the market the way buyers see it: *two things they care about.*",
+    "Competitors *already sit somewhere* in the buyer’s mind.",
+    "Find the *empty spot* your target segment wants, and take it.",
+    "Then *own one word.* Volvo owns “safety”. Say yours everywhere."
+  ],
+  vis:{type:"pos", x:"Easy to use →", y:"↑ Tells you what to do", rs:2, ys:3, ws:4,
+       rivals:[["Excel",16,62],["Enterprise BI",28,32],["Free plugin",70,60]],
+       you:[76,22], youT:"You", word:"“Actionable”"},
+  d:{
+    idea:"After segmenting, judge each segment by size, growth, attractiveness and fit with your strengths, then choose your target. Positioning is designing your offer and image so it holds a clear, distinct place in the target customer’s mind. Kotler advises being known for one main benefit, the way Volvo is known for safety.",
+    life:"Why do you pick a certain barbershop? Maybe it’s “no queue” or “best fade in town”. The busy barbers each own one clear word in your head. The one who claims to do everything is the one you forget.",
+    ana:"Draft: “For small Shopee and Tokopedia sellers with no time for spreadsheets, [name] is the marketplace analyzer that tells you what to restock and how to price, in five minutes a day.” Own the word “actionable” or “simple”.",
+    pro:"Draft: “For growing companies stuck with Excel and WhatsApp approvals, [name] shows the live status of every purchase request, so nothing gets lost.” Own the word “visibility” or “nothing lost”.",
+    act:"Fill in: For [target] who [need], [product] is the [category] that [main benefit]. Unlike [alternative], we [difference]."
+  }
+},
+{
+  title:"Five ways to win on value", src:"Principles of Marketing",
+  hook:"Benefit vs. price: 5 ways to win.",
+  beats:[
+    "*More for more*: premium benefits, premium price.",
+    "*More for the same*: beat rivals at their price.",
+    "*Same for less*: the same thing, cheaper.",
+    "*Less for much less*: fewer features, far cheaper.",
+    "*More for less*: the dream. Very hard to keep up."
+  ],
+  vis:{type:"tiles", tiles:[
+    {t:"More for more",x:"Starbucks",b:"up",p:"up"},
+    {t:"More for the same",x:"Kopi Kenangan",b:"up",p:"eq"},
+    {t:"Same for less",x:"Indomaret house brand",b:"eq",p:"dn"},
+    {t:"Less for much less",x:"Sachet coffee at a warung",b:"dn",p:"dn"},
+    {t:"More for less",x:"Rare and hard to sustain",b:"up",p:"dn"}]},
+  d:{
+    idea:"Kotler maps every offer by benefits against price. Five positions can win: more-for-more, more-for-the-same, the-same-for-less, less-for-much-less, and more-for-less. More-for-less is hard to hold for long. Positions like “less for more” lose sooner or later. The point is to choose a lane on purpose.",
+    life:"Starbucks is more-for-more. Kopi Kenangan gives good taste and convenience for less than Starbucks. A sachet from the warung is less-for-much-less. All three succeed because each picked a lane and stayed in it.",
+    ana:"Enterprise analytics tools are expensive and complicated. You can win with less-for-much-less: only the five insights small sellers need, at a price like Rp 99.000 a month. Or more-for-the-same: a competitor’s price, plus automatic recommendations.",
+    pro:"Against big systems like SAP Ariba or Oracle you can’t be more-for-more. Go less-for-much-less: requests, approvals and PO tracking only, live in one week instead of six months.",
+    act:"Put competitors’ prices and main features in a table. Choose one of the five lanes and write it under your logo."
+  }
+},
+{
+  title:"From 4Ps to 4Cs", src:"Marketing Management",
+  hook:"Same four boxes. Seen from the buyer’s chair.",
+  beats:[
+    "*Product* becomes *customer solution*: people buy results, not features.",
+    "*Price* becomes *customer cost*: money plus time, effort and risk.",
+    "*Place* becomes *convenience*: be where buying is easiest.",
+    "*Promotion* becomes *communication*: a conversation, not shouting."
+  ],
+  vis:{type:"flips", cards:[
+    {p:"Product",ps:"What you make",c:"Solution",cs:"The result they get"},
+    {p:"Price",ps:"What you charge",c:"Cost",cs:"Money + time + effort + risk"},
+    {p:"Place",ps:"Where you sell",c:"Convenience",cs:"Easiest way to buy"},
+    {p:"Promotion",ps:"What you say",c:"Communication",cs:"A two-way talk"}]},
+  d:{
+    idea:"The marketing mix is the set of tools a company uses: product, price, place and promotion. Kotler suggests checking each P against the customer’s view using Robert Lauterborn’s 4Cs: customer solution, customer cost, convenience and communication. The 4Ps are the seller’s view. The 4Cs are the same decisions seen by the buyer.",
+    life:"A Gojek ride. Product: a ride. Solution: arriving on time without parking stress. Price: Rp 15.000. Cost: also the waiting and the risk. Place: the app. Convenience: two taps. Promotion: push notifications. Communication: both sides rate each other.",
+    ana:"Solution: “know what sells”. Cost: subscription plus the time to learn it, so setup must take under 10 minutes. Convenience: connect a store in one click and get a weekly report on WhatsApp. Communication: a seller community and in-app feedback.",
+    pro:"Solution: approvals that never get stuck. Cost: license, migration, training and the risk of a failed rollout, so offer a guided pilot. Convenience: approve from phone or email. Communication: case studies and a monthly check-in with the procurement head.",
+    act:"For each P of your product, write the matching C. If the C column looks weak, fix it before you spend anything on ads."
+  }
+},
+{
+  title:"Five product levels", src:"Marketing Management",
+  hook:"You’re never selling just the thing.",
+  beats:[
+    "*Core benefit*: what they really buy. At a hotel: rest.",
+    "*Basic and expected*: bed, towels, a clean room. Missing one makes people angry.",
+    "*Augmented*: beyond expectations. Fast Wi-Fi, late checkout.",
+    "*Potential*: what it could become. That’s where future competition happens."
+  ],
+  vis:{type:"rings", rings:[
+    {t:"Potential",s:4,c:"--violet"},
+    {t:"Augmented",s:3,c:"--teal"},
+    {t:"Expected",s:2,c:"--rose"},
+    {t:"Basic",s:2,c:"--rose"},
+    {t:"Core benefit",s:1,c:"--sun",core:1}]},
+  d:{
+    idea:"Kotler describes five levels of a product. The core benefit is what the customer really buys. The basic product turns it into something real. The expected product is the set of attributes buyers normally expect. The augmented product exceeds expectations, and this is where most competition happens. The potential product covers all future improvements.",
+    life:"Buying a phone. Core: staying connected. Basic: the phone. Expected: charger and warranty. Augmented: a free screen protector and 0% installments. Potential: a trade-in program next year. You often choose the shop because of the augmented level.",
+    ana:"Core: more profit with less guessing. Basic: the dashboard. Expected: accurate data updated daily, working with Shopee, Tokopedia and TikTok Shop. Augmented: a WhatsApp alert when stock runs low, competitor price watch. Potential: AI that writes better product titles.",
+    pro:"Core: control and speed. Basic: request and approval flow. Expected: audit trail, user roles, export to Excel. Augmented: vendor comparison, budget warnings. Potential: link to accounting software and spend analytics.",
+    act:"Draw the rings for your product. Make sure the expected ring is complete before you build augmented features."
+  }
+},
+{
+  title:"Customer lifetime value", src:"Marketing Management",
+  hook:"Your best customer is one you already have.",
+  beats:[
+    "Winning a new customer can cost *five times more* than keeping one.",
+    "A customer isn’t one sale. It’s *every sale* they’ll ever make.",
+    "Rp 99.000 a month × 24 months = *Rp 2.376.000* of lifetime value.",
+    "So treat month one as the start of a *two-year relationship.*"
+  ],
+  vis:{type:"clv"},
+  d:{
+    idea:"Kotler points out that attracting a new customer can cost five times as much as keeping a current one happy. A satisfied customer buys again, buys more, stays longer and recommends you. Customer lifetime value is the value of all the purchases a customer will make over the whole relationship, so companies should invest in relationships, not single transactions.",
+    life:"Your regular mie ayam stall adds an extra pangsit without being asked. It costs them about Rp 2.000. You eat there 100 times a year.",
+    ana:"Measure churn every month. A seller who leaves in month two cost you acquisition money and returned almost nothing. Give them a win in week one (one insight that earns money) and a monthly report saying “this tool helped you earn Rp X”.",
+    pro:"B2B contracts renew every year, and an unhappy procurement head means no renewal and no referral. A quarterly review showing “average approval time fell from 5 days to 1 day” protects the renewal.",
+    act:"Calculate: price × average months a customer stays − cost to win them. That number tells you how much you can afford to spend to get one customer."
+  }
+},
+{
+  title:"The buyer decision process", src:"Principles of Marketing",
+  hook:"The purchase starts long before checkout.",
+  beats:[
+    "*Need recognition*: “My phone dies by noon.”",
+    "*Information search*: reviews, friends, YouTube.",
+    "*Evaluate alternatives*: compare three options.",
+    "*Purchase decision*: price, payment method, trust.",
+    "*After the purchase*: happy means repeat and recommend. Unhappy means they warn others."
+  ],
+  vis:{type:"chain", cls:"tight", nodes:[
+    {k:"1",t:"Need recognition",s:1},
+    {k:"2",t:"Information search",s:2},
+    {k:"3",t:"Evaluate alternatives",s:3},
+    {k:"4",t:"Purchase decision",s:4},
+    {k:"5",t:"Post-purchase behavior",s:5}]},
+  d:{
+    idea:"Kotler describes five stages: need recognition, information search, evaluation of alternatives, purchase decision, and post-purchase behavior. The buying process starts long before the purchase and continues long after it. Marketers should support every stage, not just the moment of payment.",
+    life:"Buying earphones. Need: your old ones broke. Search: TikTok reviews and asking a friend. Evaluate: three models under Rp 500.000. Decide: the one with free shipping and an official store badge. After: they’re great, so you post a review and your friend buys the same pair.",
+    ana:"Need: sales dropped. Search: Googling “cara analisa toko Shopee”, watching TikTok. Evaluate: a free trial against a competitor. Purchase: easy payment by QRIS or e-wallet. After: onboarding messages that deliver the first useful insight.",
+    pro:"Need: often triggered by an audit finding or a lost PO. Search: LinkedIn and peers. Evaluate: demos and an RFP. Purchase: legal review and vendor registration. After: a smooth rollout decides whether they renew.",
+    act:"For each of the five stages, write what content or help you give. Most startups only have stage 4 covered (a pricing page)."
+  }
+},
+{
+  title:"The B2B buying center", src:"Marketing Management",
+  hook:"In B2B, you never sell to just one person.",
+  beats:[
+    "*Initiators and users*: who raise the problem and use your app daily.",
+    "*Influencers*: IT and finance set the requirements.",
+    "*Deciders and approvers*: who says yes, and who signs off.",
+    "*Buyers and gatekeepers*: procurement runs the deal; assistants control access.",
+    "Win *every role*. One “no” can kill the deal."
+  ],
+  vis:{type:"orbit", center:"Your deal", hot:5, roles:[
+    {t:"Initiator",x:"raises the need",s:1},
+    {t:"User",x:"uses it daily",s:1},
+    {t:"Influencer",x:"IT, finance",s:2},
+    {t:"Decider",x:"says yes",s:3},
+    {t:"Approver",x:"signs off",s:3},
+    {t:"Buyer",x:"runs the deal",s:4},
+    {t:"Gatekeeper",x:"controls access",s:4}]},
+  d:{
+    idea:"Kotler calls the group involved in a business purchase the buying center: initiators, users, influencers, deciders, approvers, buyers and gatekeepers. Each role has different worries and different criteria. Business marketers need to know who plays each role and what each one needs to hear.",
+    life:"A family buying a car. The kid says the car is too small (initiator). Mom drives it daily (user). An uncle who is a mechanic gives his opinion (influencer). Dad chooses (decider). Grandma, who is lending part of the money, has to agree (approver).",
+    ana:"Even small sellers have a mini buying center: the owner decides, the admin staff uses the dashboard, and a partner or spouse may control the money. Show the admin it saves them time and show the owner it makes money.",
+    pro:"This is your main challenge. User: procurement staff. Influencers: IT security and finance. Decider: head of procurement or CFO. Approver: a director. Buyer: their own procurement team, who will literally procure your procurement tool. Gatekeeper: IT or an assistant. Prepare one message per role.",
+    act:"Make a table with four columns: role, person’s name, what they fear, what they want. Bring a different slide for each role to your next demo."
+  }
+},
+{
+  title:"The product life cycle", src:"Marketing Management",
+  hook:"Every product ages. Your marketing must age with it.",
+  beats:[
+    "*Introduction*: few people know you. Educate and find early adopters.",
+    "*Growth*: sales climb and competitors arrive. Build preference.",
+    "*Maturity*: the market is crowded. Defend and differentiate.",
+    "*Decline*: renew the product, or retire it before it drains you."
+  ],
+  vis:{type:"curve"},
+  d:{
+    idea:"Kotler describes four stages in a product’s sales over time: introduction, growth, maturity and decline. Each stage needs different marketing. Introduction needs awareness and trial. Growth needs brand preference and wider reach. Maturity needs differentiation and defense of share. Decline needs a decision: refresh, harvest or drop.",
+    life:"Think of boba drinks in Indonesia: introduction (one new shop), growth (shops everywhere), maturity (heavy price promos and new flavors to stand out), and for some brands, decline. The winners kept adding new reasons to buy.",
+    ana:"Marketplace analytics for Indonesian sellers is in the growth stage: competitors keep appearing. Your job is preference. Make one clear difference that sellers can explain to each other.",
+    pro:"Simple procurement tracking for mid-size companies is closer to introduction: many companies still don’t know they need it. Your job is education: content like “what Excel approvals are really costing you”.",
+    act:"Decide which stage each product is in, then pick the matching goal: awareness, preference, defense, or renewal."
+  }
+},
+{
+  title:"The 5A customer path", src:"Marketing 4.0",
+  hook:"Online, the sales funnel became a loop.",
+  beats:[
+    "*Aware*: they hear about you from ads, friends, or TikTok.",
+    "*Appeal*: a few brands stand out and stick in their mind.",
+    "*Ask*: they check reviews and ask friends and groups.",
+    "*Act*: they buy and start using it.",
+    "*Advocate*: they recommend you, which creates new *Aware.*"
+  ],
+  vis:{type:"chain", cls:"tight", loop:5, loopT:"advocates create awareness", nodes:[
+    {k:"A1",t:"Aware",s:1},
+    {k:"A2",t:"Appeal",s:2},
+    {k:"A3",t:"Ask",s:3},
+    {k:"A4",t:"Act",s:4},
+    {k:"A5",t:"Advocate",s:5}]},
+  d:{
+    idea:"In Marketing 4.0, Kotler, Kartajaya and Setiawan replace the old funnel with the 5A path: Aware, Appeal, Ask, Act, Advocate. Connected customers trust friends, family, fans and followers more than ads. Two useful measures: purchase action ratio (how many who know you end up buying) and brand advocacy ratio (how many end up recommending you).",
+    life:"Choosing a skincare product. Aware: you saw it on TikTok. Appeal: it looked better than the others. Ask: you read reviews and asked a friend. Act: you bought it on Shopee. Advocate: you left a five-star review with photos.",
+    ana:"Sellers ask in Facebook groups and WhatsApp communities. Be present in those Ask places: share free insights and real seller results. Make advocacy easy, for example a free month for each referral.",
+    pro:"Procurement heads ask peers in associations and on LinkedIn. Get two or three solid case studies and offer reference calls with happy customers.",
+    act:"Out of 100 people who know you, how many bought? How many recommend you? Find the weakest A and work on that one first."
+  }
+},
+{
+  title:"A lifetime to master", src:"Kotler on Marketing",
+  hook:"“Marketing takes a day to learn…”",
+  beats:[
+    "“…and a *lifetime to master.*” Philip Kotler",
+    "This week: *interview five customers.* Just listen.",
+    "Next week: write *one position statement* for each product.",
+    "Every month: *measure, learn, adjust.* That’s the C in R-STP-MM-I-C."
+  ],
+  vis:{type:"quote", lines:[
+    {big:"…and a lifetime to master.",by:"Philip Kotler",s:1},
+    {n:"Week 1",t:"Interview 5 customers per product",s:2},
+    {n:"Week 2",t:"Write your position statements",s:3},
+    {n:"Monthly",t:"Measure, learn, adjust",s:4}]},
+  d:{
+    idea:"Kotler’s famous line: “Marketing takes a day to learn. Unfortunately, it takes a lifetime to master.” The concepts in these shorts are simple. What makes the difference is applying them again and again, measuring the results, and staying close to customers as markets change.",
+    life:"Learning to ride a motorbike takes an afternoon. Riding well in Jakarta traffic takes years. Marketing works the same way: you get better by doing it every day.",
+    ana:"Your 30-day plan: interview 5 sellers, write the position statement, pick one segment, set a price lane, launch one channel (TikTok or seller groups), and track trial-to-paid every week.",
+    pro:"Your 30-day plan: map the buying center at three target companies, write one message per role, prepare a one-page case study, and run one guided pilot.",
+    act:"Rewatch any short whose “Try this today” step you haven’t done yet. Then start again from short 3 with real customer answers."
+  }
+}
+];
+
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+};
+const watched = new Set(store.get("ks-watched", []));
+const saved = new Set(store.get("ks-saved", []));
+
+/* ---- visual renderers: elements with data-s appear at that beat; data-hot glows from that beat ---- */
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const R = {
+  versus(v){
+    const col = (h, items, s, cls, hot) => `<div class="vs-col ${cls}" data-s="${s}"${hot ? ` data-hot="${hot}"` : ""}><div class="vs-h">${h}</div>${items.map(x => `<div class="vs-i">${esc(x)}</div>`).join("")}</div>`;
+    return `<div class="vs">${col(v.l, v.li, v.ls, "bad")}<div class="vs-mid" data-s="${v.rs}">→</div>${col(v.r, v.ri, v.rs, "", v.hot)}</div>`;
+  },
+  chain(v){
+    const nodes = v.nodes.map((n, i) => `${i ? `<div class="arrow" data-s="${n.s}"></div>` : ""}<div class="node" data-s="${n.s}"${n.hot ? ` data-hot="${n.hot}"` : ""}><b>${esc(n.k)}</b><span>${esc(n.t)}</span></div>`).join("");
+    const loop = v.loop ? `<div class="loop" data-s="${v.loop}"><em>↺ ${esc(v.loopT)}</em></div>` : "";
+    return `<div class="chain ${v.cls || ""}">${nodes}${loop}</div>`;
+  },
+  dots(v){
+    let h = "";
+    const count = [0,0,0,0];
+    for(let i = 0; i < 64; i++){
+      const g = (i * 7 + (i >> 3)) % 4;
+      const k = count[g]++;
+      const col = i % 8, row = i >> 3;
+      const jx = ((i * 37) % 9) - 4, jy = ((i * 53) % 9) - 4;
+      const x1 = 7 + col * 12.3 + jx * .6, y1 = 7 + row * 12.3 + jy * .6;
+      const x2 = (g % 2) * 50 + 9 + (k % 4) * 10.7, y2 = (g >> 1) * 50 + 9 + (k >> 2) * 10.7;
+      const big = (i * 11) % 5 === 0 ? " big" : "";
+      h += `<i class="dot${big}" data-g="${g}" style="--x1:${x1}%;--y1:${y1}%;--x2:${x2}%;--y2:${y2}%;--d:${(col + row) * 22}ms"></i>`;
+    }
+    const colors = ["--sun","--teal","--rose","--violet"];
+    const legend = v.labels.map((l, i) => `<span data-s="2" style="--i:${i}"><i style="background:var(${colors[i]})"></i>${esc(l)}</span>`).join("");
+    return `<div class="seg"><div class="dots">${h}</div><div class="legend">${legend}</div></div>`;
+  },
+  pos(v){
+    const rivals = v.rivals.map((r, i) => `<div class="pt-pos" style="left:${r[1]}%;top:${r[2]}%"><div class="pt" data-s="${v.rs}" style="--i:${i}"><i></i>${esc(r[0])}</div></div>`).join("");
+    return `<div class="map"><div class="ax x" data-s="1"><span>${esc(v.x)}</span></div><div class="ax y" data-s="1"><span>${esc(v.y)}</span></div>${rivals}
+      <div class="pt-pos" style="left:${v.you[0]}%;top:${v.you[1]}%"><div class="pt you" data-s="${v.ys}"><i></i>${esc(v.youT)}</div></div>
+      <div class="word" data-s="${v.ws}">${esc(v.word)}</div></div>`;
+  },
+  tiles(v){
+    const lab = {up:"▲", eq:"=", dn:"▼"};
+    return `<div class="tiles">${v.tiles.map((t, i) => `<div class="tile" data-s="${i + 1}"><div><b>${esc(t.t)}</b><small>${esc(t.x)}</small></div><span class="pill ${t.b}">benefit ${lab[t.b]}</span><span class="pill ${t.p === "up" ? "dn" : t.p === "dn" ? "up" : "eq"}">price ${lab[t.p]}</span></div>`).join("")}</div>`;
+  },
+  flips(v){
+    return `<div class="flips">${v.cards.map((c, i) => `<div class="flip" data-s="${i + 1}"><div class="flip-in">
+      <div class="face"><em>4P · seller</em><b>${esc(c.p)}</b><span>${esc(c.ps)}</span></div>
+      <div class="face back"><em>4C · buyer</em><b>${esc(c.c)}</b><span>${esc(c.cs)}</span></div></div></div>`).join("")}</div>`;
+  },
+  rings(v){
+    const sizes = [100, 80, 61, 44, 27];
+    return `<div class="rings">${v.rings.map((r, i) => {
+      const sz = sizes[i], off = (100 - sz) / 2;
+      return `<div class="ring${r.core ? " core" : ""}" data-s="${r.s}" style="--c:var(${r.c});left:${off}%;top:${off}%;width:${sz}%;height:${sz}%"><span>${esc(r.t)}</span></div>`;
+    }).join("")}</div>`;
+  },
+  clv(){
+    let m = "";
+    for(let k = 0; k < 24; k++) m += `<i style="--h:${((k + 1) / 24 * 100).toFixed(1)};--k:${k}"></i>`;
+    return `<div class="clv">
+      <div class="cmp" data-s="1">
+        <div><i style="width:50cqw;background:var(--rose)"></i>Win new · 5×</div>
+        <div><i style="width:10cqw;background:var(--teal)"></i>Keep · 1×</div>
+      </div>
+      <div><div class="months">${m}</div><div class="months-l"><span>month 1</span><span>cumulative revenue</span><span>month 24</span></div></div>
+      <div class="total" data-s="3"><small>one customer, 24 months</small>Rp 2.376.000</div></div>`;
+  },
+  orbit(v){
+    const n = v.roles.length;
+    const roles = v.roles.map((r, i) => {
+      const a = -Math.PI / 2 + i * 2 * Math.PI / n;
+      const x = 50 + Math.cos(a) * 40, y = 50 + Math.sin(a) * 40;
+      return `<div class="role-pos" style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%"><div class="role" data-s="${r.s}"><b>${esc(r.t)}</b><small>${esc(r.x)}</small></div></div>`;
+    }).join("");
+    return `<div class="orbit"><div class="center" data-hot="${v.hot}">${esc(v.center)}</div>${roles}</div>`;
+  },
+  curve(){
+    const segs = [
+      "M12 196 C 40 194, 62 188, 82 174",
+      "M82 174 C 108 150, 122 74, 160 54",
+      "M160 54 C 186 40, 214 40, 236 54",
+      "M236 54 C 256 68, 276 104, 292 134"];
+    const labels = [["Intro",47,"educate"],["Growth",121,"build preference"],["Maturity",198,"defend"],["Decline",266,"renew or exit"]];
+    return `<div class="curve"><svg viewBox="0 0 300 240" role="img" aria-label="Product life cycle curve: introduction, growth, maturity, decline">
+      <line class="base" x1="8" y1="200" x2="296" y2="200"/>
+      ${[82,160,236].map(x => `<line class="div" x1="${x}" y1="20" x2="${x}" y2="200"/>`).join("")}
+      <path class="ghost" d="${segs.join(" ").replace(/ M[\d ]+/g, " ")}"/>
+      ${segs.map((d, i) => `<path pathLength="1" d="${d}" data-s="${i + 1}"/>`).join("")}
+      ${labels.map((l, i) => `<g data-s="${i + 1}"><text x="${l[1]}" y="218" text-anchor="middle">${l[0]}</text><text class="sub" x="${l[1]}" y="231" text-anchor="middle">${l[2]}</text></g>`).join("")}
+      <text class="sub" x="12" y="14">sales</text>
+    </svg></div>`;
+  },
+  quote(v){
+    return `<div class="quote">${v.lines.map(l => l.big
+      ? `<div data-s="${l.s}"><div class="q-big">${esc(l.big)}</div><div class="q-by">${esc(l.by)}</div></div>`
+      : `<div class="q-item" data-s="${l.s}"><b>${esc(l.n)}</b><span>${esc(l.t)}</span></div>`).join("")}</div>`;
+  }
+};
+
+/* ---- player ---- */
+let ep = 0, beat = 0, durs = [], playing = true, ended = false, beatStart = 0, elapsed = 0;
+const screen = $("screen"), vis = $("vis");
+
+function beatDur(s, b){
+  if(b === 0) return 2600;
+  const len = s.beats[b - 1].replace(/\*/g, "").length;
+  return Math.min(5600, Math.max(3200, 1700 + len * 42));
+}
+function caption(text){
+  let i = 0;
+  return text.split(/(\*[^*]+\*)/).filter(Boolean).map(part => {
+    const hl = part.startsWith("*");
+    const words = (hl ? part.slice(1, -1) : part).split(/(\s+)/).filter(Boolean);
+    return words.map(w => /^\s+$/.test(w) ? " " : `<span class="w${hl ? " hl" : ""}" style="--i:${i++}">${esc(w)}</span>`).join("");
+  }).join("");
+}
+
+function load(i, autoplay = true){
+  ep = (i + SHORTS.length) % SHORTS.length;
+  const s = SHORTS[ep];
+  $("epNo").textContent = `Short ${ep + 1}/${SHORTS.length}`;
+  $("epSrc").textContent = s.src;
+  $("hook").textContent = s.hook;
+  vis.innerHTML = R[s.vis.type](s.vis);
+  durs = [0, ...s.beats].map((_, b) => beatDur(s, b));
+  $("bars").innerHTML = durs.map(() => "<span><i></i></span>").join("");
+  $("end").hidden = true;
+  ended = false;
+  renderNotes();
+  renderEps();
+  setBeat(0);
+  setPlaying(autoplay);
+  try{ history.replaceState(null, "", "#short-" + (ep + 1)); }catch(e){}
+}
+
+function setBeat(b){
+  beat = Math.max(0, Math.min(b, durs.length - 1));
+  elapsed = 0;
+  beatStart = performance.now();
+  vis.querySelectorAll("[data-s]").forEach(el => {
+    const k = +el.dataset.s;
+    el.classList.toggle("on", beat >= k);
+    el.classList.toggle("now", beat === k);
+  });
+  vis.querySelectorAll("[data-hot]").forEach(el => el.classList.toggle("hot", beat >= +el.dataset.hot));
+  for(let k = 1; k <= 6; k++) vis.classList.toggle("b" + k, beat >= k);
+  screen.classList.toggle("at-hook", beat === 0);
+  $("cap").innerHTML = beat === 0 ? "" : `<span>${caption(SHORTS[ep].beats[beat - 1])}</span>`;
+  [...$("bars").children].forEach((sp, idx) => { sp.firstChild.style.width = idx < beat ? "100%" : "0%"; });
+}
+
+function setPlaying(p){
+  playing = p;
+  if(p) beatStart = performance.now() - elapsed;
+  screen.classList.toggle("paused", !p);
+  $("playTx").textContent = p ? "Pause" : "Play";
+  $("bPlay").setAttribute("aria-label", p ? "Pause" : "Play");
+  $("playIc").innerHTML = p ? '<path d="M9 5v14M15 5v14"/>' : '<path d="M8 5v14l11-7z" fill="currentColor"/>';
+}
+
+function finish(){
+  watched.add(ep);
+  store.set("ks-watched", [...watched]);
+  renderEps();
+  if($("autoNext").checked && ep < SHORTS.length - 1){ load(ep + 1); return; }
+  ended = true;
+  $("endTx").textContent = ep < SHORTS.length - 1 ? `Up next: ${SHORTS[ep + 1].title}` : "You’ve watched the last short.";
+  $("eNext").textContent = ep < SHORTS.length - 1 ? "Next short" : "Start over";
+  $("end").hidden = false;
+}
+
+function nextBeat(){ if(ended) return; if(beat < durs.length - 1) setBeat(beat + 1); else finish(); }
+function prevBeat(){ if(ended){ $("end").hidden = true; ended = false; } if(beat > 0) setBeat(beat - 1); else if(ep > 0) load(ep - 1); }
+
+function tick(now){
+  if(playing && !ended){
+    elapsed = now - beatStart;
+    const p = Math.min(1, elapsed / durs[beat]);
+    const bar = $("bars").children[beat];
+    if(bar) bar.firstChild.style.width = (p * 100) + "%";
+    if(p >= 1) nextBeat();
+  }
+  requestAnimationFrame(tick);
+}
+
+/* ---- notes + list ---- */
+function renderNotes(){
+  const s = SHORTS[ep];
+  $("nKick").textContent = `Short ${ep + 1} of ${SHORTS.length}`;
+  $("nTitle").textContent = s.title;
+  $("nSrc").textContent = "From: " + s.src;
+  $("nIdea").textContent = s.d.idea;
+  $("nLife").textContent = s.d.life;
+  $("nAna").textContent = s.d.ana;
+  $("nPro").textContent = s.d.pro;
+  $("nAct").textContent = s.d.act;
+  const sv = saved.has(ep);
+  $("bSave").classList.toggle("saved", sv);
+  $("bSave").setAttribute("aria-pressed", sv);
+}
+function renderEps(){
+  $("epList").innerHTML = SHORTS.map((s, i) => `<li><button class="ep" data-i="${i}" aria-current="${i === ep}">
+    <span class="n">${String(i + 1).padStart(2, "0")}</span>
+    <span class="t">${esc(s.title)}<small>${esc(s.src)}</small></span>
+    <span class="st" title="${watched.has(i) ? "Watched" : ""}">${saved.has(i) ? "★" : ""}${watched.has(i) ? "✓" : ""}</span></button></li>`).join("");
+  const n = watched.size;
+  $("mText").textContent = `${n} / ${SHORTS.length} watched`;
+  $("mBar").style.width = (n / SHORTS.length * 100) + "%";
+  const cur = $("epList").querySelector('[aria-current="true"]');
+  if(cur && window.matchMedia("(max-width:1199px)").matches){
+    const list = $("epList");
+    list.scrollTo({left: cur.parentElement.offsetLeft - list.offsetLeft - 8, behavior: "smooth"});
+  }
+}
+
+/* ---- events ---- */
+$("tapMid").onclick = () => { if(!ended) setPlaying(!playing); };
+$("tapNext").onclick = nextBeat;
+$("tapPrev").onclick = prevBeat;
+$("bPlay").onclick = () => { if(ended){ load(ep); } else setPlaying(!playing); };
+$("bNext").onclick = $("cNext").onclick = () => load(ep + 1);
+$("cPrev").onclick = () => load(ep - 1);
+$("eReplay").onclick = () => load(ep);
+$("eNext").onclick = () => load(ep + 1);
+$("bSave").onclick = () => { saved.has(ep) ? saved.delete(ep) : saved.add(ep); store.set("ks-saved", [...saved]); renderNotes(); renderEps(); };
+$("bInfo").onclick = () => { setPlaying(false); $("notes").scrollIntoView({behavior: "smooth", block: "start"}); };
+$("epList").addEventListener("click", e => { const b = e.target.closest(".ep"); if(b) load(+b.dataset.i); });
+$("autoNext").checked = store.get("ks-auto", true);
+$("autoNext").onchange = e => store.set("ks-auto", e.target.checked);
+
+screen.addEventListener("keydown", e => {
+  const k = e.key;
+  if(k === " " || k === "k"){ e.preventDefault(); if(!ended) setPlaying(!playing); }
+  else if(k === "ArrowRight"){ e.preventDefault(); nextBeat(); }
+  else if(k === "ArrowLeft"){ e.preventDefault(); prevBeat(); }
+  else if(k === "ArrowDown" || k === "PageDown"){ e.preventDefault(); load(ep + 1); }
+  else if(k === "ArrowUp" || k === "PageUp"){ e.preventDefault(); load(ep - 1); }
+});
+let touch = null;
+screen.addEventListener("touchstart", e => { touch = {x: e.touches[0].clientX, y: e.touches[0].clientY}; }, {passive: true});
+screen.addEventListener("touchend", e => {
+  if(!touch) return;
+  const dx = e.changedTouches[0].clientX - touch.x, dy = e.changedTouches[0].clientY - touch.y;
+  touch = null;
+  if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.4){ load(ep + (dx < 0 ? 1 : -1)); }
+});
+document.addEventListener("visibilitychange", () => { if(document.hidden && playing) setPlaying(false); });
+
+const m = /^#short-(\d+)$/.exec(location.hash);
+load(m ? Math.min(SHORTS.length, Math.max(1, +m[1])) - 1 : 0, true);
+requestAnimationFrame(tick);
+</script>
