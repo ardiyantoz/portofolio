@@ -368,7 +368,7 @@ button{font:inherit;color:inherit}
       <label><input type="checkbox" id="mxVoice"> Voice</label>
       <label><input type="checkbox" id="mxSfx"> Effects</label>
     </div>
-    <p class="hint">Every short has its own background music, sound effects and a narrator voice. Tap the right side for the next scene, left side to go back, middle to pause. Swipe left for the next short.</p>
+    <p class="hint">Every short has a narrator voice-over, its own background music and sound effects. Tap the right side for the next scene, left side to go back, middle to pause. Swipe left for the next short.</p>
   </div>
 
   <nav class="eps" aria-label="All shorts">
@@ -850,7 +850,7 @@ const DRUMS = {
 
 const Sound = (() => {
   const P = Object.assign({on:false, music:true, voice:true, sfx:true}, store.get("ks-sound", {}));
-  let ctx = null, master, music, sfx, noise, mg = null, mood = null, moodKey = null, step = 0, next = 0, running = false, ducked = false;
+  let ctx = null, master, music, sfx, vox, noise, mg = null, mood = null, moodKey = null, step = 0, next = 0, running = false, ducked = false;
   const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 
   function init(){
@@ -866,6 +866,7 @@ const Sound = (() => {
     verb.buffer = ir; vg.gain.value = .3; verb.connect(vg); vg.connect(master);
     music = ctx.createGain(); music.gain.value = 0; music.connect(master); music.connect(verb);
     sfx = ctx.createGain(); sfx.connect(master); sfx.connect(verb);
+    vox = ctx.createGain(); vox.gain.value = 1.15; vox.connect(master);
     noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const nd = noise.getChannelData(0); for(let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
     setInterval(schedule, 25);
@@ -981,7 +982,9 @@ const Sound = (() => {
     play(on){ if(ctx && on && !running) next = ctx.currentTime + .06; running = on; apply(); },
     duck(on){ ducked = on; apply(); },
     fx(name, arg){ if(!ctx || !P.on || !P.sfx || ctx.state !== "running") return; FX[name](ctx.currentTime + .01, arg); },
-    set(k, v){ P[k] = v; store.set("ks-sound", P); apply(); }
+    set(k, v){ P[k] = v; store.set("ks-sound", P); apply(); },
+    decode(ab){ return new Promise((res, rej) => ctx.decodeAudioData(ab, res, rej)); },
+    playVoice(buf, onend){ const s = ctx.createBufferSource(); s.buffer = buf; s.connect(vox); s.onended = onend; s.start(ctx.currentTime + .05); return s; }
   };
 })();
 
@@ -990,35 +993,55 @@ function speakable(t){
     .replace(/R-STP-MM-I-C/g, "R, S T P, M M, I, C").replace(/\bSTP\b/g, "S T P").replace(/\bMM\b/g, "M M")
     .replace(/×/g, " times ").replace(/…/g, "... ").replace(/[“”]/g, '"');
 }
+/* Voice-over: pre-recorded dubbing clips in dub/NN-B.mp3 (short number, scene number), played through Web Audio.
+   If a clip can't load, the browser's own speech voice reads the line instead. */
 const Voice = (() => {
-  const ok = "speechSynthesis" in window;
-  let voice = null, cur = null, done = true, key = "", finished = "";
+  const tts = "speechSynthesis" in window;
+  const cache = {};
+  let voice = null, src = null, busy = false, done = true, key = "", finished = "", tok = 0;
+  const clipId = k => { const [e, b] = k.split("-"); return String(+e + 1).padStart(2, "0") + "-" + b; };
+  function clip(id){
+    if(!cache[id]) cache[id] = fetch(`dub/${id}.mp3`).then(r => { if(!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+      .then(ab => Sound.decode(ab)).catch(e => { delete cache[id]; throw e; });
+    return cache[id];
+  }
   function pick(){
     try{
       const vs = speechSynthesis.getVoices();
       voice = vs.find(v => /^en[-_](US|GB)/i.test(v.lang) && /Natural|Google|Samantha|Aria|Jenny|Daniel/i.test(v.name)) || vs.find(v => /^en/i.test(v.lang)) || null;
     }catch(e){}
   }
-  if(ok){ pick(); try{ speechSynthesis.addEventListener("voiceschanged", pick); }catch(e){} }
-  const end = u => { if(cur === u){ cur = null; done = true; finished = key; Sound.duck(false); } };
+  if(tts){ pick(); try{ speechSynthesis.addEventListener("voiceschanged", pick); }catch(e){} }
+  function end(t, k){ if(t !== tok) return; src = null; busy = false; done = true; finished = k; Sound.duck(false); }
+  function speak(text, k, t){
+    if(!tts){ end(t, k); return; }
+    try{
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(speakable(text));
+      if(voice){ u.voice = voice; u.lang = voice.lang; }else u.lang = "en-US";
+      u.rate = 1.04;
+      u.onend = u.onerror = () => end(t, k);
+      speechSynthesis.speak(u);
+      setTimeout(() => { if(t === tok && !speechSynthesis.speaking && !speechSynthesis.pending) end(t, k); }, 1500);
+    }catch(e){ end(t, k); }
+  }
+  function halt(){ if(src){ try{ src.onended = null; src.stop(); }catch(e){} src = null; } try{ if(tts) speechSynthesis.cancel(); }catch(e){} }
   return {
     get done(){ return done; },
+    preload(e, n){ if(!Sound.started()) return; for(let b = 0; b <= n; b++) clip(clipId(e + "-" + b)).catch(() => {}); },
     say(text, k){
-      if(!ok || !Sound.P.on || !Sound.P.voice || !Sound.started()){ done = true; return; }
-      if(k === finished || (k === key && cur)) return;
-      key = k;
-      try{
-        speechSynthesis.cancel();
-        const u = new SpeechSynthesisUtterance(speakable(text));
-        if(voice){ u.voice = voice; u.lang = voice.lang; }else u.lang = "en-US";
-        u.rate = 1.04;
-        u.onend = u.onerror = () => end(u);
-        cur = u; done = false; Sound.duck(true);
-        speechSynthesis.speak(u);
-        setTimeout(() => { if(cur === u && !speechSynthesis.speaking && !speechSynthesis.pending) end(u); }, 1500);
-      }catch(e){ done = true; }
+      if(!Sound.P.on || !Sound.P.voice || !Sound.started()){ done = true; return; }
+      if(k === finished || (k === key && busy)) return;
+      halt();
+      key = k; busy = true; done = false;
+      const t = ++tok;
+      Sound.duck(true);
+      clip(clipId(k)).then(buf => {
+        if(t !== tok) return;
+        src = Sound.playVoice(buf, () => end(t, k));
+      }).catch(() => { if(t === tok) speak(text, k, t); });
     },
-    stop(reset){ if(reset){ key = ""; finished = ""; } cur = null; done = true; try{ speechSynthesis.cancel(); }catch(e){} Sound.duck(false); }
+    stop(reset){ tok++; if(reset){ key = ""; finished = ""; } halt(); busy = false; done = true; Sound.duck(false); }
   };
 })();
 
@@ -1066,6 +1089,7 @@ function load(i, autoplay = true){
   vis.innerHTML = R[s.vis.type](s.vis);
   Sound.setMood(s.mood);
   Voice.stop(true);
+  Voice.preload(ep, s.beats.length);
   durs = [0, ...s.beats].map((_, b) => beatDur(s, b));
   $("bars").innerHTML = durs.map(() => "<span><i></i></span>").join("");
   $("end").hidden = true;
@@ -1215,6 +1239,7 @@ function renderSound(){
 function soundOn(){
   Sound.set("on", true);
   if(Sound.start()){
+    Voice.preload(ep, SHORTS[ep].beats.length);
     Sound.play(playing && !ended);
     if(playing && !ended) Voice.say(beatText(beat), ep + "-" + beat);
   }
