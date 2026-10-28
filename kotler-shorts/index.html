@@ -103,6 +103,19 @@ button{font:inherit;color:inherit}
 .rail svg{width:5.4cqw;height:5.4cqw;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .rail .saved .ic{background:var(--sun);color:#1A1406}
 .rail .saved svg{fill:currentColor}
+.rail .muted .ic{background:rgba(255,255,255,.06);color:var(--s-muted)}
+.sound-gate{position:absolute;z-index:6;left:50%;bottom:31%;transform:translateX(-50%);display:flex;align-items:center;gap:2cqw;white-space:nowrap;
+  border:0;border-radius:99px;padding:2.6cqw 4.6cqw;background:var(--s-ink);color:var(--screen);font-weight:700;font-size:3.7cqw;cursor:pointer;
+  box-shadow:0 0 0 0 color-mix(in srgb,var(--s-ink) 50%,transparent);animation:gatePulse 2s ease-in-out infinite}
+.sound-gate svg{width:4.6cqw;height:4.6cqw;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+@keyframes gatePulse{50%{box-shadow:0 0 0 2.4cqw color-mix(in srgb,var(--s-ink) 0%,transparent)}}
+.eqz{display:inline-flex;align-items:flex-end;gap:2px;height:12px;margin-right:6px;vertical-align:-1px}
+.eqz i{width:3px;background:var(--accent);border-radius:1px;height:30%;animation:eqb .9s ease-in-out infinite alternate}
+.eqz i:nth-child(2){animation-delay:-.3s}.eqz i:nth-child(3){animation-delay:-.6s}
+@keyframes eqb{to{height:100%}}
+.eqz.off i{animation:none;height:30%;background:var(--muted)}
+.mix{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;align-items:center;width:min(100%,400px);font-size:13.5px;color:var(--muted)}
+.mix label{display:flex;align-items:center;gap:6px;cursor:pointer}
 
 .tap{position:absolute;inset:0;z-index:2;display:grid;grid-template-columns:1fr 1.4fr 1fr}
 .tap button{all:unset;cursor:pointer}
@@ -331,8 +344,10 @@ button{font:inherit;color:inherit}
         <button id="tapNext" aria-label="Next scene"></button>
       </div>
       <div class="pause-badge"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+      <button class="sound-gate" id="soundGate"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>Tap for sound</button>
       <div class="rail">
         <button id="bPlay" aria-label="Pause"><span class="ic"><svg id="playIc" viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></svg></span><span id="playTx">Pause</span></button>
+        <button id="bSound" aria-label="Turn sound on"><span class="ic"><svg id="soundIc" viewBox="0 0 24 24"></svg></span><span id="soundTx">Sound</span></button>
         <button id="bSave" aria-label="Save this short"><span class="ic"><svg viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4z"/></svg></span><span>Save</span></button>
         <button id="bInfo" aria-label="Read the notes"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg></span><span>Notes</span></button>
         <button id="bNext" aria-label="Next short"><span class="ic"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span><span>Next</span></button>
@@ -347,7 +362,13 @@ button{font:inherit;color:inherit}
       <label><input type="checkbox" id="autoNext" checked> Auto-play next</label>
       <button id="cNext">Next ↓</button>
     </div>
-    <p class="hint">Tap the right side for the next scene, left side to go back, middle to pause. Swipe left for the next short.</p>
+    <div class="mix" aria-label="Sound mix">
+      <span><span class="eqz off" id="eqIc"><i></i><i></i><i></i></span><span id="trackName">Sound is off</span></span>
+      <label><input type="checkbox" id="mxMusic"> Music</label>
+      <label><input type="checkbox" id="mxVoice"> Voice</label>
+      <label><input type="checkbox" id="mxSfx"> Effects</label>
+    </div>
+    <p class="hint">Every short has its own background music, sound effects and a narrator voice. Tap the right side for the next scene, left side to go back, middle to pause. Swipe left for the next short.</p>
   </div>
 
   <nav class="eps" aria-label="All shorts">
@@ -398,7 +419,7 @@ button{font:inherit;color:inherit}
 <script>
 const SHORTS = [
 {
-  title:"Marketing is not selling", src:"Kotler on Marketing",
+  title:"Marketing is not selling", src:"Kotler on Marketing", mood:"confident",
   hook:"Marketing is NOT selling.",
   beats:[
     "Most people think marketing means *pushing* your product at people.",
@@ -417,7 +438,7 @@ const SHORTS = [
   }
 },
 {
-  title:"Needs, wants and demands", src:"Principles of Marketing",
+  title:"Needs, wants and demands", src:"Principles of Marketing", mood:"playful",
   hook:"Thirsty? That’s not a sale yet.",
   beats:[
     "A *need* is a basic lack. You’re thirsty.",
@@ -438,7 +459,7 @@ const SHORTS = [
   }
 },
 {
-  title:"The R-STP-MM-I-C formula", src:"Kotler on Marketing",
+  title:"The R-STP-MM-I-C formula", src:"Kotler on Marketing", mood:"drive",
   hook:"Kotler’s whole playbook fits in one line.",
   beats:[
     "*R*: research. Study the market before you build or shout.",
@@ -461,7 +482,7 @@ const SHORTS = [
   }
 },
 {
-  title:"Segmentation", src:"Marketing Management",
+  title:"Segmentation", src:"Marketing Management", mood:"lofi",
   hook:"“Everyone” is not a market.",
   beats:[
     "This is your market. It looks like *one crowd.*",
@@ -479,7 +500,7 @@ const SHORTS = [
   }
 },
 {
-  title:"Targeting and positioning", src:"Kotler on Marketing",
+  title:"Targeting and positioning", src:"Kotler on Marketing", mood:"focus",
   hook:"Pick a spot. Own one word.",
   beats:[
     "Draw the market the way buyers see it: *two things they care about.*",
@@ -499,7 +520,7 @@ const SHORTS = [
   }
 },
 {
-  title:"Five ways to win on value", src:"Principles of Marketing",
+  title:"Five ways to win on value", src:"Principles of Marketing", mood:"playful",
   hook:"Benefit vs. price: 5 ways to win.",
   beats:[
     "*More for more*: premium benefits, premium price.",
@@ -523,7 +544,7 @@ const SHORTS = [
   }
 },
 {
-  title:"From 4Ps to 4Cs", src:"Marketing Management",
+  title:"From 4Ps to 4Cs", src:"Marketing Management", mood:"confident",
   hook:"Same four boxes. Seen from the buyer’s chair.",
   beats:[
     "*Product* becomes *customer solution*: people buy results, not features.",
@@ -545,7 +566,7 @@ const SHORTS = [
   }
 },
 {
-  title:"Five product levels", src:"Marketing Management",
+  title:"Five product levels", src:"Marketing Management", mood:"dreamy",
   hook:"You’re never selling just the thing.",
   beats:[
     "*Core benefit*: what they really buy. At a hotel: rest.",
@@ -568,7 +589,7 @@ const SHORTS = [
   }
 },
 {
-  title:"Customer lifetime value", src:"Marketing Management",
+  title:"Customer lifetime value", src:"Marketing Management", mood:"warm",
   hook:"Your best customer is one you already have.",
   beats:[
     "Winning a new customer can cost *five times more* than keeping one.",
@@ -586,7 +607,7 @@ const SHORTS = [
   }
 },
 {
-  title:"The buyer decision process", src:"Principles of Marketing",
+  title:"The buyer decision process", src:"Principles of Marketing", mood:"steady",
   hook:"The purchase starts long before checkout.",
   beats:[
     "*Need recognition*: “My phone dies by noon.”",
@@ -610,7 +631,7 @@ const SHORTS = [
   }
 },
 {
-  title:"The B2B buying center", src:"Marketing Management",
+  title:"The B2B buying center", src:"Marketing Management", mood:"tension",
   hook:"In B2B, you never sell to just one person.",
   beats:[
     "*Initiators and users*: who raise the problem and use your app daily.",
@@ -636,7 +657,7 @@ const SHORTS = [
   }
 },
 {
-  title:"The product life cycle", src:"Marketing Management",
+  title:"The product life cycle", src:"Marketing Management", mood:"rising",
   hook:"Every product ages. Your marketing must age with it.",
   beats:[
     "*Introduction*: few people know you. Educate and find early adopters.",
@@ -654,7 +675,7 @@ const SHORTS = [
   }
 },
 {
-  title:"The 5A customer path", src:"Marketing 4.0",
+  title:"The 5A customer path", src:"Marketing 4.0", mood:"social",
   hook:"Online, the sales funnel became a loop.",
   beats:[
     "*Aware*: they hear about you from ads, friends, or TikTok.",
@@ -678,7 +699,7 @@ const SHORTS = [
   }
 },
 {
-  title:"A lifetime to master", src:"Kotler on Marketing",
+  title:"A lifetime to master", src:"Kotler on Marketing", mood:"finale",
   hook:"“Marketing takes a day to learn…”",
   beats:[
     "“…and a *lifetime to master.*” Philip Kotler",
@@ -803,6 +824,221 @@ const R = {
   }
 };
 
+/* ---- sound: everything is synthesized with Web Audio, so nothing loads from outside ---- */
+const MAJ_POP = [[0,4,7],[7,11,14],[9,12,16],[5,9,12]];      // I V vi IV
+const MAJ_UP = [[0,4,7],[5,9,12],[9,12,16],[7,11,14]];       // I IV vi V
+const MIN_EPIC = [[0,3,7],[-4,0,3],[3,7,10],[-2,2,5]];       // i VI III VII
+const MOODS = {
+  confident:{name:"Confident groove", bpm:96, root:60, prog:MAJ_POP, drums:"drive", lead:"pluck", arp:[0,1,2,1], every:2},
+  playful:{name:"Playful pluck", bpm:108, root:62, prog:MAJ_UP, drums:"soft", lead:"pluck", arp:[0,2,1,2,0,2,1,3], every:2},
+  drive:{name:"Step-by-step pulse", bpm:112, root:57, prog:MIN_EPIC, drums:"drive", lead:"pluck", arp:[0,0,2,0,1,0,2,1], every:2},
+  lofi:{name:"Curious lo-fi", bpm:80, root:60, prog:[[2,5,9,12],[7,11,14,17],[0,4,7,11],[9,12,16,19]], drums:"lofi", lead:"piano", arp:[0,2,3,1], every:4, swing:.18},
+  focus:{name:"Focused and minimal", bpm:90, root:64, prog:[[0,4,7,11],[9,12,16,19],[5,9,12,16],[7,11,14,17]], drums:"soft", lead:"bell", arp:[2,null,1,null,3,null,1,null], every:4},
+  dreamy:{name:"Dreamy layers", bpm:70, root:65, prog:[[0,4,7,11],[5,9,12,16]], drums:"none", lead:"bell", arp:[0,2,3,1,2,null,3,null], every:4, bars:2},
+  warm:{name:"Warm and hopeful", bpm:86, root:60, prog:[[0,4,7],[4,7,11],[5,9,12],[7,11,14]], drums:"lofi", lead:"piano", arp:[0,1,2,1], every:4, swing:.1},
+  steady:{name:"Steady journey", bpm:94, root:62, prog:MAJ_POP, drums:"soft", lead:"piano", arp:[0,1,2,3,2,1], every:2},
+  tension:{name:"Boardroom tension", bpm:100, root:57, prog:[[0,3,7],[-4,0,3],[5,8,12],[7,11,14]], drums:"drive", lead:"pluck", arp:[0,1,0,2,0,1,0,3], every:2},
+  rising:{name:"Cinematic rise", bpm:76, root:62, prog:MIN_EPIC, drums:"soft", lead:"bell", arp:[0,1,2,3], every:4},
+  social:{name:"Social loop", bpm:116, root:64, prog:MAJ_UP, drums:"drive", lead:"pluck", arp:[0,2,1,3,2,1], every:2},
+  finale:{name:"Inspiring finale", bpm:98, root:60, prog:[[5,9,12],[7,11,14],[9,12,16],[0,4,7,12]], drums:"drive", lead:"bell", arp:[0,1,2,3,2,1,2,3], every:2}
+};
+const DRUMS = {
+  drive:{k:[0,4,8,12], kv:.8, s:[4,12], sv:.55, h:[0,2,6,8,10,14], b:[0,8,14]},
+  soft:{k:[0,8], kv:.5, s:[], sv:0, h:[4,12], b:[0,8]},
+  lofi:{k:[0,7,10], kv:.7, s:[4,12], sv:.45, h:[0,2,4,6,8,10,12,14], b:[0,10]}
+};
+
+const Sound = (() => {
+  const P = Object.assign({on:false, music:true, voice:true, sfx:true}, store.get("ks-sound", {}));
+  let ctx = null, master, music, sfx, noise, mg = null, mood = null, moodKey = null, step = 0, next = 0, running = false, ducked = false;
+  const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+
+  function init(){
+    if(ctx) return true;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return false;
+    try{ ctx = new AC(); }catch(e){ return false; }
+    const comp = ctx.createDynamicsCompressor(); comp.connect(ctx.destination);
+    master = ctx.createGain(); master.connect(comp);
+    const verb = ctx.createConvolver(), vg = ctx.createGain();
+    const len = Math.floor(ctx.sampleRate * 2.4), ir = ctx.createBuffer(2, len, ctx.sampleRate);
+    for(let c = 0; c < 2; c++){ const d = ir.getChannelData(c); for(let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
+    verb.buffer = ir; vg.gain.value = .3; verb.connect(vg); vg.connect(master);
+    music = ctx.createGain(); music.gain.value = 0; music.connect(master); music.connect(verb);
+    sfx = ctx.createGain(); sfx.connect(master); sfx.connect(verb);
+    noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+    const nd = noise.getChannelData(0); for(let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+    setInterval(schedule, 25);
+    apply();
+    return true;
+  }
+  const gainTo = dest => { const g = ctx.createGain(); g.connect(dest); return g; };
+  function env(g, t, a, peak, decay){ g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(.0001, t + a + decay); }
+  function osc(type, f, t, end, dest){ const o = ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(f, t); o.connect(dest); o.start(t); o.stop(end + .05); return o; }
+
+  const I = {
+    pad(t, notes, dur, out){
+      const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 900; f.connect(out);
+      const g = gainTo(f);
+      g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(.045, t + Math.min(.8, dur * .3));
+      g.gain.setValueAtTime(.045, t + dur * .75); g.gain.linearRampToValueAtTime(.0001, t + dur);
+      notes.forEach(n => [-7, 7].forEach(dt => { osc("sawtooth", mtof(n), t, t + dur, g).detune.value = dt; }));
+    },
+    bass(t, n, dur, out){ const g = gainTo(out); env(g, t, .01, .2, dur); osc("triangle", mtof(n), t, t + dur + .1, g); osc("sine", mtof(n), t, t + dur + .1, g); },
+    pluck(t, n, v, out){
+      const f = ctx.createBiquadFilter(); f.type = "lowpass"; f.frequency.setValueAtTime(3200, t); f.frequency.exponentialRampToValueAtTime(500, t + .3); f.connect(out);
+      const g = gainTo(f); env(g, t, .005, .08 * v, .4);
+      osc("triangle", mtof(n), t, t + .5, g); osc("square", mtof(n), t, t + .5, g).detune.value = 4;
+    },
+    bell(t, n, v, out){
+      const g = gainTo(out); env(g, t, .005, .06 * v, 1.4); osc("sine", mtof(n), t, t + 1.6, g);
+      const g2 = gainTo(out); env(g2, t, .002, .02 * v, .5); osc("sine", mtof(n) * 2.76, t, t + .6, g2);
+    },
+    piano(t, n, v, out){
+      const g = gainTo(out); env(g, t, .004, .085 * v, 1.1); osc("triangle", mtof(n), t, t + 1.2, g);
+      const g2 = gainTo(out); env(g2, t, .003, .03 * v, .4); osc("sine", mtof(n + 12), t, t + .5, g2);
+    },
+    kick(t, v, out){ const g = gainTo(out); env(g, t, .002, .6 * v, .32); osc("sine", 130, t, t + .4, g).frequency.exponentialRampToValueAtTime(42, t + .14); },
+    hit(t, type, freq, v, dec, out){
+      const s = ctx.createBufferSource(); s.buffer = noise;
+      const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq;
+      const g = gainTo(out); env(g, t, .002, v, dec); s.connect(f); f.connect(g); s.start(t); s.stop(t + dec + .05);
+    },
+    whoosh(t, dur, from, to, v, out){
+      const s = ctx.createBufferSource(); s.buffer = noise; s.loop = true;
+      const f = ctx.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 1.2;
+      f.frequency.setValueAtTime(from, t); f.frequency.exponentialRampToValueAtTime(to, t + dur);
+      const g = gainTo(out); g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(v, t + dur * .7); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+      s.connect(f); f.connect(g); s.start(t); s.stop(t + dur + .05);
+    },
+    gliss(t, dur, from, to, v, out){ const g = gainTo(out); env(g, t, dur * .3, v, dur * .7); osc("triangle", from, t, t + dur, g).frequency.exponentialRampToValueAtTime(to, t + dur); }
+  };
+
+  function schedule(){
+    if(!running || !mood) return;
+    const spb = 60 / mood.bpm / 4;
+    while(next < ctx.currentTime + .18){ playStep(step, next, spb); next += spb; step++; }
+  }
+  function playStep(s, t, spb){
+    const m = mood, pos = s % 16, bar = Math.floor(s / 16), bars = m.bars || 1;
+    const chord = m.prog[Math.floor(bar / bars) % m.prog.length].map(n => n + m.root);
+    if(m.swing && pos % 4 === 2) t += m.swing * spb * 2;
+    if(pos === 0 && bar % bars === 0) I.pad(t, chord, spb * 16 * bars, mg);
+    const D = DRUMS[m.drums];
+    if(D){
+      if(D.k.includes(pos)) I.kick(t, D.kv, mg);
+      if(D.s.includes(pos)) I.hit(t, "bandpass", 1900, .2 * D.sv, .16, mg);
+      if(D.h.includes(pos)) I.hit(t, "highpass", 7500, pos % 4 === 2 ? .05 : .03, .05, mg);
+      if(D.b.includes(pos)) I.bass(t, chord[0] - 24, spb * (pos === 0 ? 6 : 2), mg);
+    }else if(pos === 0 && bar % bars === 0) I.bass(t, chord[0] - 24, spb * 16 * bars * .9, mg);
+    if(pos % m.every === 0){
+      const idx = m.arp[Math.floor(s / m.every) % m.arp.length];
+      if(idx !== null){
+        const n = chord[idx % chord.length] + 12 * (1 + Math.floor(idx / chord.length));
+        I[m.lead](t, n, pos === 0 ? 1.2 : .9, mg);
+      }
+    }
+  }
+  function apply(){
+    if(!ctx) return;
+    const now = ctx.currentTime;
+    master.gain.setTargetAtTime(P.on ? 1 : 0, now, .05);
+    music.gain.setTargetAtTime(running && P.music ? (ducked ? .13 : .32) : 0, now, .2);
+    sfx.gain.setTargetAtTime(P.sfx ? .6 : 0, now, .05);
+  }
+  function setMood(key){
+    if(key === moodKey && mg) return;
+    moodKey = key;
+    if(!ctx) return;
+    mood = MOODS[key];
+    const now = ctx.currentTime;
+    if(mg){ const old = mg; old.gain.cancelScheduledValues(now); old.gain.setValueAtTime(old.gain.value, now); old.gain.linearRampToValueAtTime(.0001, now + .5); setTimeout(() => old.disconnect(), 4000); }
+    mg = ctx.createGain(); mg.gain.setValueAtTime(.0001, now); mg.gain.linearRampToValueAtTime(1, now + .9); mg.connect(music);
+    step = 0; next = now + .08;
+  }
+  const FX = {
+    hook(t){ I.whoosh(t, .7, 250, 3800, .22, sfx); I.kick(t + .55, .9, sfx); I.bell(t + .6, 84, 1.2, sfx); },
+    swipe(t){ I.whoosh(t, .35, 3000, 400, .18, sfx); },
+    pop(t, i = 1){ const g = gainTo(sfx); env(g, t, .003, .22, .12); osc("sine", 520 + i * 90, t, t + .2, g).frequency.exponentialRampToValueAtTime(260 + i * 45, t + .1); },
+    ding(t){ I.bell(t, 84, 2.2, sfx); I.bell(t + .09, 91, 1.6, sfx); },
+    chime(t){ [72, 76, 79, 84].forEach((n, i) => I.bell(t + i * .08, n, 1.8, sfx)); },
+    sparkle(t){ for(let i = 0; i < 8; i++) I.bell(t + i * .05, 86 + (i * 5) % 12, .9, sfx); },
+    flip(t){ I.hit(t, "highpass", 2500, .18, .09, sfx); I.hit(t + .08, "bandpass", 1200, .12, .06, sfx); },
+    rise(t){ I.gliss(t, .9, 220, 880, .12, sfx); },
+    fall(t){ I.gliss(t, 1, 660, 160, .12, sfx); },
+    coin(t){ I.hit(t, "highpass", 5000, .1, .04, sfx); I.bell(t + .02, 88, 2.4, sfx); I.bell(t + .09, 95, 2.4, sfx); },
+    stab(t){ [60, 64, 67, 72].forEach(n => I.pluck(t, n, 3, sfx)); I.kick(t, .6, sfx); },
+    wub(t, i = 1){ const g = gainTo(sfx); env(g, t, .15, .25, .7); osc("sine", 70 + i * 22, t, t + 1, g); FX.pop(t, i); },
+    click(t){ I.hit(t, "highpass", 4000, .1, .02, sfx); },
+    save(t){ I.pluck(t, 79, 3, sfx); I.pluck(t + .07, 86, 3, sfx); }
+  };
+  return {
+    P,
+    started: () => !!ctx && ctx.state === "running",
+    start(){ if(!init()) return false; try{ ctx.resume(); }catch(e){} if(moodKey){ const k = moodKey; moodKey = null; setMood(k); } apply(); return true; },
+    setMood,
+    moodName: () => moodKey ? MOODS[moodKey] : null,
+    play(on){ if(ctx && on && !running) next = ctx.currentTime + .06; running = on; apply(); },
+    duck(on){ ducked = on; apply(); },
+    fx(name, arg){ if(!ctx || !P.on || !P.sfx || ctx.state !== "running") return; FX[name](ctx.currentTime + .01, arg); },
+    set(k, v){ P[k] = v; store.set("ks-sound", P); apply(); }
+  };
+})();
+
+function speakable(t){
+  return t.replace(/\*/g, "").replace(/Rp\s?([\d.]+)/g, (_, n) => n.replace(/\./g, "") + " rupiah")
+    .replace(/R-STP-MM-I-C/g, "R, S T P, M M, I, C").replace(/\bSTP\b/g, "S T P").replace(/\bMM\b/g, "M M")
+    .replace(/×/g, " times ").replace(/…/g, "... ").replace(/[“”]/g, '"');
+}
+const Voice = (() => {
+  const ok = "speechSynthesis" in window;
+  let voice = null, cur = null, done = true, key = "", finished = "";
+  function pick(){
+    try{
+      const vs = speechSynthesis.getVoices();
+      voice = vs.find(v => /^en[-_](US|GB)/i.test(v.lang) && /Natural|Google|Samantha|Aria|Jenny|Daniel/i.test(v.name)) || vs.find(v => /^en/i.test(v.lang)) || null;
+    }catch(e){}
+  }
+  if(ok){ pick(); try{ speechSynthesis.addEventListener("voiceschanged", pick); }catch(e){} }
+  const end = u => { if(cur === u){ cur = null; done = true; finished = key; Sound.duck(false); } };
+  return {
+    get done(){ return done; },
+    say(text, k){
+      if(!ok || !Sound.P.on || !Sound.P.voice || !Sound.started()){ done = true; return; }
+      if(k === finished || (k === key && cur)) return;
+      key = k;
+      try{
+        speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(speakable(text));
+        if(voice){ u.voice = voice; u.lang = voice.lang; }else u.lang = "en-US";
+        u.rate = 1.04;
+        u.onend = u.onerror = () => end(u);
+        cur = u; done = false; Sound.duck(true);
+        speechSynthesis.speak(u);
+        setTimeout(() => { if(cur === u && !speechSynthesis.speaking && !speechSynthesis.pending) end(u); }, 1500);
+      }catch(e){ done = true; }
+    },
+    stop(reset){ if(reset){ key = ""; finished = ""; } cur = null; done = true; try{ speechSynthesis.cancel(); }catch(e){} Sound.duck(false); }
+  };
+})();
+
+function beatFx(s, b){
+  const v = s.vis, t = v.type;
+  if(b === 0) return Sound.fx("hook");
+  if(t === "dots") return Sound.fx(b === 2 ? "sparkle" : b === 4 ? "ding" : "pop", b);
+  if(t === "pos") return Sound.fx(b === v.ys ? "ding" : b === v.ws ? "stab" : "pop", b);
+  if(t === "flips") return Sound.fx("flip");
+  if(t === "clv") return Sound.fx(b === 2 ? "rise" : b === 3 ? "coin" : b === 4 ? "ding" : "pop", b);
+  if(t === "orbit") return Sound.fx(b === v.hot ? "stab" : "pop", b);
+  if(t === "curve") return Sound.fx(b === 4 ? "fall" : "rise");
+  if(t === "rings") return Sound.fx("wub", b);
+  if(t === "quote") return Sound.fx(b === 1 ? "chime" : "pop", b);
+  if(t === "versus") return Sound.fx(b === v.hot ? "chime" : b === v.rs ? "ding" : "pop", b);
+  if(t === "chain" && v.loop === b) return Sound.fx("chime");
+  Sound.fx("pop", b);
+}
+const beatText = b => b === 0 ? SHORTS[ep].hook : SHORTS[ep].beats[b - 1];
+
 /* ---- player ---- */
 let ep = 0, beat = 0, durs = [], playing = true, ended = false, beatStart = 0, elapsed = 0;
 const screen = $("screen"), vis = $("vis");
@@ -828,6 +1064,8 @@ function load(i, autoplay = true){
   $("epSrc").textContent = s.src;
   $("hook").textContent = s.hook;
   vis.innerHTML = R[s.vis.type](s.vis);
+  Sound.setMood(s.mood);
+  Voice.stop(true);
   durs = [0, ...s.beats].map((_, b) => beatDur(s, b));
   $("bars").innerHTML = durs.map(() => "<span><i></i></span>").join("");
   $("end").hidden = true;
@@ -851,6 +1089,7 @@ function setBeat(b){
   vis.querySelectorAll("[data-hot]").forEach(el => el.classList.toggle("hot", beat >= +el.dataset.hot));
   for(let k = 1; k <= 6; k++) vis.classList.toggle("b" + k, beat >= k);
   screen.classList.toggle("at-hook", beat === 0);
+  if(playing && !ended){ beatFx(SHORTS[ep], beat); Voice.say(beatText(beat), ep + "-" + beat); }
   $("cap").innerHTML = beat === 0 ? "" : `<span>${caption(SHORTS[ep].beats[beat - 1])}</span>`;
   [...$("bars").children].forEach((sp, idx) => { sp.firstChild.style.width = idx < beat ? "100%" : "0%"; });
 }
@@ -859,6 +1098,9 @@ function setPlaying(p){
   playing = p;
   if(p) beatStart = performance.now() - elapsed;
   screen.classList.toggle("paused", !p);
+  Sound.play(p && !ended);
+  if(p && !ended) Voice.say(beatText(beat), ep + "-" + beat); else Voice.stop();
+  renderSound();
   $("playTx").textContent = p ? "Pause" : "Play";
   $("bPlay").setAttribute("aria-label", p ? "Pause" : "Play");
   $("playIc").innerHTML = p ? '<path d="M9 5v14M15 5v14"/>' : '<path d="M8 5v14l11-7z" fill="currentColor"/>';
@@ -870,6 +1112,10 @@ function finish(){
   renderEps();
   if($("autoNext").checked && ep < SHORTS.length - 1){ load(ep + 1); return; }
   ended = true;
+  Sound.play(false);
+  Voice.stop();
+  Sound.fx("chime");
+  renderSound();
   $("endTx").textContent = ep < SHORTS.length - 1 ? `Up next: ${SHORTS[ep + 1].title}` : "You’ve watched the last short.";
   $("eNext").textContent = ep < SHORTS.length - 1 ? "Next short" : "Start over";
   $("end").hidden = false;
@@ -884,7 +1130,7 @@ function tick(now){
     const p = Math.min(1, elapsed / durs[beat]);
     const bar = $("bars").children[beat];
     if(bar) bar.firstChild.style.width = (p * 100) + "%";
-    if(p >= 1) nextBeat();
+    if(p >= 1 && (Voice.done || elapsed > durs[beat] + 15000)) nextBeat();
   }
   requestAnimationFrame(tick);
 }
@@ -894,7 +1140,8 @@ function renderNotes(){
   const s = SHORTS[ep];
   $("nKick").textContent = `Short ${ep + 1} of ${SHORTS.length}`;
   $("nTitle").textContent = s.title;
-  $("nSrc").textContent = "From: " + s.src;
+  const md = MOODS[s.mood];
+  $("nSrc").textContent = `From: ${s.src} · Soundtrack: ${md.name}, ${md.bpm} bpm`;
   $("nIdea").textContent = s.d.idea;
   $("nLife").textContent = s.d.life;
   $("nAna").textContent = s.d.ana;
@@ -924,11 +1171,11 @@ $("tapMid").onclick = () => { if(!ended) setPlaying(!playing); };
 $("tapNext").onclick = nextBeat;
 $("tapPrev").onclick = prevBeat;
 $("bPlay").onclick = () => { if(ended){ load(ep); } else setPlaying(!playing); };
-$("bNext").onclick = $("cNext").onclick = () => load(ep + 1);
+$("bNext").onclick = $("cNext").onclick = () => { Sound.fx("swipe"); load(ep + 1); };
 $("cPrev").onclick = () => load(ep - 1);
 $("eReplay").onclick = () => load(ep);
 $("eNext").onclick = () => load(ep + 1);
-$("bSave").onclick = () => { saved.has(ep) ? saved.delete(ep) : saved.add(ep); store.set("ks-saved", [...saved]); renderNotes(); renderEps(); };
+$("bSave").onclick = () => { saved.has(ep) ? saved.delete(ep) : (saved.add(ep), Sound.fx("save")); store.set("ks-saved", [...saved]); renderNotes(); renderEps(); };
 $("bInfo").onclick = () => { setPlaying(false); $("notes").scrollIntoView({behavior: "smooth", block: "start"}); };
 $("epList").addEventListener("click", e => { const b = e.target.closest(".ep"); if(b) load(+b.dataset.i); });
 $("autoNext").checked = store.get("ks-auto", true);
@@ -951,6 +1198,38 @@ screen.addEventListener("touchend", e => {
   if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.4){ load(ep + (dx < 0 ? 1 : -1)); }
 });
 document.addEventListener("visibilitychange", () => { if(document.hidden && playing) setPlaying(false); });
+
+function renderSound(){
+  const P = Sound.P, live = P.on && Sound.started();
+  $("soundGate").hidden = live;
+  $("soundGate").lastChild.textContent = P.on ? "Tap to resume sound" : "Tap for sound";
+  $("bSound").classList.toggle("muted", !P.on);
+  $("bSound").setAttribute("aria-label", P.on ? "Mute sound" : "Turn sound on");
+  $("soundTx").textContent = P.on ? "Sound" : "Muted";
+  $("soundIc").innerHTML = P.on ? '<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>' : '<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9l5 6M22 9l-5 6"/>';
+  const md = MOODS[SHORTS[ep].mood];
+  $("trackName").textContent = live ? (P.music ? md.name : "Music off") : "Sound is off";
+  $("eqIc").classList.toggle("off", !(live && P.music && playing && !ended));
+  $("mxMusic").checked = P.music; $("mxVoice").checked = P.voice; $("mxSfx").checked = P.sfx;
+}
+function soundOn(){
+  Sound.set("on", true);
+  if(Sound.start()){
+    Sound.play(playing && !ended);
+    if(playing && !ended) Voice.say(beatText(beat), ep + "-" + beat);
+  }
+  setTimeout(renderSound, 60);
+  renderSound();
+}
+$("soundGate").onclick = e => { e.stopPropagation(); soundOn(); };
+$("bSound").onclick = () => {
+  if(Sound.P.on && Sound.started()){ Sound.set("on", false); Voice.stop(); renderSound(); }
+  else soundOn();
+};
+document.addEventListener("pointerdown", e => { if(Sound.P.on && !Sound.started() && !e.target.closest("#soundGate, #bSound")) soundOn(); }, true);
+$("mxMusic").onchange = e => { Sound.set("music", e.target.checked); renderSound(); };
+$("mxSfx").onchange = e => { Sound.set("sfx", e.target.checked); renderSound(); };
+$("mxVoice").onchange = e => { Sound.set("voice", e.target.checked); if(!e.target.checked) Voice.stop(); else if(playing && !ended) Voice.say(beatText(beat), ep + "-" + beat); renderSound(); };
 
 const m = /^#short-(\d+)$/.exec(location.hash);
 load(m ? Math.min(SHORTS.length, Math.max(1, +m[1])) - 1 : 0, true);
