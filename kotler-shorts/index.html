@@ -850,7 +850,8 @@ const DRUMS = {
 
 const Sound = (() => {
   const P = Object.assign({on:false, music:true, voice:true, sfx:true}, store.get("ks-sound", {}));
-  let ctx = null, master, music, sfx, vox, noise, mg = null, mood = null, moodKey = null, step = 0, next = 0, running = false, ducked = false;
+  let ctx = null, master, music, pocket, sfx, vox, noise, mg = null, mood = null, moodKey = null, step = 0, next = 0, running = false, ducked = false;
+  let chordIdx = 0, energy = 0, cueQ = null;  // the narration drives harmony and arrangement
   const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 
   function init(){
@@ -864,7 +865,10 @@ const Sound = (() => {
     const len = Math.floor(ctx.sampleRate * 2.4), ir = ctx.createBuffer(2, len, ctx.sampleRate);
     for(let c = 0; c < 2; c++){ const d = ir.getChannelData(c); for(let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); }
     verb.buffer = ir; vg.gain.value = .3; verb.connect(vg); vg.connect(master);
-    music = ctx.createGain(); music.gain.value = 0; music.connect(master); music.connect(verb);
+    music = ctx.createGain(); music.gain.value = 0;
+    // "voice pocket": a dip around 2.5 kHz in the music while the narrator talks, so the words sit on top
+    pocket = ctx.createBiquadFilter(); pocket.type = "peaking"; pocket.frequency.value = 2500; pocket.Q.value = .9; pocket.gain.value = 0;
+    music.connect(pocket); pocket.connect(master); music.connect(verb);
     sfx = ctx.createGain(); sfx.connect(master); sfx.connect(verb);
     vox = ctx.createGain(); vox.gain.value = 1.15; vox.connect(master);
     noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
@@ -920,31 +924,58 @@ const Sound = (() => {
     const spb = 60 / mood.bpm / 4;
     while(next < ctx.currentTime + .18){ playStep(step, next, spb); next += spb; step++; }
   }
+  /* Arrangement follows the voice-over:
+     - each new narrated line (scene) moves to the next chord, landing on the beat together with the voice
+     - energy builds through the short: hook = pad + bass, early scenes add kick and hats,
+       later scenes add the melody, the final line gets the full groove
+     - while the narrator talks, the melody and hats thin out; between lines they fill back in */
   function playStep(s, t, spb){
-    const m = mood, pos = s % 16, bar = Math.floor(s / 16), bars = m.bars || 1;
-    const chord = m.prog[Math.floor(bar / bars) % m.prog.length].map(n => n + m.root);
+    const m = mood, pos = s % 16, bars = m.bars || 1;
     if(m.swing && pos % 4 === 2) t += m.swing * spb * 2;
-    if(pos === 0 && bar % bars === 0) I.pad(t, chord, spb * 16 * bars, mg);
+    let cued = false;
+    if(cueQ && pos % 2 === 0){
+      chordIdx = cueQ.chord; energy = cueQ.energy; cueQ = null; cued = true;
+    }
+    const chord = m.prog[chordIdx % m.prog.length].map(n => n + m.root);
+    const barLen = spb * 16 * bars;
+    if(cued){
+      I.pad(t, chord, barLen, mg);
+      I.bass(t, chord[0] - 24, spb * 6, mg);
+      if(energy >= 2) I.hit(t, "highpass", 6000, .05, .9, mg);
+    }else if(pos === 0 && Math.floor(s / 16) % bars === 0) I.pad(t, chord, barLen, mg);
     const D = DRUMS[m.drums];
-    if(D){
-      if(D.k.includes(pos)) I.kick(t, D.kv, mg);
-      if(D.s.includes(pos)) I.hit(t, "bandpass", 1900, .2 * D.sv, .16, mg);
-      if(D.h.includes(pos)) I.hit(t, "highpass", 7500, pos % 4 === 2 ? .05 : .03, .05, mg);
-      if(D.b.includes(pos)) I.bass(t, chord[0] - 24, spb * (pos === 0 ? 6 : 2), mg);
-    }else if(pos === 0 && bar % bars === 0) I.bass(t, chord[0] - 24, spb * 16 * bars * .9, mg);
-    if(pos % m.every === 0){
+    if(D && energy >= 1){
+      if(D.k.includes(pos) && (energy >= 2 || pos % 8 === 0)) I.kick(t, D.kv * (energy >= 3 ? 1 : .8), mg);
+      if(energy >= 3 && D.s.includes(pos)) I.hit(t, "bandpass", 1900, .2 * D.sv, .16, mg);
+      if(D.h.includes(pos) && (!ducked || pos % 4 === 2)) I.hit(t, "highpass", 7500, pos % 4 === 2 ? .05 : .03, .05, mg);
+      if(!cued && D.b.includes(pos)) I.bass(t, chord[0] - 24, spb * (pos === 0 ? 6 : 2), mg);
+    }else if(!cued && pos === 0) I.bass(t, chord[0] - 24, spb * 14, mg);
+    const leadEvery = ducked ? Math.max(m.every * 2, 4) : m.every;
+    if(energy >= 2 && pos % leadEvery === 0){
       const idx = m.arp[Math.floor(s / m.every) % m.arp.length];
       if(idx !== null){
         const n = chord[idx % chord.length] + 12 * (1 + Math.floor(idx / chord.length));
-        I[m.lead](t, n, pos === 0 ? 1.2 : .9, mg);
+        I[m.lead](t, n, (pos === 0 ? 1.2 : .9) * (ducked ? .7 : 1), mg);
       }
     }
+  }
+  // time of the next 8th note on the music grid, so voice lines and chord changes land together
+  function grid(){
+    if(!ctx) return 0;
+    const now = ctx.currentTime + .04;
+    if(!running || !mood) return now;
+    const spb = 60 / mood.bpm / 4;
+    let t = next, k = step;
+    while(t < now || k % 2){ t += spb; k++; }
+    return t;
   }
   function apply(){
     if(!ctx) return;
     const now = ctx.currentTime;
     master.gain.setTargetAtTime(P.on ? 1 : 0, now, .05);
-    music.gain.setTargetAtTime(running && P.music ? (ducked ? .13 : .32) : 0, now, .2);
+    // duck fast when the voice starts, swell back slowly after the line ends
+    music.gain.setTargetAtTime(running && P.music ? (ducked ? .1 : .3) : 0, now, ducked ? .06 : .45);
+    pocket.gain.setTargetAtTime(ducked ? -8 : 0, now, ducked ? .05 : .4);
     sfx.gain.setTargetAtTime(P.sfx ? .6 : 0, now, .05);
   }
   function setMood(key){
@@ -955,7 +986,7 @@ const Sound = (() => {
     const now = ctx.currentTime;
     if(mg){ const old = mg; old.gain.cancelScheduledValues(now); old.gain.setValueAtTime(old.gain.value, now); old.gain.linearRampToValueAtTime(.0001, now + .5); setTimeout(() => old.disconnect(), 4000); }
     mg = ctx.createGain(); mg.gain.setValueAtTime(.0001, now); mg.gain.linearRampToValueAtTime(1, now + .9); mg.connect(music);
-    step = 0; next = now + .08;
+    step = 0; next = now + .08; chordIdx = 0; energy = 0; cueQ = null;
   }
   const FX = {
     hook(t){ I.whoosh(t, .7, 250, 3800, .22, sfx); I.kick(t + .55, .9, sfx); I.bell(t + .6, 84, 1.2, sfx); },
@@ -984,7 +1015,13 @@ const Sound = (() => {
     fx(name, arg){ if(!ctx || !P.on || !P.sfx || ctx.state !== "running") return; FX[name](ctx.currentTime + .01, arg); },
     set(k, v){ P[k] = v; store.set("ks-sound", P); apply(); },
     decode(ab){ return new Promise((res, rej) => ctx.decodeAudioData(ab, res, rej)); },
-    playVoice(buf, onend){ const s = ctx.createBufferSource(); s.buffer = buf; s.connect(vox); s.onended = onend; s.start(ctx.currentTime + .05); return s; }
+    playVoice(buf, onend){ const s = ctx.createBufferSource(); s.buffer = buf; s.connect(vox); s.onended = onend; s.start(Math.max(grid(), ctx.currentTime + .03)); return s; },
+    cue(scene, last){ cueQ = {chord: scene, energy: scene === 0 ? 0 : scene >= last ? 3 : scene <= last / 2 ? 1 : 2}; },
+    resolve(){
+      if(!ctx || !mood || !P.on) return;
+      const t = ctx.currentTime + .05, root = mood.root;
+      if(P.music){ const g = gainTo(master); g.gain.value = .3; I.pad(t, [root, root + 4, root + 7, root + 12], 2.6, g); I.bass(t, root - 24, 2.2, g); }
+    }
   };
 })();
 
@@ -1113,6 +1150,7 @@ function setBeat(b){
   vis.querySelectorAll("[data-hot]").forEach(el => el.classList.toggle("hot", beat >= +el.dataset.hot));
   for(let k = 1; k <= 6; k++) vis.classList.toggle("b" + k, beat >= k);
   screen.classList.toggle("at-hook", beat === 0);
+  Sound.cue(beat, durs.length - 1);
   if(playing && !ended){ beatFx(SHORTS[ep], beat); Voice.say(beatText(beat), ep + "-" + beat); }
   $("cap").innerHTML = beat === 0 ? "" : `<span>${caption(SHORTS[ep].beats[beat - 1])}</span>`;
   [...$("bars").children].forEach((sp, idx) => { sp.firstChild.style.width = idx < beat ? "100%" : "0%"; });
@@ -1136,6 +1174,7 @@ function finish(){
   renderEps();
   if($("autoNext").checked && ep < SHORTS.length - 1){ load(ep + 1); return; }
   ended = true;
+  Sound.resolve();
   Sound.play(false);
   Voice.stop();
   Sound.fx("chime");
